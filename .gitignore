@@ -224,6 +224,5 @@ pyrightconfig.json
 # Ignore all local history of files
 .history
 .ionide
-.direnv
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode
