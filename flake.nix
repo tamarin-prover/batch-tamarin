@@ -14,8 +14,9 @@
         python = pkgs.python3;
 
         pythonEnv = python.withPackages (ps: with ps; [
-          typer
           pip
+          typer
+          textual
           black
           isort
           autoflake
