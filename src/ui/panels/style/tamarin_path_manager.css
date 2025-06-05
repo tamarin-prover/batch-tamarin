@@ -1,0 +1,28 @@
+.title {
+    dock: top;
+    width: 100%;
+    height: 3;
+    content-align: center middle;
+    text-style: bold;
+    background: $primary;
+    color: $text;
+}
+
+.main {
+    layout: grid;
+    grid-size: 1 3;
+    grid-rows: 1fr 1fr auto;
+    grid-columns: 1fr;
+    grid-gutter: 1;
+    height: 1fr;
+}
+
+.buttons {
+    layout: horizontal;
+    height: 3;
+    align: center middle;
+}
+
+.buttons Button {
+    margin: 0 1;
+}

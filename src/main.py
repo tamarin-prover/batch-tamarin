@@ -1,12 +1,7 @@
-#!/usr/bin/env python3
-"""
-Tamarin-wrapper
-"""
-
 import typer
 
-from tui.config import ConfigManager
-from tui.tamarin_path_selector import run_tamarin_path_selector
+from model.wrapper import Wrapper
+from ui.panels.tamarin_path_manager import TamarinPathManager
 
 app = typer.Typer(help="Tamarin-wrapper")
 
@@ -23,12 +18,9 @@ def main(
         print("Tamarin-wrapper v0.1")
         return
     else:
-        selected_path = run_tamarin_path_selector()
-        if selected_path:
-            print(f"Selected Tamarin path: {selected_path}")
-            ConfigManager().set_selected_path(selected_path)
-        else:
-            print("No path selected.")
+        wrapper = Wrapper()
+        app = TamarinPathManager(wrapper)
+        app.run()
 
 
 if __name__ == "__main__":

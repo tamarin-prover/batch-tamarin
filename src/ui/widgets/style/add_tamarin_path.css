@@ -1,0 +1,67 @@
+.add-path-title {
+    dock: top;
+    width: 100%;
+    height: 3;
+    content-align: center middle;
+    text-style: bold;
+    background: $accent;
+    color: $text;
+}
+
+.add-path-container {
+    height: 1fr;
+    padding: 1;
+}
+
+.input-row {
+    height: 3;
+    width: 100%;
+    margin: 0 0 1 0;
+}
+
+.path-input {
+    width: 1fr;
+    margin: 0 1 0 0;
+}
+
+.browse-btn {
+    width: 10;
+}
+
+.button-row {
+    height: 3;
+    width: 100%;
+    margin: 0 0 1 0;
+}
+
+.add-btn {
+    width: 15;
+    margin: 0 1 0 0;
+}
+
+.clear-btn {
+    width: 10;
+}
+
+.validation-status {
+    height: 3;
+    width: 100%;
+    content-align: center middle;
+    text-style: bold;
+}
+
+.validation-status.error {
+    color: $error;
+}
+
+.validation-status.success {
+    color: $success;
+}
+
+.validation-status.validating {
+    color: $warning;
+}
+
+.validation-status.info {
+    color: $info;
+}

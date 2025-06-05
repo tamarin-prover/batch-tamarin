@@ -1,0 +1,34 @@
+.path-viewer-title {
+    dock: top;
+    width: 100%;
+    height: 3;
+    content-align: center middle;
+    text-style: bold;
+    background: $primary;
+    color: $text;
+}
+
+.path-container {
+    height: 1fr;
+    padding: 1;
+}
+
+.no-paths {
+    content-align: center middle;
+    text-style: italic;
+    color: $text-muted;
+}
+
+.path-entry {
+    height: 3;
+    width: 100%;
+    padding: 0 1;
+    margin: 0 0 1 0;
+    border: solid $surface;
+    background: $surface;
+    content-align: left middle;
+}
+
+.path-entry:hover {
+    background: $surface-lighten-1;
+}
