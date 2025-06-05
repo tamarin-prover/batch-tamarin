@@ -11,7 +11,7 @@
 .main {
     layout: grid;
     grid-size: 1 3;
-    grid-rows: 1fr 1fr auto;
+    grid-rows: 1fr 9 4;
     grid-columns: 1fr;
     grid-gutter: 1;
     height: 1fr;
