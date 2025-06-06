@@ -30,6 +30,12 @@
             python3Packages.setuptools
             python3Packages.wheel
             pre-commit
+
+            # Tamarin dependencies
+            maude
+            graphviz
+            stack
+            ghc
           ];
         };
 
