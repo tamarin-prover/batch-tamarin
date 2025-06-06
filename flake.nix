@@ -37,6 +37,7 @@
             stack
             ghc
             zlib
+            libffi
           ];
         };
 
