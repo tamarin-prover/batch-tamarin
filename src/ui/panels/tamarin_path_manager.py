@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.containers import Container, VerticalScroll
+from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Input, Static
 
 from model.wrapper import Wrapper
@@ -17,9 +17,7 @@ class TamarinPathManager(App):  # type: ignore
 
     BINDINGS = [
         ("q,escape", "quit", "Quit"),
-        ("ctrl+c", "quit", "Quit"),
-        ("a", "add_path", "Add Path"),
-        ("r", "refresh", "Refresh"),
+        ("a", "add_path", "Add Path Input"),
     ]
 
     def __init__(self, wrapper: Wrapper) -> None:
@@ -38,30 +36,33 @@ class TamarinPathManager(App):  # type: ignore
             yield Static("Loading paths...", id="loading")
 
         yield Static("➕ Add New Path:", id="add-header")
-        yield Input(placeholder="Enter path to tamarin-prover...", id="path-input")
-        yield Button("Add Path", variant="primary", id="add-btn")
+        yield Input(
+            placeholder="Enter path to tamarin-prover... (Press Enter)", id="path-input"
+        )
 
         yield Static("", id="status")
 
-        with Container(id="buttons"):
-            yield Button("Refresh", variant="default", id="refresh-btn")
-            yield Button("Save & Exit", variant="success", id="save-btn")
+        with Horizontal(id="buttons"):
             yield Button("Cancel", variant="error", id="cancel-btn")
+            yield Button("Save & Exit", variant="success", id="save-btn")
 
         yield Footer()
 
     async def on_mount(self) -> None:
         """Initialize the app."""
-        await self.refresh_paths()
+        await self.initial_load_paths()
 
-    async def refresh_paths(self) -> None:
-        """Refresh the paths display."""
-        notification_manager.info("🔄 Loading paths...")
-
-        # Auto-detect paths
+    async def initial_load_paths(self) -> None:
+        """Initial load with auto-detection."""
+        # Auto-detect paths only on initial load
         await self.wrapper.auto_detect_tamarin_paths()
 
-        # Get paths
+        # Update the display
+        await self.update_paths_display()
+
+    async def update_paths_display(self) -> None:
+        """Update the paths display without auto-detection."""
+        # Get current paths from wrapper (no auto-detection)
         paths = self.wrapper.get_tamarin_paths()
 
         # Clear current list
@@ -85,7 +86,7 @@ class TamarinPathManager(App):  # type: ignore
                 await paths_list.mount(Static(test_info, classes="path-details"))
 
                 delete_btn = Button(
-                    f"🗑 Delete Path {i}",
+                    "🗑 Delete Path",
                     variant="error",
                     id=f"delete-{i}",
                     classes="delete-btn",
@@ -95,15 +96,9 @@ class TamarinPathManager(App):  # type: ignore
                 # Add separator
                 await paths_list.mount(Static("─" * 50, classes="separator"))
 
-        notification_manager.info(f"📊 Loaded {len(paths)} path(s)")
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
-        if event.button.id == "add-btn":
-            self.add_path()
-        elif event.button.id == "refresh-btn":
-            asyncio.create_task(self.refresh_paths())
-        elif event.button.id == "save-btn":
+        if event.button.id == "save-btn":
             self.save_and_exit()
         elif event.button.id == "cancel-btn":
             asyncio.create_task(self._cleanup_and_exit())
@@ -128,8 +123,6 @@ class TamarinPathManager(App):  # type: ignore
 
     async def validate_and_add_path(self, path_str: str) -> None:
         """Validate and add path."""
-        notification_manager.info("⏳ Validating path...")
-
         try:
             path = Path(path_str)
             if not path.exists():
@@ -142,17 +135,21 @@ class TamarinPathManager(App):  # type: ignore
                 notification_manager.error("❌ Not a valid tamarin-prover")
                 return
 
-            if tamarin_path.test_success:
-                notification_manager.info(f"✅ Added: {tamarin_path.version}")
-            else:
-                notification_manager.warning(
-                    f"⚠️ Added: {tamarin_path.version} (test failed)"
-                )
+            # Single notification with comprehensive result
+            status = (
+                "fully functional"
+                if tamarin_path.test_success
+                else "partially functional (test failed)"
+            )
+            notification_manager.info(
+                f"✅ Added tamarin-prover {tamarin_path.version} - {status}"
+            )
 
-            # Clear input and refresh
+            # Clear input and update display
             path_input = self.query_one("#path-input", Input)
             path_input.value = ""
-            await self.refresh_paths()
+            # Update display without auto-detection
+            await self.update_paths_display()
 
         except Exception as e:
             notification_manager.error(f"❌ Error: {str(e)}")
@@ -167,7 +164,8 @@ class TamarinPathManager(App):  # type: ignore
                 path_to_remove = paths[index]
                 if self.wrapper.remove_tamarin_path(str(path_to_remove.path)):
                     notification_manager.info(f"🗑 Removed: {path_to_remove.path}")
-                    asyncio.create_task(self.refresh_paths())
+                    # Update display without auto-detection
+                    asyncio.create_task(self.update_paths_display())
                 else:
                     notification_manager.error("❌ Failed to remove path")
 
@@ -180,8 +178,8 @@ class TamarinPathManager(App):  # type: ignore
         path_input.focus()
 
     def action_refresh(self) -> None:
-        """Refresh paths."""
-        asyncio.create_task(self.refresh_paths())
+        """Refresh paths with auto-detection."""
+        asyncio.create_task(self.initial_load_paths())
 
     async def action_quit(self) -> None:
         """Quit the application."""
@@ -189,14 +187,12 @@ class TamarinPathManager(App):  # type: ignore
 
     def save_and_exit(self) -> None:
         """Save and exit."""
-        notification_manager.info("💾 Saving configuration...")
         asyncio.create_task(self._cleanup_and_exit())
 
     async def _cleanup_and_exit(self) -> None:
         """Clean up and exit."""
         active_count = process_manager.get_active_processes_count()
         if active_count > 0:
-            notification_manager.info(f"🛑 Stopping {active_count} process(es)...")
             await process_manager.kill_all_processes()
 
         self.exit()  # type: ignore

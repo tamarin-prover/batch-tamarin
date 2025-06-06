@@ -36,7 +36,7 @@ class Wrapper:
         for i, tamarin_path in enumerate(self.tamarin_path):
             if str(tamarin_path.path) == path:
                 del self.tamarin_path[i]
-                notification_manager.info(f"Removed Tamarin path: {path}")
+                notification_manager.info(f"🗑 Removed tamarin-prover: {path}")
                 return True
         return False
 
@@ -62,31 +62,29 @@ class Wrapper:
                 # Add if version is detected, even if test fails
                 if tamarin_path_obj.version:
                     detected_paths.append(tamarin_path_obj)
-                    if tamarin_path_obj.test_success:
-                        notification_manager.info(
-                            f"Valid tamarin-prover found: {candidate} ({tamarin_path_obj.version})"
-                        )
-                    else:
-                        notification_manager.warning(
-                            f"Tamarin-prover found but test failed: {candidate} ({tamarin_path_obj.version}) - may work partially"
-                        )
-                else:
-                    notification_manager.error(
-                        f"Invalid tamarin-prover at: {candidate} - no version detected"
-                    )
             except Exception as e:
                 notification_manager.error(f"Error validating {candidate}: {e}")
 
         # Update the wrapper's paths
         self.tamarin_path.extend(detected_paths)
 
+        # Single consolidated notification with results summary
         if detected_paths:
+            valid_paths = [p for p in detected_paths if p.test_success]
+            partial_paths = [p for p in detected_paths if not p.test_success]
+
+            summary_parts: list[str] = []
+            if valid_paths:
+                summary_parts.append(f"{len(valid_paths)} fully functional")
+            if partial_paths:
+                summary_parts.append(f"{len(partial_paths)} partially functional")
+
             notification_manager.info(
-                f"Auto-detection complete. Found {len(detected_paths)} tamarin-prover installation(s)."
+                f"✅ Auto-detection complete: Found {len(detected_paths)} tamarin-prover installation(s) ({', '.join(summary_parts)})"
             )
         else:
             notification_manager.warning(
-                "No valid tamarin-prover installations found during auto-detection."
+                "❌ No valid tamarin-prover installations found during auto-detection"
             )
 
         return detected_paths

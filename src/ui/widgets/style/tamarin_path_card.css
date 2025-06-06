@@ -59,4 +59,5 @@
 .delete-btn {
     width: 4;
     min-width: 4;
+    content-align: center middle;
 }

@@ -42,9 +42,6 @@ async def extract_tamarin_version(path: Path) -> str:
             if version_match:
                 version = version_match.group(1)
                 formatted_version = f"v{version}"
-                notification_manager.info(
-                    f"Extracted Tamarin version: {formatted_version}"
-                )
                 return formatted_version
             else:
                 notification_manager.error("Could not parse version from output")
@@ -92,10 +89,9 @@ async def launch_tamarin_test(path: Path) -> bool:
         # Verify all success indicators are present
         for indicator in success_indicators:
             if indicator not in output:
-                notification_manager.error(f"Missing success indicator: {indicator}")
+                notification_manager.error(f"Missing success indicator: '{indicator}'")
                 return False
 
-        notification_manager.info("Tamarin test completed successfully")
         return True
 
     except Exception as e:

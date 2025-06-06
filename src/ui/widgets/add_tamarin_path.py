@@ -72,7 +72,6 @@ class AddTamarinPath(Widget):
         from utils.notifications import notification_manager
 
         self.is_validating = True
-        notification_manager.info("⏳ Validating path...")
 
         try:
             # Convert to Path object
@@ -93,14 +92,15 @@ class AddTamarinPath(Widget):
                 )
                 return
 
-            if tamarin_path.test_success:
-                notification_manager.info(
-                    f"✅ Added: {tamarin_path.version} - fully functional"
-                )
-            else:
-                notification_manager.warning(
-                    f"⚠️ Added: {tamarin_path.version} - test failed, may work partially"
-                )
+            # Single notification with comprehensive result
+            status = (
+                "fully functional"
+                if tamarin_path.test_success
+                else "partially functional (test failed)"
+            )
+            notification_manager.info(
+                f"✅ Added tamarin-prover {tamarin_path.version} - {status}"
+            )
 
             # Clear input and notify parent
             path_input = self.query_one("#path_input", Input)

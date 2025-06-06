@@ -44,7 +44,7 @@ class TamarinPathCard(Widget):
                 yield Static("Path:", classes="label")
                 yield Static(str(self.tamarin_path.path), classes="path-value")
                 yield Button(
-                    "🗑",
+                    "🗑 Delete this path",
                     variant="error",
                     classes="delete-btn",
                     id=f"delete_{id(self.tamarin_path)}",

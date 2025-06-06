@@ -40,18 +40,13 @@ Screen {
 
 .separator {
     color: gray;
-    margin: 0 0 1 0;
+    margin: 0 0 0 0;
 }
 
 .no-paths {
     content-align: center middle;
     color: red;
     text-style: italic;
-}
-
-.delete-btn {
-    width: auto;
-    margin: 0 0 1 0;
 }
 
 #add-header {
@@ -77,12 +72,13 @@ Screen {
 }
 
 #buttons {
-    layout: vertical;
-    height: auto;
+    layout: horizontal;
+    height: 3;
     margin: 1 0 0 0;
 }
 
 #buttons Button {
     height: 3;
-    margin: 0 0 1 0;
+    margin: 0 1 0 0;
+    width: 1fr;
 }

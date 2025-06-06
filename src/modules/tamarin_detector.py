@@ -13,9 +13,6 @@ def detect_tamarin_installations() -> list[Path]:
     Returns:
         list[Path]: List of paths to potential tamarin-prover executables
     """
-    notification_manager.info(
-        "Starting auto-detection of tamarin-prover installations..."
-    )
     candidate_paths: set[Path] = set()  # Use set to avoid duplicates
 
     # 1. Check PATH environment variable
@@ -52,9 +49,6 @@ def _check_path_environment() -> list[Path]:
                 path_str = path_str.strip()
                 if path_str:
                     candidates.append(Path(path_str))
-                    notification_manager.info(
-                        f"Found tamarin-prover in PATH: {path_str}"
-                    )
 
     except Exception as e:
         notification_manager.warning(f"Error checking PATH environment: {e}")
@@ -120,9 +114,6 @@ def _check_common_directories() -> list[Path]:
                         if system != "Windows" and not os.access(exe_path, os.X_OK):
                             continue
                         candidates.append(exe_path)
-                        notification_manager.info(
-                            f"Found tamarin-prover in common directory: {exe_path}"
-                        )
         except Exception as e:
             notification_manager.warning(f"Error checking directory {directory}: {e}")
 
@@ -144,9 +135,6 @@ def _check_package_manager_locations() -> list[Path]:
             macports_path = Path("/opt/local/bin/tamarin-prover")
             if macports_path.exists():
                 candidates.append(macports_path)
-                notification_manager.info(
-                    f"Found tamarin-prover via MacPorts: {macports_path}"
-                )
 
         # Check Haskell Stack/Cabal locations (cross-platform)
         stack_candidates = _check_haskell_locations()
@@ -176,7 +164,6 @@ def _check_homebrew_locations() -> list[Path]:
         brew_path = Path(prefix) / "bin" / "tamarin-prover"
         if brew_path.exists():
             candidates.append(brew_path)
-            notification_manager.info(f"Found tamarin-prover via Homebrew: {brew_path}")
 
     return candidates
 
@@ -189,13 +176,11 @@ def _check_haskell_locations() -> list[Path]:
     stack_local = Path.home() / ".local" / "bin" / "tamarin-prover"
     if stack_local.exists():
         candidates.append(stack_local)
-        notification_manager.info(f"Found tamarin-prover via Stack: {stack_local}")
 
     # Cabal bin
     cabal_bin = Path.home() / ".cabal" / "bin" / "tamarin-prover"
     if cabal_bin.exists():
         candidates.append(cabal_bin)
-        notification_manager.info(f"Found tamarin-prover via Cabal: {cabal_bin}")
 
     return candidates
 
@@ -215,9 +200,6 @@ def _check_nix_locations() -> list[Path]:
             nix_profile = Path.home() / ".nix-profile" / "bin" / "tamarin-prover"
             if nix_profile.exists():
                 candidates.append(nix_profile)
-                notification_manager.info(
-                    f"Found tamarin-prover via Nix: {nix_profile}"
-                )
 
     except Exception as e:
         notification_manager.warning(f"Error checking Nix locations: {e}")
