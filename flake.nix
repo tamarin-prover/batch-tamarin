@@ -36,6 +36,7 @@
             graphviz
             stack
             ghc
+            zlib
           ];
         };
 

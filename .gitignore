@@ -225,4 +225,5 @@ pyrightconfig.json
 .history
 .ionide
 
+tamarin-binaries
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode
