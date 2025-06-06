@@ -5,7 +5,50 @@ This module provides a centralized way to send notifications throughout the appl
 without creating tight coupling between business logic and UI components.
 """
 
+import re
+
 from textual.app import App
+
+
+def _sanitize_message(message: str) -> str:
+    """
+    Sanitize a message to prevent control characters from crashing the UI.
+
+    This function removes or replaces potentially problematic characters
+    that could be interpreted as control sequences by the terminal/UI.
+
+    Args:
+        message: The raw message string
+
+    Returns:
+        A sanitized version of the message safe for display
+    """
+    # Remove ANSI escape sequences
+    message = re.sub(r"\x1b\[[0-9;]*m", "", message)
+
+    # Replace other problematic control characters
+    message = re.sub(r"[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]", "", message)
+
+    # Replace shell variable references that look like control sequences
+    message = re.sub(r"@@[A-Z_]+@", "[VARIABLE]", message)
+
+    # Replace any remaining @ sequences that might be interpreted as markup
+    message = message.replace("@@", "@")
+
+    # Escape square brackets that can be interpreted as markup
+    message = message.replace("[", "(").replace("]", ")")
+
+    # Remove any other characters that could cause markup parsing issues
+    message = re.sub(r"[<>{}]", "", message)
+
+    # Replace multiple spaces/tabs with single space for cleaner display
+    message = re.sub(r"\s+", " ", message)
+
+    # Limit message length to prevent overwhelming the UI
+    if len(message) > 1000:
+        message = message[:997] + "..."
+
+    return message.strip()
 
 
 class NotificationManager:
@@ -37,8 +80,11 @@ class NotificationManager:
             message: The notification message to display
             severity: The severity level ("information", "warning", "error")
         """
+        # Sanitize the message to prevent UI crashes from control characters
+        sanitized_message = _sanitize_message(message)
+
         if self._app_instance:  # type: ignore
-            self._app_instance.action_notify(message, severity=severity)  # type: ignore
+            self._app_instance.action_notify(sanitized_message, severity=severity)  # type: ignore
         else:
             # Fallback when no TUI is available (for testing/CLI usage)
             severity_prefix = {
@@ -46,7 +92,7 @@ class NotificationManager:
                 "warning": "WARN",
                 "error": "ERROR",
             }.get(severity, "INFO")
-            print(f"[{severity_prefix}] {message}")
+            print(f"[{severity_prefix}] {sanitized_message}")
 
     def error(self, message: str):
         """
