@@ -1,10 +1,11 @@
 import re
 import subprocess
+from pathlib import Path
 
 from utils.notifications import notification_manager
 
 
-def extract_tamarin_version(path) -> str:
+def extract_tamarin_version(path: Path) -> str:
     """
     Extracts the Tamarin version from the given path.
 
@@ -66,7 +67,7 @@ def extract_tamarin_version(path) -> str:
         return ""
 
 
-def launch_tamarin_test(path) -> bool:
+def launch_tamarin_test(path: Path) -> bool:
     """
     Launches a Tamarin test command and returns whether it was successful.
 

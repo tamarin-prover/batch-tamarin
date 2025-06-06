@@ -21,8 +21,8 @@ class AddTamarinPath(Widget):
             self.path = path
             super().__init__()
 
-    def __init__(self, wrapper: Wrapper, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, wrapper: Wrapper, **kwargs) -> None:  # type: ignore
+        super().__init__(**kwargs)  # type: ignore
         self.wrapper = wrapper
         self.is_validating = False
 
@@ -96,7 +96,7 @@ class AddTamarinPath(Widget):
             tamarin_path = TamarinPath(path)
 
             # Check validation results
-            if tamarin_path.version is None:
+            if not tamarin_path.version:
                 self.update_status("❌ Not a valid tamarin-prover", "error")
                 return
 

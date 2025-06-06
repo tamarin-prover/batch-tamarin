@@ -16,7 +16,7 @@ def detect_tamarin_installations() -> list[Path]:
     notification_manager.info(
         "Starting auto-detection of tamarin-prover installations..."
     )
-    candidate_paths = set()  # Use set to avoid duplicates
+    candidate_paths: set[Path] = set()  # Use set to avoid duplicates
 
     # 1. Check PATH environment variable
     path_candidates = _check_path_environment()
@@ -35,7 +35,7 @@ def detect_tamarin_installations() -> list[Path]:
 
 def _check_path_environment() -> list[Path]:
     """Check if tamarin-prover is available in PATH."""
-    candidates = []
+    candidates: list[Path] = []
     try:
         # Determine the command based on OS
         if platform.system() == "Windows":
@@ -64,12 +64,12 @@ def _check_path_environment() -> list[Path]:
 
 def _check_common_directories() -> list[Path]:
     """Check common installation directories for tamarin-prover."""
-    candidates = []
+    candidates: list[Path] = []
     system = platform.system()
 
     # Define common directories based on OS
     if system == "Darwin":  # macOS
-        common_dirs = [
+        common_dirs: list[str | Path] = [
             "/usr/local/bin",
             "/opt/homebrew/bin",
             "/usr/bin",
@@ -78,7 +78,7 @@ def _check_common_directories() -> list[Path]:
             Path.home() / "bin",
         ]
     elif system == "Linux":
-        common_dirs = [
+        common_dirs: list[str | Path] = [
             "/usr/bin",
             "/usr/local/bin",
             "/opt/bin",
@@ -87,7 +87,7 @@ def _check_common_directories() -> list[Path]:
             "/snap/bin",  # Snap packages
         ]
     elif system == "Windows":
-        common_dirs = [
+        common_dirs: list[str | Path] = [
             Path("C:/Program Files"),
             Path("C:/Program Files (x86)"),
             Path.home() / "AppData" / "Local" / "Programs",
@@ -95,7 +95,7 @@ def _check_common_directories() -> list[Path]:
         ]
     else:
         # Generic Unix-like system
-        common_dirs = [
+        common_dirs: list[str | Path] = [
             "/usr/bin",
             "/usr/local/bin",
             Path.home() / ".local" / "bin",
@@ -131,7 +131,7 @@ def _check_common_directories() -> list[Path]:
 
 def _check_package_manager_locations() -> list[Path]:
     """Check package manager specific locations."""
-    candidates = []
+    candidates: list[Path] = []
     system = platform.system()
 
     try:
@@ -164,7 +164,7 @@ def _check_package_manager_locations() -> list[Path]:
 
 def _check_homebrew_locations() -> list[Path]:
     """Check Homebrew installation locations."""
-    candidates = []
+    candidates: list[Path] = []
 
     # Common Homebrew prefixes
     homebrew_prefixes = [
@@ -183,7 +183,7 @@ def _check_homebrew_locations() -> list[Path]:
 
 def _check_haskell_locations() -> list[Path]:
     """Check Haskell Stack and Cabal installation locations."""
-    candidates = []
+    candidates: list[Path] = []
 
     # Stack local bin
     stack_local = Path.home() / ".local" / "bin" / "tamarin-prover"
@@ -202,7 +202,7 @@ def _check_haskell_locations() -> list[Path]:
 
 def _check_nix_locations() -> list[Path]:
     """Check Nix package manager locations."""
-    candidates = []
+    candidates: list[Path] = []
 
     try:
         # Check if nix-env is available

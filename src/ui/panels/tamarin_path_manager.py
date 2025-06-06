@@ -10,7 +10,7 @@ from ui.widgets.current_tamarin_path import CurrentTamarinPath
 from utils.notifications import notification_manager
 
 
-class TamarinPathManager(App):
+class TamarinPathManager(App):  # type: ignore
     """Terminal UI for managing Tamarin installation paths, used by the Tamarin-wrapper."""
 
     CSS_PATH = str(Path(__file__).parent / "style/tamarin_path_manager.css")
@@ -20,7 +20,7 @@ class TamarinPathManager(App):
     def __init__(self, wrapper: Wrapper) -> None:
         super().__init__()
         self.wrapper = wrapper
-        notification_manager.set_app(self)
+        notification_manager.set_app(self)  # type: ignore
 
     def compose(self) -> ComposeResult:
         """Compose the selection path panel."""
@@ -39,7 +39,7 @@ class TamarinPathManager(App):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "cancel_btn":
-            self.exit()
+            self.exit()  # type: ignore
         elif event.button.id == "save_btn":
             self.save_and_exit()
 
@@ -54,4 +54,4 @@ class TamarinPathManager(App):
     def save_and_exit(self) -> None:
         """Save changes and exit."""
         # Here you would implement saving to config file if needed
-        self.exit()
+        self.exit()  # type: ignore

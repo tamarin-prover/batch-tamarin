@@ -7,7 +7,7 @@ from utils.notifications import notification_manager
 
 class Wrapper:
     def __init__(self) -> None:
-        self.tamarin_path = self.auto_detect_tamarin_paths()
+        self.tamarin_path: list[TamarinPath] = self.auto_detect_tamarin_paths()
 
     def add_tamarin_path(self, path: str) -> None:
         """
@@ -30,7 +30,7 @@ class Wrapper:
         """
         Automatically detects Tamarin Paths and adds them to the wrapper.
         """
-        detected_paths = []
+        detected_paths: list[TamarinPath] = []
         candidate_paths = detect_tamarin_installations()
 
         # Validate each candidate path using TamarinPath
