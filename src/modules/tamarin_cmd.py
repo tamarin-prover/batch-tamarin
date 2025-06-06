@@ -1,13 +1,13 @@
 import re
-import subprocess
 from pathlib import Path
 
+from modules.process_manager import process_manager
 from utils.notifications import notification_manager
 
 
-def extract_tamarin_version(path: Path) -> str:
+async def extract_tamarin_version(path: Path) -> str:
     """
-    Extracts the Tamarin version from the given path.
+    Extracts the Tamarin version from the given path using async process manager.
 
     Args:
         path: Path to the Tamarin executable
@@ -17,24 +17,21 @@ def extract_tamarin_version(path: Path) -> str:
     """
     try:
         # Execute the tamarin-prover --version command
-        result = subprocess.run(
-            [path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=30,  # 30 second timeout
+        return_code, stdout, stderr = await process_manager.run_command(
+            path, ["--version"], timeout=30.0
         )
 
         # Check if command executed successfully
-        if result.returncode != 0:
+        if return_code != 0:
             notification_manager.error(
-                f"Version command failed with return code {result.returncode}"
+                f"Version command failed with return code {return_code}"
             )
-            if result.stderr:
-                notification_manager.error(f"Error output: {result.stderr}")
+            if stderr:
+                notification_manager.error(f"Error output: {stderr}")
             return ""
 
         # Parse the output to extract version
-        output = result.stdout
+        output = stdout
 
         # Look for version pattern in first line: "tamarin-prover X.X.X"
         lines = output.split("\n")
@@ -56,18 +53,12 @@ def extract_tamarin_version(path: Path) -> str:
             notification_manager.error("No output received from version command")
             return ""
 
-    except subprocess.TimeoutExpired:
-        notification_manager.error("Version command timed out")
-        return ""
-    except subprocess.CalledProcessError as e:
-        notification_manager.error(f"Version command execution failed: {e}")
-        return ""
     except Exception as e:
         notification_manager.error(f"Unexpected error during version extraction: {e}")
         return ""
 
 
-def launch_tamarin_test(path: Path) -> bool:
+async def launch_tamarin_test(path: Path) -> bool:
     """
     Launches a Tamarin test command and returns whether it was successful.
 
@@ -76,24 +67,21 @@ def launch_tamarin_test(path: Path) -> bool:
     """
     try:
         # Execute the tamarin-prover test command
-        result = subprocess.run(
-            [path, "test"],
-            capture_output=True,
-            text=True,
-            timeout=60,  # 60 second timeout
+        return_code, stdout, stderr = await process_manager.run_command(
+            path, ["test"], timeout=60.0
         )
 
         # Check if command executed successfully
-        if result.returncode != 0:
+        if return_code != 0:
             notification_manager.error(
-                f"Test command failed with return code {result.returncode}"
+                f"Test command failed with return code {return_code}"
             )
-            if result.stderr:
-                notification_manager.error(f"Error output: {result.stderr}")
+            if stderr:
+                notification_manager.error(f"Error output: {stderr}")
             return False
 
         # Parse the output to verify test success
-        output = result.stdout
+        output = stdout
 
         # Check for key success indicators in the output
         success_indicators = [
@@ -110,12 +98,6 @@ def launch_tamarin_test(path: Path) -> bool:
         notification_manager.info("Tamarin test completed successfully")
         return True
 
-    except subprocess.TimeoutExpired:
-        notification_manager.error("Tamarin test timed out")
-        return False
-    except subprocess.CalledProcessError as e:
-        notification_manager.error(f"Command execution failed: {e}")
-        return False
     except Exception as e:
         notification_manager.error(f"Unexpected error during tamarin test: {e}")
         return False

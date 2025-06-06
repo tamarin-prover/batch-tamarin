@@ -6,8 +6,20 @@ from modules.tamarin_cmd import extract_tamarin_version, launch_tamarin_test
 class TamarinPath:
     def __init__(self, path: Path) -> None:
         self.path = path
-        self.version = extract_tamarin_version(path)
-        self.test_success = launch_tamarin_test(path)
+        self.version = ""
+        self.test_success = False
+
+    async def validate(self) -> None:
+        """Validate the Tamarin path asynchronously."""
+        self.version = await extract_tamarin_version(self.path)
+        self.test_success = await launch_tamarin_test(self.path)
+
+    @classmethod
+    async def create(cls, path: Path) -> "TamarinPath":
+        """Factory method to create and validate a TamarinPath asynchronously."""
+        instance = cls(path)
+        await instance.validate()
+        return instance
 
     def __str__(self) -> str:
         return f"TamarinPath(path={self.path}, version={self.version}, test_success={self.test_success})"

@@ -1,28 +1,88 @@
-.title {
+/* Simple Tamarin Path Manager Styles */
+
+Screen {
+    layout: vertical;
+}
+
+#title {
     dock: top;
     width: 100%;
     height: 3;
     content-align: center middle;
     text-style: bold;
-    background: $primary;
-    color: $text;
+    background: blue;
+    color: white;
 }
 
-.main {
-    layout: grid;
-    grid-size: 1 3;
-    grid-rows: 1fr 9 4;
-    grid-columns: 1fr;
-    grid-gutter: 1;
+#paths-header {
+    height: 2;
+    text-style: bold;
+    color: green;
+    margin: 1 0 0 0;
+}
+
+#paths-list {
     height: 1fr;
+    border: solid white;
+    margin: 0 0 1 0;
 }
 
-.buttons {
-    layout: horizontal;
+.path-item {
+    color: white;
+    text-style: bold;
+    margin: 1 0 0 0;
+}
+
+.path-details {
+    color: gray;
+    margin: 0 0 0 0;
+}
+
+.separator {
+    color: gray;
+    margin: 0 0 1 0;
+}
+
+.no-paths {
+    content-align: center middle;
+    color: red;
+    text-style: italic;
+}
+
+.delete-btn {
+    width: auto;
+    margin: 0 0 1 0;
+}
+
+#add-header {
+    height: 2;
+    text-style: bold;
+    color: blue;
+    margin: 1 0 0 0;
+}
+
+#path-input {
     height: 3;
-    align: center middle;
+    margin: 0 0 1 0;
 }
 
-.buttons Button {
-    margin: 0 1;
+#add-btn {
+    height: 3;
+    margin: 0 0 1 0;
+}
+
+#status {
+    height: 2;
+    margin: 1 0;
+}
+
+#buttons {
+    layout: vertical;
+    height: auto;
+    margin: 1 0 0 0;
+}
+
+#buttons Button {
+    height: 3;
+    margin: 0 0 1 0;
 }

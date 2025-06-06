@@ -7,7 +7,6 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button, Input, Static
 
-from model.tamarin_path import TamarinPath
 from model.wrapper import Wrapper
 
 
@@ -37,26 +36,14 @@ class AddTamarinPath(Widget):
                     classes="path-input",
                     id="path_input",
                 )
-                yield Button("Browse", classes="browse-btn", id="browse_btn")
-
-            with Horizontal(classes="button-row"):
                 yield Button(
                     "Add Path", variant="primary", classes="add-btn", id="add_btn"
                 )
-                yield Button(
-                    "Clear", variant="default", classes="clear-btn", id="clear_btn"
-                )
-
-            yield Static("", classes="validation-status", id="status")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "add_btn":
             self.add_path()
-        elif event.button.id == "clear_btn":
-            self.clear_input()
-        elif event.button.id == "browse_btn":
-            self.browse_for_path()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission (Enter key)."""
@@ -72,7 +59,9 @@ class AddTamarinPath(Widget):
         path_str = path_input.value.strip()
 
         if not path_str:
-            self.update_status("Please enter a path", "error")
+            from utils.notifications import notification_manager
+
+            notification_manager.error("Please enter a path")
             return
 
         # Start async validation
@@ -80,8 +69,10 @@ class AddTamarinPath(Widget):
 
     async def validate_and_add_path(self, path_str: str) -> None:
         """Validate and add path asynchronously."""
+        from utils.notifications import notification_manager
+
         self.is_validating = True
-        self.update_status("⏳ Validating path...", "validating")
+        notification_manager.info("⏳ Validating path...")
 
         try:
             # Convert to Path object
@@ -89,26 +80,29 @@ class AddTamarinPath(Widget):
 
             # Check if file exists
             if not path.exists():
-                self.update_status("❌ Path does not exist", "error")
+                notification_manager.error("❌ Path does not exist")
                 return
 
-            # Create TamarinPath object (this will validate)
-            tamarin_path = TamarinPath(path)
+            # Add to wrapper (this will validate asynchronously)
+            tamarin_path = await self.wrapper.add_tamarin_path(str(path))
 
-            # Check validation results
+            # Check validation results and provide appropriate feedback
             if not tamarin_path.version:
-                self.update_status("❌ Not a valid tamarin-prover", "error")
+                notification_manager.error(
+                    "❌ Not a valid tamarin-prover - no version detected"
+                )
                 return
 
-            if not tamarin_path.test_success:
-                self.update_status("❌ Tamarin test failed", "error")
-                return
+            if tamarin_path.test_success:
+                notification_manager.info(
+                    f"✅ Added: {tamarin_path.version} - fully functional"
+                )
+            else:
+                notification_manager.warning(
+                    f"⚠️ Added: {tamarin_path.version} - test failed, may work partially"
+                )
 
-            # Add to wrapper
-            self.wrapper.add_tamarin_path(str(path))
-            self.update_status(f"✅ Added: {tamarin_path.version}", "success")
-
-            # Clear input and notify
+            # Clear input and notify parent
             path_input = self.query_one("#path_input", Input)
             path_input.value = ""
 
@@ -116,28 +110,6 @@ class AddTamarinPath(Widget):
             self.post_message(self.PathAdded(str(path)))
 
         except Exception as e:
-            self.update_status(f"❌ Error: {str(e)}", "error")
+            notification_manager.error(f"❌ Error: {str(e)}")
         finally:
             self.is_validating = False
-
-    def clear_input(self) -> None:
-        """Clear the input field."""
-        path_input = self.query_one("#path_input", Input)
-        path_input.value = ""
-        self.update_status("", "")
-
-    def browse_for_path(self) -> None:
-        """Open file browser (placeholder - implementation depends on platform)."""
-        # This would need platform-specific implementation
-        # For now, just show a message
-        self.update_status("File browser not implemented yet", "info")
-
-    def update_status(self, message: str, status_type: str) -> None:
-        """Update the status message."""
-        status_widget = self.query_one("#status", Static)
-        status_widget.update(message)
-
-        # Update CSS class based on status type
-        status_widget.remove_class("error", "success", "validating", "info")
-        if status_type:
-            status_widget.add_class(status_type)
