@@ -5,6 +5,8 @@ This module provides a centralized way to send notifications throughout the appl
 without creating tight coupling between business logic and UI components.
 """
 
+from textual.app import App
+
 
 class NotificationManager:
     """
@@ -18,14 +20,14 @@ class NotificationManager:
     def __init__(self):
         self._app_instance = None
 
-    def set_app(self, app):
+    def set_app(self, app: App) -> None:  # type: ignore
         """
         Set the Textual app instance that will handle notifications.
 
         Args:
             app: The Textual app instance
         """
-        self._app_instance = app
+        self._app_instance = app  # type: ignore
 
     def notify(self, message: str, severity: str = "information"):
         """
@@ -35,8 +37,8 @@ class NotificationManager:
             message: The notification message to display
             severity: The severity level ("information", "warning", "error")
         """
-        if self._app_instance:
-            self._app_instance.action_notify(message, severity=severity)
+        if self._app_instance:  # type: ignore
+            self._app_instance.action_notify(message, severity=severity)  # type: ignore
         else:
             # Fallback when no TUI is available (for testing/CLI usage)
             severity_prefix = {
