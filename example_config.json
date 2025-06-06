@@ -1,0 +1,19 @@
+{
+  "tamarin_paths": [
+    {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
+      "version": "1.8.0",
+      "test_success": true
+    },
+    {
+      "path": "tamarin-binaries/tamarin-prover-1.6.1/1.6.1/bin/tamarin-prover",
+      "version": "1.6.1",
+      "test_success": false
+    },
+    {
+      "path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover",
+      "version": "1.11.0",
+      "test_success": false
+    }
+  ]
+}

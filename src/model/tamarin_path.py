@@ -9,6 +9,16 @@ class TamarinPath:
         self.version = ""
         self.test_success = False
 
+    @classmethod
+    def create_from_data(
+        cls, path: Path, version: str, test_success: bool
+    ) -> "TamarinPath":
+        """Create a TamarinPath instance from saved data without validation."""
+        instance = cls(path)
+        instance.version = version
+        instance.test_success = test_success
+        return instance
+
     async def validate(self) -> None:
         """Validate the Tamarin path asynchronously."""
         self.version = await extract_tamarin_version(self.path)
