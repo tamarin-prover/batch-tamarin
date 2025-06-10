@@ -1,34 +1,32 @@
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from modules.tamarin_cmd import extract_tamarin_version, launch_tamarin_test
 
 
-class TamarinPath:
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self.version = ""
-        self.test_success = False
+class TamarinPath(BaseModel):
+    path: Path
+    version: str = ""
+    test_success: bool = False
 
     @classmethod
     def create_from_data(
         cls, path: Path, version: str, test_success: bool
     ) -> "TamarinPath":
         """Create a TamarinPath instance from saved data without validation."""
-        instance = cls(path)
-        instance.version = version
-        instance.test_success = test_success
-        return instance
+        return cls(path=path, version=version, test_success=test_success)
 
-    async def validate(self) -> None:
-        """Validate the Tamarin path asynchronously."""
+    async def test_tamarin(self) -> None:
+        """Call the Tamarin executable to extract version and test its functionality."""
         self.version = await extract_tamarin_version(self.path)
         self.test_success = await launch_tamarin_test(self.path)
 
     @classmethod
     async def create(cls, path: Path) -> "TamarinPath":
         """Factory method to create and validate a TamarinPath asynchronously."""
-        instance = cls(path)
-        await instance.validate()
+        instance = cls(path=path)
+        await instance.test_tamarin()
         return instance
 
     def __str__(self) -> str:

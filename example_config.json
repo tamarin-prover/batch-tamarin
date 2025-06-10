@@ -1,5 +1,5 @@
 {
-  "tamarin_paths": [
+  "tamarin_path": [
     {
       "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
       "version": "1.8.0",

@@ -1,13 +1,14 @@
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from model.tamarin_path import TamarinPath
 from modules.tamarin_detector import detect_tamarin_installations
 from utils.notifications import notification_manager
 
 
-class Wrapper:
-    def __init__(self) -> None:
-        self.tamarin_path: list[TamarinPath] = []
+class Wrapper(BaseModel):
+    tamarin_path: list[TamarinPath] = []
 
     async def add_tamarin_path(self, path: str) -> TamarinPath:
         """
