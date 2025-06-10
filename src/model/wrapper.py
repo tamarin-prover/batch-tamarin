@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any, Dict
 
 from model.tamarin_path import TamarinPath
 from modules.tamarin_detector import detect_tamarin_installations
@@ -9,57 +8,6 @@ from utils.notifications import notification_manager
 class Wrapper:
     def __init__(self) -> None:
         self.tamarin_path: list[TamarinPath] = []
-
-    def to_config(self) -> Dict[str, Any]:
-        """
-        Convert wrapper to configuration dictionary for JSON serialization.
-
-        Returns:
-            Dictionary representation of the wrapper configuration
-        """
-        return {
-            "tamarin_paths": [
-                {
-                    "path": str(tp.path),
-                    "version": tp.version,
-                    "test_success": tp.test_success,
-                }
-                for tp in self.tamarin_path
-            ]
-        }
-
-    def load_from_config(
-        self, config_data: Dict[str, Any], revalidate: bool = False
-    ) -> None:
-        """
-        Load wrapper configuration from dictionary data.
-
-        Args:
-            config_data: Configuration dictionary
-            revalidate: If True, re-validate all tamarin paths after loading
-        """
-        self.tamarin_path.clear()
-
-        for path_data in config_data.get("tamarin_paths", []):
-            try:
-                if revalidate:
-                    # This would need to be called in an async context
-                    # For now, we'll use the non-validating version
-                    pass
-                else:
-                    # Create tamarin path without validation (faster loading)
-                    tamarin_path = TamarinPath.create_from_data(
-                        path=Path(path_data["path"]),
-                        version=path_data.get("version", ""),
-                        test_success=path_data.get("test_success", False),
-                    )
-                    self.tamarin_path.append(tamarin_path)
-
-            except Exception as e:
-                notification_manager.warning(
-                    f"⚠️ Failed to load tamarin path {path_data.get('path', 'unknown')}: {e}"
-                )
-                continue
 
     async def add_tamarin_path(self, path: str) -> TamarinPath:
         """

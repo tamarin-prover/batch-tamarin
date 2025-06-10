@@ -42,7 +42,7 @@ def main(
         False,
         "--revalidate",
         "-r",
-        help="Re-validate tamarin paths when loading from config",
+        help="Re-validate tamarin binaries paths when loading from config, useful for modifying existing configurations",
     ),
 ) -> None:
     """
