@@ -20,6 +20,7 @@
           black
           isort
           autoflake
+          pydantic
         ]);
       in
       {

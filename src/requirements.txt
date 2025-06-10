@@ -1,3 +1,4 @@
+annotated-types==0.7.0
 autoflake==2.3.1
 black==25.1.0
 cffi==1.17.1
@@ -20,8 +21,10 @@ packaging==24.2
 pathspec==0.12.1
 platformdirs==4.3.7
 pluggy==1.5.0
-pre_commit==4.0.1
+pre_commit==4.2.0
 pycparser==2.22
+pydantic==2.11.1
+pydantic_core==2.33.0
 pyflakes==3.3.2
 Pygments==2.19.1
 pytest==8.3.5
@@ -32,6 +35,7 @@ shellingham==1.5.4
 textual==3.3.0
 toml==0.10.2
 typer==0.15.2
+typing-inspection==0.4.0
 typing_extensions==4.13.2
 uc-micro-py==1.0.3
 ukkonen==1.0.1
