@@ -7,14 +7,9 @@
   },
   "tamarin_versions": {
     "stable": {
-      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
-      "version": "1.8.0",
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover",
+      "version": "1.10.0",
       "test_success": true
-    },
-    "legacy": {
-      "path": "tamarin-binaries/tamarin-prover-1.6.1/1.6.1/bin/tamarin-prover",
-      "version": "1.6.1",
-      "test_success": false
     },
     "dev": {
       "path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover",
@@ -26,7 +21,7 @@
     "example_protocol_basic": {
       "theory_file": "protocols/example.spthy",
       "tamarin_versions": ["stable", "dev"],
-      "output_file": "example_basic_results.txt",
+      "output_file": "example.txt",
       "ressources": {
         "max_cores": 4,
         "max_memory": 8,
@@ -34,31 +29,20 @@
       }
     },
     "complex_protocol_analysis": {
-      "theory_file": "protocols/complex_protocol.spthy",
+      "theory_file": "protocols/auth-signing-simple.spthy",
       "tamarin_versions": ["stable"],
-      "output_file": "complex_results.txt",
+      "output_file": "auth_signing_simple.txt",
       "lemmas": [
         {
-          "name": "secrecy",
+          "name": "executable",
           "timeout": 1200
-        },
-        {
-          "name": "authentication",
-          "timeout": 900
-        }
-      ],
-      "tamarin_options": ["--diff"],
-      "preprocess_flags": ["GoodKeysOnly", "bindkttoct"]
-    },
-    "quick_test": {
-      "theory_file": "protocols/test.spthy",
-      "tamarin_versions": ["stable", "legacy", "dev"],
-      "output_file": "test_comparison.txt",
-      "lemmas": [
-        {
-          "name": "basic_lemma"
         }
       ]
+    },
+    "quick_test": {
+      "theory_file": "protocols/NSLPK3.spthy",
+      "tamarin_versions": ["stable", "dev"],
+      "output_file": "NSLPK3.txt"
     }
   }
 }
