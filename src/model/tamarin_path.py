@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from modules.tamarin_cmd import extract_tamarin_version, launch_tamarin_test
+from modules.tamarin_test_cmd import extract_tamarin_version, launch_tamarin_test
 
 
 class TamarinPath(BaseModel):
