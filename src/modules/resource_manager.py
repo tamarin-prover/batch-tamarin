@@ -8,8 +8,8 @@ Tamarin proof execution.
 
 from typing import Dict, List
 
-from ..model.executable_task import ExecutableTask
-from ..utils.notifications import notification_manager
+from model.executable_task import ExecutableTask
+from utils.notifications import notification_manager
 
 
 class ResourceManager:
