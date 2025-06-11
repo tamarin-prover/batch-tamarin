@@ -349,18 +349,21 @@ class ConfigManager:
                     if task.lemmas:
                         # Create separate ExecutableTask for each lemma
                         for lemma in task.lemmas:
+                            output_file_path_lemma = output_file_path.with_name(
+                                f"{output_file_path.stem}_{lemma.name}{output_file_path.suffix}"
+                            )
                             executable_task = ExecutableTask(
-                                task_name=task_name,
+                                task_name=task_name + lemma.name,
                                 tamarin_version_name=version_name,
                                 tamarin_executable=tamarin_executable,
                                 theory_file=theory_file,
-                                output_file=output_file_path,
+                                output_file=output_file_path_lemma,
                                 lemma=lemma.name,
                                 tamarin_options=task.tamarin_options,
                                 preprocess_flags=task.preprocess_flags,
                                 max_cores=max_cores,
                                 max_memory=max_memory,
-                                task_timeout=task_timeout,
+                                task_timeout=lemma.timeout or task_timeout,
                             )
                             executable_tasks.append(executable_task)
                     else:
