@@ -58,6 +58,8 @@ class TaskRunner:
 
         # Track shutdown state
         self._shutdown_requested = False
+        self._force_shutdown_requested = False
+        self._signal_count = 0
         notification_manager.info(
             f"TaskRunner initialized with {global_config.global_max_cores} cores, "
             f"{global_config.global_max_memory}GB memory"
@@ -94,12 +96,23 @@ class TaskRunner:
         self._task_results.clear()
         self._shutdown_requested = False
 
-        # Set up graceful shutdown handler
+        # Set up shutdown handler
         def signal_handler(signum: int, frame: Any) -> None:
-            notification_manager.warning(
-                "Shutdown signal received (CTRL+C). Initiating graceful shutdown..."
-            )
-            self._shutdown_requested = True
+            self._signal_count += 1
+
+            if self._signal_count == 1:
+                notification_manager.warning(
+                    "Shutdown signal received (CTRL+C). Initiating graceful shutdown..."
+                )
+                notification_manager.info(
+                    "Press CTRL+C again to force immediate termination of all tasks."
+                )
+                self._shutdown_requested = True
+            elif self._signal_count >= 2:
+                notification_manager.error(
+                    "Force shutdown signal received (CTRL+C x2). Killing all tasks immediately!"
+                )
+                self._force_shutdown_requested = True
 
         # Register signal handler for CTRL+C
         original_handler = signal.signal(signal.SIGINT, signal_handler)
@@ -132,9 +145,20 @@ class TaskRunner:
         except Exception as e:
             notification_manager.error(f"Unexpected error during task execution: {e}")
             # Clean up any running tasks
-            await self._cleanup_running_tasks()
+            if self._force_shutdown_requested:
+                await self._force_kill_all_tasks()
+            else:
+                await self._cleanup_running_tasks()
             raise
         finally:
+            # Clean up any remaining tasks if shutdown was requested
+            if self._force_shutdown_requested and (
+                self._running_tasks or self._pending_tasks
+            ):
+                await self._force_kill_all_tasks()
+            elif self._shutdown_requested and self._running_tasks:
+                await self._cleanup_running_tasks()
+
             # Restore original signal handler
             signal.signal(signal.SIGINT, original_handler)
 
@@ -156,27 +180,30 @@ class TaskRunner:
         progress_update_interval = 3.0  # Update progress every 3 seconds
 
         while (
-            self._pending_tasks or self._running_tasks
-        ) and not self._shutdown_requested:
+            (self._pending_tasks or self._running_tasks)
+            and not self._shutdown_requested
+            and not self._force_shutdown_requested
+        ):
             # Get next schedulable tasks
             schedulable_tasks = self.resource_manager.get_next_schedulable_tasks(
                 self._pending_tasks
             )
 
-            # Start new tasks as background coroutines
-            for task in schedulable_tasks:
-                if self.resource_manager.allocate_resources(task):
-                    task_id = self._get_task_id(task)
+            # Start new tasks as background coroutines (only if not shutting down)
+            if not self._shutdown_requested and not self._force_shutdown_requested:
+                for task in schedulable_tasks:
+                    if self.resource_manager.allocate_resources(task):
+                        task_id = self._get_task_id(task)
 
-                    # Create and start background coroutine
-                    coroutine = self._execute_single_task(task)
-                    asyncio_task = asyncio.create_task(coroutine)
-                    self._running_tasks[task_id] = asyncio_task
+                        # Create and start background coroutine
+                        coroutine = self._execute_single_task(task)
+                        asyncio_task = asyncio.create_task(coroutine)
+                        self._running_tasks[task_id] = asyncio_task
 
-                    # Remove from pending tasks
-                    self._pending_tasks.remove(task)
+                        # Remove from pending tasks
+                        self._pending_tasks.remove(task)
 
-                    notification_manager.info(f"Started task: {task_id}")
+                        notification_manager.info(f"Started task: {task_id}")
 
             # Check for completed tasks
             completed_task_ids: List[str] = []
@@ -216,13 +243,22 @@ class TaskRunner:
                 self._display_progress_update()
                 last_progress_update = current_time
 
+            # Check for force shutdown more frequently
+            if self._force_shutdown_requested:
+                break
+
             # Small sleep to prevent busy loop
             await asyncio.sleep(1)
 
-        # Handle shutdown scenario
-        if self._shutdown_requested:
+        # Handle shutdown scenarios
+        if self._force_shutdown_requested:
             notification_manager.warning(
-                "Shutdown requested. Waiting for running tasks to complete..."
+                "Force shutdown requested. Killing all running tasks immediately..."
+            )
+            await self._force_kill_all_tasks()
+        elif self._shutdown_requested:
+            notification_manager.warning(
+                "Graceful shutdown requested. Waiting for running tasks to complete..."
             )
             await self._cleanup_running_tasks()
 
@@ -323,15 +359,23 @@ class TaskRunner:
             f"Progress: {completed_count + failed_count}/{total_tasks} complete "
             f"(Running: {running_count}, Pending: {pending_count}, "
             f"Completed: {completed_count}, Failed: {failed_count}) | "
-            f"Resources: {allocated_cores}/{total_cores} cores, "
+            f"Allocated: {allocated_cores}/{total_cores} cores, "
             f"{allocated_memory}/{total_memory}GB memory"
         )
 
         notification_manager.info(progress_msg)
 
+        task_msg = (
+            f"Running tasks: {', '.join(self._running_tasks.keys())}"
+            if self._running_tasks
+            else "No running tasks"
+        )
+
+        notification_manager.info(task_msg)
+
     async def _cleanup_running_tasks(self) -> None:
         """
-        Clean up running tasks during shutdown.
+        Clean up running tasks during graceful shutdown.
 
         Waits for currently running tasks to complete and releases their resources.
         """
@@ -354,13 +398,57 @@ class TaskRunner:
                 )
             except asyncio.TimeoutError:
                 notification_manager.warning(
-                    "Some tasks did not complete within timeout during shutdown"
+                    "Some tasks did not complete within timeout during graceful shutdown"
                 )
 
         # Clear tracking
         self._running_tasks.clear()
 
-        notification_manager.info("Task cleanup completed")
+        notification_manager.info("Graceful shutdown cleanup completed")
+
+    async def _force_kill_all_tasks(self) -> None:
+        """
+        Force kill all running tasks immediately.
+
+        Cancels all asyncio tasks and kills underlying processes via ProcessManager.
+        """
+        if not self._running_tasks:
+            return
+
+        notification_manager.warning(
+            f"Force killing {len(self._running_tasks)} running tasks..."
+        )
+
+        # Cancel all asyncio tasks immediately
+        running_tasks: List[asyncio.Task[TaskResult]] = list(
+            self._running_tasks.values()
+        )
+
+        for task in running_tasks:
+            if not task.done():
+                task.cancel()
+
+        # Force kill all processes via ProcessManager
+        from modules.process_manager import process_manager
+
+        await process_manager.kill_all_processes()
+
+        # Wait briefly for cancellations to complete
+        if running_tasks:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*running_tasks, return_exceptions=True), timeout=5.0
+                )
+            except asyncio.TimeoutError:
+                notification_manager.warning(
+                    "Some tasks did not respond to cancellation within timeout"
+                )
+
+        # Clear all tracking - both running and pending tasks
+        self._running_tasks.clear()
+        self._pending_tasks.clear()
+
+        notification_manager.info("Force shutdown cleanup completed")
 
     def _get_task_id(self, task: ExecutableTask) -> str:
         """
