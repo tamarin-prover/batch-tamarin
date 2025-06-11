@@ -135,7 +135,7 @@
                 "task_timeout": {
                   "type": "integer",
                   "minimum": 1,
-                  "description": "Timeout in seconds for this task (default: 3600)"
+                  "description": "Timeout in seconds for this task (default: default_timeout from config)"
                 }
               },
               "additionalProperties": false
