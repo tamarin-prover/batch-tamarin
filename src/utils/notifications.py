@@ -135,8 +135,8 @@ class NotificationManager:
             styled_message = f"{prefix} {sanitized_message}"
         elif severity == "information":
             # Black styling for information
-            prefix = typer.style("[INFO]", fg=typer.colors.BLACK, bold=True)
-            sanitized_message = typer.style(sanitized_message, fg=typer.colors.BLACK)
+            prefix = typer.style("[INFO]", fg=typer.colors.RESET, bold=True)
+            sanitized_message = typer.style(sanitized_message, fg=typer.colors.RESET)
             styled_message = f"{prefix} {sanitized_message}"
         elif severity == "debug":
             # Gray/dim styling for debug
@@ -147,8 +147,8 @@ class NotificationManager:
             styled_message = f"{prefix} {sanitized_message}"
         else:
             # Default styling
-            prefix = typer.style("[INFO]", fg=typer.colors.BLACK, bold=True)
-            sanitized_message = typer.style(sanitized_message, fg=typer.colors.BLACK)
+            prefix = typer.style("[INFO]", fg=typer.colors.RESET, bold=True)
+            sanitized_message = typer.style(sanitized_message, fg=typer.colors.RESET)
             styled_message = f"{prefix} {sanitized_message}"
 
         # Use typer.echo for output which automatically handles Rich formatting
