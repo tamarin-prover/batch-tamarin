@@ -21,6 +21,7 @@
           isort
           autoflake
           pydantic
+          psutil
         ]);
       in
       {

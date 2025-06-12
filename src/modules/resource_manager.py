@@ -6,7 +6,11 @@ intelligent task scheduling, and resource allocation/deallocation for parallel
 Tamarin proof execution.
 """
 
+import os
 from typing import Dict, List
+
+import psutil
+import typer
 
 from model.executable_task import ExecutableTask
 from utils.notifications import notification_manager
@@ -31,6 +35,45 @@ class ResourceManager:
         """
         self.global_max_cores = global_max_cores
         self.global_max_memory = global_max_memory
+
+        # Verify that global limits on cores are under system limits
+        if cores := os.cpu_count():
+            if global_max_cores > cores:
+                notification_manager.warning(
+                    f"[ResourceManager] Global max cores ({global_max_cores}) exceeds available CPU cores ({cores}). "
+                )
+                fallback = typer.confirm(
+                    "Do you want to fallback to maximum available cores?"
+                )
+                if fallback:
+                    global_max_cores = cores
+                    notification_manager.info(
+                        f"[ResourceManager] Falling back to {global_max_cores} cores."
+                    )
+                else:
+                    notification_manager.info(
+                        f"[ResourceManager] Using configured global max cores: {global_max_cores}."
+                    )
+
+        # Same goes for memory limits
+        system_memory_gb = int(psutil.virtual_memory().total / (1024**3))
+
+        if global_max_memory > system_memory_gb:
+            notification_manager.warning(
+                f"[ResourceManager] Global max memory ({global_max_memory}GB) exceeds available system memory ({system_memory_gb}GB). "
+            )
+            fallback = typer.confirm(
+                "Do you want to fallback to maximum available memory?"
+            )
+            if fallback:
+                global_max_memory = system_memory_gb
+                notification_manager.info(
+                    f"[ResourceManager] Falling back to {global_max_memory}GB memory."
+                )
+            else:
+                notification_manager.info(
+                    f"[ResourceManager] Using configured global max memory: {global_max_memory}GB."
+                )
 
         # Track current allocations
         self.allocated_cores = 0

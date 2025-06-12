@@ -1,7 +1,7 @@
 {
 	"config": {
-		"global_max_cores": 24,
-		"global_max_memory": 24,
+		"global_max_cores": 10,
+		"global_max_memory": 32,
 		"default_timeout": 7200,
 		"output_directory": "./results"
 	},
@@ -22,8 +22,8 @@
 			"tamarin_versions": ["stable", "dev", "legacy"],
 			"output_file": "wpa2.txt",
 			"ressources": {
-				"max_cores": 2,
-				"max_memory": 1
+				"max_cores": 4,
+				"max_memory": 8
 			},
             "lemmas" : [
                 {
