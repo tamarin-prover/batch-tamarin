@@ -1,7 +1,9 @@
 import json
+import shutil
 from pathlib import Path
 from typing import List
 
+import typer
 from pydantic import ValidationError
 
 from model.executable_task import ExecutableTask
@@ -101,12 +103,40 @@ class ConfigManager:
                 except Exception as e:
                     error_msg = f"[ConfigManager] Failed to create output directory {output_dir}: {e}"
                     raise ConfigError(error_msg) from e
+            else:
+                # Directory exists, check if it's a directory
+                if not output_dir.is_dir():
+                    error_msg = (
+                        f"[ConfigManager] Output path is not a directory: {output_dir}"
+                    )
+                    raise ConfigError(error_msg)
 
-            if not output_dir.is_dir():
-                error_msg = (
-                    f"[ConfigManager] Output path is not a directory: {output_dir}"
-                )
-                raise ConfigError(error_msg)
+                # Check if directory is empty
+                if any(output_dir.iterdir()):
+                    # Directory is not empty, prompt user
+                    should_wipe = typer.confirm(
+                        f"Output directory '{output_dir}' is not empty. Do you want to DELETE its contents?",
+                        default=False,
+                    )
+
+                    if should_wipe:
+                        try:
+                            # Remove all contents of the directory
+                            for item in output_dir.iterdir():
+                                if item.is_dir():
+                                    shutil.rmtree(item)
+                                else:
+                                    item.unlink()
+                            notification_manager.info(
+                                f"[ConfigManager] Wiped contents of output directory: {output_dir}"
+                            )
+                        except Exception as e:
+                            error_msg = f"[ConfigManager] Failed to wipe output directory {output_dir}: {e}"
+                            raise ConfigError(error_msg) from e
+                    else:
+                        notification_manager.info(
+                            f"[ConfigManager] Continuing with non-empty output directory: {output_dir}"
+                        )
 
             for task_name, task in recipe.tasks.items():
                 # Validate theory file exists
