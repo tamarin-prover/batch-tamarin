@@ -7,10 +7,11 @@ without creating tight coupling between business logic and UI components.
 
 import re
 
+import typer
 from textual.app import App
 
 
-def _sanitize_message(message: str) -> str:
+def _sanitize_message(message: str, for_rich: bool = False) -> str:
     """
     Sanitize a message to prevent control characters from crashing the UI.
 
@@ -19,6 +20,7 @@ def _sanitize_message(message: str) -> str:
 
     Args:
         message: The raw message string
+        for_rich: If True, preserve some markup-safe characters for rich formatting
 
     Returns:
         A sanitized version of the message safe for display
@@ -35,11 +37,15 @@ def _sanitize_message(message: str) -> str:
     # Replace any remaining @ sequences that might be interpreted as markup
     message = message.replace("@@", "@")
 
-    # Escape square brackets that can be interpreted as markup
-    message = message.replace("[", "(").replace("]", ")")
-
-    # Remove any other characters that could cause markup parsing issues
-    message = re.sub(r"[<>{}]", "", message)
+    if not for_rich:
+        # Escape square brackets that can be interpreted as markup (only for non-rich output)
+        message = message.replace("[", "(").replace("]", ")")
+        # Remove any other characters that could cause markup parsing issues
+        message = re.sub(r"[<>{}]", "", message)
+    else:
+        # For rich output, preserve module prefixes like [TaskManager] but escape problematic characters
+        # Only escape characters that could break rich markup
+        message = re.sub(r"[<>{}]", "", message)
 
     # Replace multiple spaces/tabs with single space for cleaner display
     message = re.sub(r"\s+", " ", message)
@@ -79,32 +85,74 @@ class NotificationManager:
 
         Args:
             message: The notification message to display
-            severity: The severity level ("information", "warning", "error")
+            severity: The severity level ("information", "warning", "error", "debug")
         """
-        # Sanitize the message to prevent UI crashes from control characters
-        sanitized_message = _sanitize_message(message)
-
         if self._app_instance:  # type: ignore
+            # Sanitize the message for TUI (preserve original behavior)
+            sanitized_message = _sanitize_message(message, for_rich=False)
+
             if severity == "debug":
                 # Debug messages are not sent to the TUI, but can be logged if debug is enabled
                 if self._debug_enabled:
-                    print(f"[DEBUG] {sanitized_message}")
+                    self._render_rich_notification(message, severity)
                 return
-            self._app_instance.action_notify(sanitized_message, severity=severity)  # type: ignore
+            self._app_instance.action_notify(  # type: ignore
+                sanitized_message, severity=severity
+            )
         else:
-            # Fallback when no TUI is available (for testing/CLI usage)
-            severity_prefix = {
-                "information": "INFO",
-                "warning": "WARN",
-                "error": "ERROR",
-                "debug": "DEBUG",
-            }.get(severity, "INFO")
-
-            # Only print debug messages if debug is enabled
+            # Enhanced console fallback with Typer's Rich integration
             if severity == "debug" and not self._debug_enabled:
                 return
 
-            print(f"[{severity_prefix}] {sanitized_message}")
+            self._render_rich_notification(message, severity)
+
+    def _render_rich_notification(self, message: str, severity: str):
+        """
+        Render a notification using Typer's Rich integration for console output.
+
+        Args:
+            message: The notification message to display
+            severity: The severity level ("information", "warning", "error", "debug")
+        """
+        # Sanitize message for rich output (preserves some formatting)
+        sanitized_message = _sanitize_message(message, for_rich=True)
+
+        # Define styling for different severity levels using Typer's style system
+        # Only the prefix is bold and colored, the message remains normal
+        if severity == "error":
+            # Red styling for errors
+            prefix = typer.style("[ERROR]", fg=typer.colors.RED, bold=True)
+            sanitized_message = typer.style(
+                f"{sanitized_message}", fg=typer.colors.BRIGHT_RED
+            )
+            styled_message = f"{prefix} {sanitized_message}"
+        elif severity == "warning":
+            # Yellow/orange styling for warnings
+            prefix = typer.style("[WARN]", fg=typer.colors.YELLOW, bold=True)
+            sanitized_message = typer.style(
+                sanitized_message, fg=typer.colors.BRIGHT_YELLOW
+            )
+            styled_message = f"{prefix} {sanitized_message}"
+        elif severity == "information":
+            # Black styling for information
+            prefix = typer.style("[INFO]", fg=typer.colors.BLACK, bold=True)
+            sanitized_message = typer.style(sanitized_message, fg=typer.colors.BLACK)
+            styled_message = f"{prefix} {sanitized_message}"
+        elif severity == "debug":
+            # Gray/dim styling for debug
+            prefix = typer.style("[DEBUG]", fg=typer.colors.BRIGHT_BLACK, bold=True)
+            sanitized_message = typer.style(
+                sanitized_message, fg=typer.colors.BRIGHT_BLACK
+            )
+            styled_message = f"{prefix} {sanitized_message}"
+        else:
+            # Default styling
+            prefix = typer.style("[INFO]", fg=typer.colors.BLACK, bold=True)
+            sanitized_message = typer.style(sanitized_message, fg=typer.colors.BLACK)
+            styled_message = f"{prefix} {sanitized_message}"
+
+        # Use typer.echo for output which automatically handles Rich formatting
+        typer.echo(styled_message)
 
     def error(self, message: str):
         """
