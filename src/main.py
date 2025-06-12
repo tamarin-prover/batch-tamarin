@@ -4,26 +4,11 @@ from typing import Optional
 
 import typer
 
-from model.wrapper import Wrapper
-from modules.config_manager import ConfigError, ConfigManager
+from modules.config_manager import ConfigManager
 from runner import TaskRunner
-from ui.panels.tamarin_path_manager import TamarinPathManager
 from utils.notifications import notification_manager
 
 app = typer.Typer(help="Tamarin-wrapper")
-
-
-async def load_wrapper_from_config(
-    config_path: Path, revalidate: bool = False
-) -> Wrapper:
-    """Load wrapper from configuration file."""
-    try:
-        wrapper = await ConfigManager.load_wrapper_config(config_path, revalidate)
-        return wrapper
-    except ConfigError as e:
-        notification_manager.error(f"Failed to load configuration: {e}")
-        # Fall back to empty wrapper
-        return Wrapper()
 
 
 async def process_config_file(config_path: Path, revalidate: bool = False) -> None:
@@ -31,7 +16,7 @@ async def process_config_file(config_path: Path, revalidate: bool = False) -> No
     try:
         # Load recipe and convert to executable tasks
         config_manager = ConfigManager()
-        recipe = await config_manager.load_recipe(config_path, revalidate)
+        recipe = await config_manager.load_json_recipe(config_path, revalidate)
         executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
 
         # Execute all tasks using runner
@@ -80,10 +65,10 @@ def main(
         print("Tamarin-wrapper v0.1")
         return
 
-    if modify:
+    if modify and config_file:
         # Load configuration and open UI
-        config_path = Path(modify)
-        wrapper = asyncio.run(load_wrapper_from_config(config_path, revalidate))
+        # TODO: reimplement UI modification loading
+        pass
     elif config_file:
         # Execute config file tasks
         config_path = Path(config_file)
@@ -97,12 +82,11 @@ def main(
             notification_manager.error(f"Failed to process JSON recipe : {e}")
             raise typer.Exit(1)
     else:
-        # Normal startup (auto-detection will run in UI if needed)
-        wrapper = Wrapper()
+        # Normal startup
+        # TODO: reimplement UI configless loading
+        pass
 
-    # Start the UI
-    app = TamarinPathManager(wrapper)
-    app.run()
+    # TODO: Start the UI
 
 
 if __name__ == "__main__":

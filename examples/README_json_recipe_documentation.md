@@ -113,7 +113,7 @@ Lemmas can be specified as objects with individual timeouts:
 
 #### Lemma Properties:
 - **`name`** (string, required): Name of the lemma to prove
-- **`timeout`** (integer, optional): Specific timeout in seconds for this lemma
+- **`timeout`** (integer, optional): Specific timeout in seconds for this lemma, this will overwrite the `task_timeout` property.
 
 ## Resource Management
 
