@@ -41,8 +41,8 @@ class ResourceManager:
         # Value: tuple of (cores, memory) allocated to that task
         self.task_allocations: Dict[str, tuple[int, int]] = {}
 
-        notification_manager.info(
-            f"ResourceManager initialized: {global_max_cores} cores, {global_max_memory}GB memory"
+        notification_manager.debug(
+            f"[ResourceManager] Initialized: {global_max_cores} cores, {global_max_memory}GB memory"
         )
 
     def _get_task_id(self, task: ExecutableTask) -> str:
@@ -75,8 +75,8 @@ class ResourceManager:
         )
 
         if not can_schedule:
-            notification_manager.info(
-                f"Cannot schedule task {self._get_task_id(task)}: "
+            notification_manager.debug(
+                f"[ResourceManager] Cannot schedule task {self._get_task_id(task)}: "
                 f"needs {task.max_cores} cores/{task.max_memory}GB, "
                 f"available {available_cores} cores/{available_memory}GB"
             )
@@ -97,8 +97,8 @@ class ResourceManager:
 
         # Check if task already has resources allocated
         if task_id in self.task_allocations:
-            notification_manager.warning(
-                f"Task {task_id} already has resources allocated"
+            notification_manager.error(
+                f"[ResourceManager] Task {task_id} already has resources allocated"
             )
             return False
 
@@ -111,8 +111,8 @@ class ResourceManager:
         self.allocated_memory += task.max_memory
         self.task_allocations[task_id] = (task.max_cores, task.max_memory)
 
-        notification_manager.info(
-            f"Allocated resources to {task_id}: {task.max_cores} cores, {task.max_memory}GB. "
+        notification_manager.debug(
+            f"[ResourceManager] Allocated resources to {task_id}: {task.max_cores} cores, {task.max_memory}GB. "
             f"Total allocated: {self.allocated_cores}/{self.global_max_cores} cores, "
             f"{self.allocated_memory}/{self.global_max_memory}GB memory"
         )
@@ -130,8 +130,8 @@ class ResourceManager:
 
         # Check if task has allocated resources
         if task_id not in self.task_allocations:
-            notification_manager.warning(
-                f"Attempted to release resources for task {task_id} "
+            notification_manager.error(
+                f"[ResourceManager] Attempted to release resources for task {task_id} "
                 f"that was not previously allocated"
             )
             return
@@ -146,8 +146,8 @@ class ResourceManager:
         self.allocated_cores = max(0, self.allocated_cores)
         self.allocated_memory = max(0, self.allocated_memory)
 
-        notification_manager.info(
-            f"Released resources from {task_id}: {cores} cores, {memory}GB. "
+        notification_manager.debug(
+            f"[ResourceManager] Released resources from {task_id}: {cores} cores, {memory}GB. "
             f"Total allocated: {self.allocated_cores}/{self.global_max_cores} cores, "
             f"{self.allocated_memory}/{self.global_max_memory}GB memory"
         )
@@ -190,8 +190,8 @@ class ResourceManager:
                 remaining_cores -= task.max_cores
                 remaining_memory -= task.max_memory
 
-                notification_manager.info(
-                    f"Task {self._get_task_id(task)} selected for scheduling: "
+                notification_manager.debug(
+                    f"[ResourceManager] Task {self._get_task_id(task)} selected for scheduling: "
                     f"{task.max_cores} cores, {task.max_memory}GB. "
                     f"Remaining: {remaining_cores} cores, {remaining_memory}GB"
                 )
@@ -199,13 +199,13 @@ class ResourceManager:
         if schedulable_tasks:
             total_cores = sum(task.max_cores for task in schedulable_tasks)
             total_memory = sum(task.max_memory for task in schedulable_tasks)
-            notification_manager.info(
-                f"Scheduling {len(schedulable_tasks)} tasks requiring "
+            notification_manager.debug(
+                f"[ResourceManager] Scheduling {len(schedulable_tasks)} tasks requiring "
                 f"{total_cores} cores, {total_memory}GB total"
             )
         else:
-            notification_manager.info(
-                "No tasks can be scheduled with current resources"
+            notification_manager.debug(
+                "[ResourceManager] No tasks can be scheduled with current resources"
             )
 
         return schedulable_tasks

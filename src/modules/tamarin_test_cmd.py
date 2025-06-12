@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
+from typing import Dict
 
+from model.tamarin_recipe import TamarinVersion
 from modules.process_manager import process_manager
 from utils.notifications import notification_manager
 
@@ -24,10 +26,10 @@ async def extract_tamarin_version(path: Path) -> str:
         # Check if command executed successfully
         if return_code != 0:
             notification_manager.error(
-                f"Version command failed with return code {return_code}"
+                f"[TamarinTest] Version command failed with return code {return_code}"
             )
             if stderr:
-                notification_manager.error(f"Error output: {stderr}")
+                notification_manager.error(f"[TamarinTest] Error output: {stderr}")
             return ""
 
         # Parse the output to extract version
@@ -44,14 +46,20 @@ async def extract_tamarin_version(path: Path) -> str:
                 formatted_version = f"v{version}"
                 return formatted_version
             else:
-                notification_manager.error("Could not parse version from output")
+                notification_manager.error(
+                    "[TamarinTest] Could not parse version from output"
+                )
                 return ""
         else:
-            notification_manager.error("No output received from version command")
+            notification_manager.error(
+                "[TamarinTest] No output received from version command"
+            )
             return ""
 
     except Exception as e:
-        notification_manager.error(f"Unexpected error during version extraction: {e}")
+        notification_manager.error(
+            f"[TamarinTest] Unexpected error during version extraction: {e}"
+        )
         return ""
 
 
@@ -71,10 +79,10 @@ async def launch_tamarin_test(path: Path) -> bool:
         # Check if command executed successfully
         if return_code != 0:
             notification_manager.error(
-                f"Test command failed with return code {return_code}"
+                f"[TamarinTest] Test command failed with return code {return_code}"
             )
             if stderr:
-                notification_manager.error(f"Error output: {stderr}")
+                notification_manager.error(f"[TamarinTest] Error output: {stderr}")
             return False
 
         # Parse the output to verify test success
@@ -89,11 +97,73 @@ async def launch_tamarin_test(path: Path) -> bool:
         # Verify all success indicators are present
         for indicator in success_indicators:
             if indicator not in output:
-                notification_manager.error(f"Missing success indicator: '{indicator}'")
+                notification_manager.error(
+                    f"[TamarinTest] Missing success indicator: '{indicator}'"
+                )
                 return False
 
         return True
 
     except Exception as e:
-        notification_manager.error(f"Unexpected error during tamarin test: {e}")
+        notification_manager.error(
+            f"[TamarinTest] Unexpected error during tamarin test: {e}"
+        )
         return False
+
+
+async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -> None:
+    """
+    Test tamarin executables for functionality and update TamarinVersion objects.
+
+    Args:
+        versions: Dictionary of tamarin versions to revalidate
+    """
+    for version_name, tamarin_version in tamarin_versions.items():
+        try:
+            tamarin_path = Path(tamarin_version.path)
+
+            # Check if executable exists
+            if not tamarin_path.exists():
+                notification_manager.error(
+                    f"[TamarinTest] Tamarin executable not found: {tamarin_path}"
+                )
+                tamarin_version.version = ""
+                tamarin_version.test_success = False
+                continue
+
+            if not tamarin_path.is_file():
+                notification_manager.error(
+                    f"[TamarinTest] Tamarin path is not a file: {tamarin_path}"
+                )
+                tamarin_version.version = ""
+                tamarin_version.test_success = False
+                continue
+
+            # Extract version information
+            extracted_version = await extract_tamarin_version(tamarin_path)
+            if extracted_version:
+                tamarin_version.version = extracted_version
+            else:
+                notification_manager.warning(
+                    f"[TamarinTest] Could not extract version for {version_name}"
+                )
+
+            # Test tamarin functionality
+            test_result = await launch_tamarin_test(tamarin_path)
+            tamarin_version.test_success = test_result
+
+            if test_result:
+                notification_manager.info(
+                    f"[TamarinTest] Tamarin alias '{version_name}' passed integrity test "
+                    f"(reported {tamarin_version.version})"
+                )
+            else:
+                notification_manager.warning(
+                    f"[TamarinTest] Tamarin alias '{version_name}' failed integrity test"
+                )
+
+        except Exception as e:
+            notification_manager.error(
+                f"[TamarinTest] Failed to revalidate tamarin alias '{version_name}': {e}"
+            )
+            tamarin_version.test_success = False

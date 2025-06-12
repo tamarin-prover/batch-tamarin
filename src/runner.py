@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Set
 
 from model.executable_task import (
     ExecutableTask,
-    ExecutionSummary,
     TaskResult,
     TaskStatus,
 )
@@ -60,12 +59,8 @@ class TaskRunner:
         self._shutdown_requested = False
         self._force_shutdown_requested = False
         self._signal_count = 0
-        notification_manager.info(
-            f"TaskRunner initialized with {global_config.global_max_cores} cores, "
-            f"{global_config.global_max_memory}GB memory"
-        )
 
-    async def execute_all_tasks(self, tasks: List[ExecutableTask]) -> ExecutionSummary:
+    async def execute_all_tasks(self, tasks: List[ExecutableTask]) -> None:
         """
         Main orchestration method to coordinate resource allocation and task execution.
 
@@ -85,8 +80,7 @@ class TaskRunner:
             ExecutionSummary: Final execution summary with statistics
         """
         if not tasks:
-            notification_manager.warning("No tasks provided for execution")
-            return self.task_manager.generate_execution_summary()
+            notification_manager.error("[TaskRunner] No tasks provided for execution")
 
         # Initialize task tracking
         self._pending_tasks = tasks.copy()
@@ -101,16 +95,13 @@ class TaskRunner:
             self._signal_count += 1
 
             if self._signal_count == 1:
-                notification_manager.warning(
-                    "Shutdown signal received (CTRL+C). Initiating graceful shutdown..."
-                )
                 notification_manager.info(
-                    "Press CTRL+C again to force immediate termination of all tasks."
+                    "[TaskRunner] Shutdown signal received (CTRL+C). Initiating graceful shutdown... \nPress CTRL+C again to force immediate termination of all tasks."
                 )
                 self._shutdown_requested = True
             elif self._signal_count >= 2:
-                notification_manager.error(
-                    "Force shutdown signal received (CTRL+C x2). Killing all tasks immediately!"
+                notification_manager.warning(
+                    "[TaskRunner] Force shutdown signal received (CTRL+C x2). Killing all tasks immediately!"
                 )
                 self._force_shutdown_requested = True
 
@@ -120,7 +111,7 @@ class TaskRunner:
         try:
             # Display initial status
             notification_manager.info(
-                f"Starting execution of {len(tasks)} tasks. "
+                f"[TaskRunner] Starting execution of {len(tasks)} tasks. "
                 f"Available resources: {self.resource_manager.get_available_cores()} cores, "
                 f"{self.resource_manager.get_available_memory()}GB memory"
             )
@@ -133,17 +124,17 @@ class TaskRunner:
 
             # Display final statistics
             notification_manager.info(
-                f"Execution complete. "
+                f"[TaskRunner] Execution complete. "
                 f"Total: {summary.total_tasks}, "
                 f"Successful: {summary.successful_tasks}, "
                 f"Failed: {summary.failed_tasks}, "
                 f"Duration: {summary.total_duration:.2f}s"
             )
 
-            return summary
-
         except Exception as e:
-            notification_manager.error(f"Unexpected error during task execution: {e}")
+            notification_manager.error(
+                f"[TaskRunner] Unexpected error during task execution: {e}"
+            )
             # Clean up any running tasks
             if self._force_shutdown_requested:
                 await self._force_kill_all_tasks()
@@ -203,7 +194,9 @@ class TaskRunner:
                         # Remove from pending tasks
                         self._pending_tasks.remove(task)
 
-                        notification_manager.info(f"Started task: {task_id}")
+                        notification_manager.info(
+                            f"[TaskRunner] Started task: {task_id}"
+                        )
 
             # Check for completed tasks
             completed_task_ids: List[str] = []
@@ -229,12 +222,12 @@ class TaskRunner:
                         self._handle_task_completion(corresponding_task, task_result)
                     else:
                         notification_manager.error(
-                            f"Could not find corresponding task for {task_id}"
+                            f"[TaskRunner] Could not find corresponding task for {task_id}"
                         )
 
                 except Exception as e:
                     notification_manager.error(
-                        f"Error retrieving result for task {task_id}: {e}"
+                        f"[TaskRunner] Error retrieving result for task {task_id}: {e}"
                     )
 
             # Display progress update periodically
@@ -252,13 +245,13 @@ class TaskRunner:
 
         # Handle shutdown scenarios
         if self._force_shutdown_requested:
-            notification_manager.warning(
-                "Force shutdown requested. Killing all running tasks immediately..."
+            notification_manager.debug(
+                "[TaskRunner] Force shutdown requested. Killing all running tasks immediately..."
             )
             await self._force_kill_all_tasks()
         elif self._shutdown_requested:
-            notification_manager.warning(
-                "Graceful shutdown requested. Waiting for running tasks to complete..."
+            notification_manager.debug(
+                "[TaskRunner] Graceful shutdown requested. Waiting for running tasks to complete..."
             )
             await self._cleanup_running_tasks()
 
@@ -281,7 +274,7 @@ class TaskRunner:
             # Create error result if task execution fails unexpectedly
             task_id = self._get_task_id(task)
             notification_manager.error(
-                f"Unexpected error executing task {task_id}: {e}"
+                f"[TaskRunner] Unexpected error executing task {task_id}: {e}"
             )
 
             # Create a failed TaskResult
@@ -320,12 +313,12 @@ class TaskRunner:
         if result.status == TaskStatus.COMPLETED:
             self._completed_tasks.add(task_id)
             notification_manager.info(
-                f"Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
+                f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
             )
         else:
             self._failed_tasks.add(task_id)
             notification_manager.error(
-                f"Task failed: {task_id} (status: {result.status.value}, "
+                f"[TaskRunner] Task failed: {task_id} (status: {result.status.value}, "
                 f"return_code: {result.return_code}, duration: {result.duration:.2f}s)"
             )
 
@@ -356,7 +349,7 @@ class TaskRunner:
         total_memory = self.resource_manager.global_max_memory
 
         progress_msg = (
-            f"Progress: {completed_count + failed_count}/{total_tasks} complete "
+            f"[TaskRunner] Progress: {completed_count + failed_count}/{total_tasks} complete "
             f"(Running: {running_count}, Pending: {pending_count}, "
             f"Completed: {completed_count}, Failed: {failed_count}) | "
             f"Allocated: {allocated_cores}/{total_cores} cores, "
@@ -366,7 +359,7 @@ class TaskRunner:
         notification_manager.info(progress_msg)
 
         task_msg = (
-            f"Running tasks: {', '.join(self._running_tasks.keys())}"
+            f"[TaskRunner] Running tasks: {', '.join(self._running_tasks.keys())}"
             if self._running_tasks
             else "No running tasks"
         )
@@ -383,7 +376,7 @@ class TaskRunner:
             return
 
         notification_manager.info(
-            f"Waiting for {len(self._running_tasks)} running tasks to complete..."
+            f"[TaskRunner] Waiting for {len(self._running_tasks)} running tasks to complete..."
         )
 
         # Wait for all running tasks to complete
@@ -398,13 +391,13 @@ class TaskRunner:
                 )
             except asyncio.TimeoutError:
                 notification_manager.warning(
-                    "Some tasks did not complete within timeout during graceful shutdown"
+                    "[TaskRunner] Some tasks did not complete within timeout during graceful shutdown"
                 )
 
         # Clear tracking
         self._running_tasks.clear()
 
-        notification_manager.info("Graceful shutdown cleanup completed")
+        notification_manager.info("[TaskRunner] Graceful shutdown cleanup completed")
 
     async def _force_kill_all_tasks(self) -> None:
         """
@@ -414,10 +407,6 @@ class TaskRunner:
         """
         if not self._running_tasks:
             return
-
-        notification_manager.warning(
-            f"Force killing {len(self._running_tasks)} running tasks..."
-        )
 
         # Cancel all asyncio tasks immediately
         running_tasks: List[asyncio.Task[TaskResult]] = list(
@@ -441,14 +430,14 @@ class TaskRunner:
                 )
             except asyncio.TimeoutError:
                 notification_manager.warning(
-                    "Some tasks did not respond to cancellation within timeout"
+                    "[TaskRunner] Some tasks did not respond to cancellation within timeout"
                 )
 
         # Clear all tracking - both running and pending tasks
         self._running_tasks.clear()
         self._pending_tasks.clear()
 
-        notification_manager.info("Force shutdown cleanup completed")
+        notification_manager.info("[TaskRunner] Force shutdown cleanup completed")
 
     def _get_task_id(self, task: ExecutableTask) -> str:
         """
@@ -460,4 +449,4 @@ class TaskRunner:
         Returns:
             Unique string identifier combining task name and tamarin version
         """
-        return f"{task.task_name}_{task.tamarin_version_name}"
+        return f"{task.tamarin_version_name}_{task.task_name}"

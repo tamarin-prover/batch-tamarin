@@ -63,7 +63,7 @@ class TaskManager:
         self.update_task_status(task_id, TaskStatus.RUNNING)
 
         # Notify start of execution
-        notification_manager.info(f"Starting task: {task_id}")
+        notification_manager.debug(f"[TaskManager] Starting task: {task_id}")
 
         try:
             # Execute the command using existing run_command method
@@ -77,14 +77,16 @@ class TaskManager:
 
             if return_code == 0:
                 status = TaskStatus.COMPLETED
-                notification_manager.info(f"Task completed successfully: {task_id}")
+                notification_manager.debug(
+                    f"[TaskManager] Task completed successfully: {task_id}"
+                )
             elif return_code == -1 and stderr == "Process timed out":
                 status = TaskStatus.TIMEOUT
-                notification_manager.warning(f"Task timed out: {task_id}")
+                notification_manager.warning(f"[TaskManager] Task timed out: {task_id}")
             else:
                 status = TaskStatus.FAILED
                 notification_manager.error(
-                    f"Task failed: {task_id} (exit code: {return_code})"
+                    f"[TaskManager] Task failed: {task_id} (exit code: {return_code})"
                 )
 
             # Create task result
@@ -110,7 +112,9 @@ class TaskManager:
             end_time = asyncio.get_event_loop().time()
             duration = end_time - start_time
 
-            notification_manager.error(f"Unexpected error in task {task_id}: {e}")
+            notification_manager.error(
+                f"[TaskManager] Unexpected error in task {task_id}: {e}"
+            )
 
             task_result = TaskResult(
                 task_id=task_id,
@@ -184,7 +188,9 @@ class TaskManager:
             self._task_start_times[task_id] = asyncio.get_event_loop().time()
 
         # Notify status change
-        notification_manager.info(f"Task {task_id} status updated to {status.value}")
+        notification_manager.debug(
+            f"[TaskManager] Task {task_id} status updated to {status.value}"
+        )
 
     def generate_execution_summary(self) -> ExecutionSummary:
         """
@@ -284,7 +290,7 @@ class TaskManager:
 
         if tasks_to_remove:
             notification_manager.info(
-                f"Cleared {len(tasks_to_remove)} completed tasks from tracking"
+                f"[TaskManager] Cleared {len(tasks_to_remove)} completed tasks from tracking : {tasks_to_remove}"
             )
 
 

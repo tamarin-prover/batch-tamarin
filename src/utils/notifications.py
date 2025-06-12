@@ -60,8 +60,9 @@ class NotificationManager:
     without directly depending on the Textual app instance.
     """
 
-    def __init__(self):
+    def __init__(self, debug_enabled: bool = False):
         self._app_instance = None
+        self._debug_enabled = debug_enabled
 
     def set_app(self, app: App) -> None:  # type: ignore
         """
@@ -84,6 +85,11 @@ class NotificationManager:
         sanitized_message = _sanitize_message(message)
 
         if self._app_instance:  # type: ignore
+            if severity == "debug":
+                # Debug messages are not sent to the TUI, but can be logged if debug is enabled
+                if self._debug_enabled:
+                    print(f"[DEBUG] {sanitized_message}")
+                return
             self._app_instance.action_notify(sanitized_message, severity=severity)  # type: ignore
         else:
             # Fallback when no TUI is available (for testing/CLI usage)
@@ -91,7 +97,13 @@ class NotificationManager:
                 "information": "INFO",
                 "warning": "WARN",
                 "error": "ERROR",
+                "debug": "DEBUG",
             }.get(severity, "INFO")
+
+            # Only print debug messages if debug is enabled
+            if severity == "debug" and not self._debug_enabled:
+                return
+
             print(f"[{severity_prefix}] {sanitized_message}")
 
     def error(self, message: str):
@@ -120,6 +132,33 @@ class NotificationManager:
             message: The warning message to display
         """
         self.notify(message, "warning")
+
+    def debug(self, message: str):
+        """
+        Send a debug notification.
+
+        Args:
+            message: The debug message to display
+        """
+        self.notify(message, "debug")
+
+    def set_debug(self, enabled: bool):
+        """
+        Enable or disable debug output.
+
+        Args:
+            enabled: True to enable debug output, False to disable
+        """
+        self._debug_enabled = enabled
+
+    def is_debug_enabled(self) -> bool:
+        """
+        Check if debug output is currently enabled.
+
+        Returns:
+            True if debug output is enabled, False otherwise
+        """
+        return self._debug_enabled
 
     def clear_app(self):
         """

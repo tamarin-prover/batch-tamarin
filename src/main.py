@@ -36,12 +36,7 @@ async def process_config_file(config_path: Path, revalidate: bool = False) -> No
 
         # Execute all tasks using runner
         runner = TaskRunner(recipe.config)
-        summary = await runner.execute_all_tasks(executable_tasks)
-
-        # Print execution summary
-        notification_manager.info(
-            f"Execution completed: {summary.successful_tasks}/{summary.total_tasks} tasks successful"
-        )
+        await runner.execute_all_tasks(executable_tasks)
 
     except Exception as e:
         notification_manager.error(f"Execution failed: {e}")
@@ -50,13 +45,13 @@ async def process_config_file(config_path: Path, revalidate: bool = False) -> No
 
 def main(
     config_file: Optional[str] = typer.Argument(
-        None, help="Configuration file to process and execute tasks"
+        None, help="JSON recipe file to execute"
     ),
     modify: Optional[str] = typer.Option(
         None,
         "--modify",
         "-m",
-        help="Load configuration file and open UI for modification",
+        help="Load JSON recipe and open UI for modification instead of execution",
     ),
     version: bool = typer.Option(
         False, "--version", "-v", help="Show Tamarin-wrapper version."
@@ -65,12 +60,22 @@ def main(
         False,
         "--revalidate",
         "-r",
-        help="Re-validate tamarin binaries paths when loading from config, useful for modifying existing configurations",
+        help="Check tamarin binaries integrity when loading from a JSON recipe",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable debug output for the application.",
     ),
 ) -> None:
     """
     Entry point for the Tamarin-wrapper application.
     """
+    # Set debug mode if enabled
+    if debug:
+        notification_manager.set_debug(True)
+        notification_manager.debug("[NotificationUtil] DEBUG Enabled")
     if version:
         print("Tamarin-wrapper v0.1")
         return
@@ -89,7 +94,7 @@ def main(
             # Re-raise typer.Exit to maintain proper exit codes
             raise
         except Exception as e:
-            notification_manager.error(f"Failed to process config file: {e}")
+            notification_manager.error(f"Failed to process JSON recipe : {e}")
             raise typer.Exit(1)
     else:
         # Normal startup (auto-detection will run in UI if needed)

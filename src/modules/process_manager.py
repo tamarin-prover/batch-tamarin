@@ -74,19 +74,25 @@ class ProcessManager:
             )
             self._active_processes[process_id] = process_info
 
+            notification_manager.debug(
+                f"[ProcessManager] Running command: {' '.join(command)}"
+            )
+
             try:
                 # Wait with timeout
                 result = await asyncio.wait_for(task, timeout=timeout)
                 return result
 
             except asyncio.TimeoutError:
-                notification_manager.warning(f"Command timed out: {' '.join(command)}")
+                notification_manager.warning(
+                    f"[ProcessManager] Command timed out: {' '.join(command)}"
+                )
                 await self._kill_process(process_id)
                 return (-1, "", "Process timed out")
 
         except Exception as e:
             notification_manager.error(
-                f"Error running command {' '.join(command)}: {e}"
+                f"[ProcessManager] Error running command {' '.join(command)}: {e}"
             )
             return (-1, "", str(e))
 
@@ -131,15 +137,17 @@ class ProcessManager:
                 process_info.task.cancel()  # type: ignore
 
         except Exception as e:
-            notification_manager.error(f"Error killing process {process_id}: {e}")
+            notification_manager.error(
+                f"[ProcessManager] Error killing process {process_id}: {e}"
+            )
 
     async def kill_all_processes(self) -> None:
         """Kill all active processes."""
         if not self._active_processes:
             return
 
-        notification_manager.info(
-            f"Killing {len(self._active_processes)} active processes..."
+        notification_manager.debug(
+            f"[ProcessManager] Killing {len(self._active_processes)} active processes..."
         )
 
         # Create a list of IDs to avoid modification during iteration

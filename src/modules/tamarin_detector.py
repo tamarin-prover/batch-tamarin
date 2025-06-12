@@ -51,7 +51,9 @@ def _check_path_environment() -> list[Path]:
                     candidates.append(Path(path_str))
 
     except Exception as e:
-        notification_manager.warning(f"Error checking PATH environment: {e}")
+        notification_manager.warning(
+            f"[TamarinDetector] Error checking PATH environment: {e}"
+        )
 
     return candidates
 
@@ -115,7 +117,9 @@ def _check_common_directories() -> list[Path]:
                             continue
                         candidates.append(exe_path)
         except Exception as e:
-            notification_manager.warning(f"Error checking directory {directory}: {e}")
+            notification_manager.warning(
+                f"[TamarinDetector] Error checking directory {directory}: {e}"
+            )
 
     return candidates
 
@@ -145,7 +149,9 @@ def _check_package_manager_locations() -> list[Path]:
         candidates.extend(nix_candidates)
 
     except Exception as e:
-        notification_manager.warning(f"Error checking package manager locations: {e}")
+        notification_manager.warning(
+            f"[TamarinDetector] Error checking package manager locations: {e}"
+        )
 
     return candidates
 
@@ -202,6 +208,8 @@ def _check_nix_locations() -> list[Path]:
                 candidates.append(nix_profile)
 
     except Exception as e:
-        notification_manager.warning(f"Error checking Nix locations: {e}")
+        notification_manager.warning(
+            f"[TamarinDetector] Error checking Nix locations: {e}"
+        )
 
     return candidates

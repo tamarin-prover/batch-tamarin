@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 from pydantic import ValidationError
 
 from model.executable_task import ExecutableTask
-from model.tamarin_recipe import TamarinRecipe, TamarinVersion
+from model.tamarin_recipe import TamarinRecipe
 from model.wrapper import Wrapper
-from modules.tamarin_test_cmd import extract_tamarin_version, launch_tamarin_test
+from modules.tamarin_test_cmd import check_tamarin_integrity
 from utils.notifications import notification_manager
 
 
@@ -37,11 +37,14 @@ class ConfigManager:
             with open(config_path, "w", encoding="utf-8") as f:
                 f.write(wrapper.model_dump_json(indent=4))
 
-            notification_manager.info(f"✅ Configuration saved to {config_path}")
+            notification_manager.info(
+                f"[ConfigManager] Configuration saved to {config_path}"
+            )
 
         except Exception as e:
-            error_msg = f"Failed to save configuration to {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Failed to save configuration to {config_path}: {e}"
+            )
             raise ConfigError(error_msg) from e
 
     @staticmethod
@@ -63,10 +66,14 @@ class ConfigManager:
         """
         try:
             if not config_path.exists():
-                raise ConfigError(f"Configuration file not found: {config_path}")
+                raise ConfigError(
+                    f"[ConfigManager] Configuration file not found: {config_path}"
+                )
 
             if not config_path.is_file():
-                raise ConfigError(f"Configuration path is not a file: {config_path}")
+                raise ConfigError(
+                    f"[ConfigManager] Configuration path is not a file: {config_path}"
+                )
 
             with open(config_path, "r", encoding="utf-8") as f:
                 json_data = f.read()
@@ -75,30 +82,32 @@ class ConfigManager:
 
             # Handle revalidation if requested
             if revalidate:
-                await ConfigManager._revalidate_tamarin_paths(wrapper)
+                await ConfigManager._check_tamarin_integrity(wrapper)
 
             notification_manager.info(
-                f"✅ Configuration loaded from {config_path} "
-                f"({len(wrapper.tamarin_path)} tamarin path(s))"
+                f"[ConfigManager] Configuration loaded successfully from {config_path}"
             )
 
             return wrapper
 
         except ValidationError as e:
-            error_msg = f"Invalid configuration structure in {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Invalid configuration structure in {config_path}: {e}"
+            )
             raise ConfigError(error_msg) from e
         except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON in configuration file {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Invalid JSON in configuration file {config_path}: {e}"
+            )
             raise ConfigError(error_msg) from e
         except Exception as e:
-            error_msg = f"Failed to load configuration from {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Failed to load configuration from {config_path}: {e}"
+            )
             raise ConfigError(error_msg) from e
 
     @staticmethod
-    async def _revalidate_tamarin_paths(wrapper: Wrapper) -> None:
+    async def _check_tamarin_integrity(wrapper: Wrapper) -> None:
         """
         Re-validate all tamarin paths in the wrapper.
 
@@ -109,8 +118,8 @@ class ConfigManager:
             try:
                 await tamarin_path.test_tamarin()
             except Exception as e:
-                notification_manager.error(
-                    f"⚠️ Failed to revalidate tamarin path {tamarin_path.path}: {e}"
+                notification_manager.warning(
+                    f"[ConfigManager] Failed to ensure tamarin is functioning for {tamarin_path.path}: {e}"
                 )
 
     @staticmethod
@@ -155,10 +164,14 @@ class ConfigManager:
         """
         try:
             if not config_path.exists():
-                raise ConfigError(f"Configuration file not found: {config_path}")
+                raise ConfigError(
+                    f"[ConfigManager] Configuration file not found: {config_path}"
+                )
 
             if not config_path.is_file():
-                raise ConfigError(f"Configuration path is not a file: {config_path}")
+                raise ConfigError(
+                    f"[ConfigManager] Configuration path is not a file: {config_path}"
+                )
 
             with open(config_path, "r", encoding="utf-8") as f:
                 json_data = f.read()
@@ -167,83 +180,26 @@ class ConfigManager:
 
             # Handle revalidation if requested
             if revalidate:
-                await ConfigManager.revalidate_tamarin_versions(recipe.tamarin_versions)
+                await check_tamarin_integrity(recipe.tamarin_versions)
 
             notification_manager.info(
-                f"✅ Recipe loaded from {config_path} "
+                f"[ConfigManager] JSON recipe loaded from {config_path} with "
                 f"({len(recipe.tamarin_versions)} tamarin version(s), {len(recipe.tasks)} task(s))"
             )
 
             return recipe
 
         except ValidationError as e:
-            error_msg = f"Invalid recipe configuration structure in {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = f"[ConfigManager] Invalid JSON structure in {config_path}: {e}"
             raise ConfigError(error_msg) from e
         except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON in recipe configuration file {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Invalid JSON in configuration file {config_path}: {e}"
+            )
             raise ConfigError(error_msg) from e
         except Exception as e:
-            error_msg = f"Failed to load recipe configuration from {config_path}: {e}"
-            notification_manager.error(error_msg)
+            error_msg = f"[ConfigManager] Failed to load JSON configuration from {config_path}: {e}"
             raise ConfigError(error_msg) from e
-
-    @staticmethod
-    async def revalidate_tamarin_versions(versions: Dict[str, TamarinVersion]) -> None:
-        """
-        Test tamarin executables for functionality and update TamarinVersion objects.
-
-        Args:
-            versions: Dictionary of tamarin versions to revalidate
-        """
-        for version_name, tamarin_version in versions.items():
-            try:
-                tamarin_path = Path(tamarin_version.path)
-
-                # Check if executable exists
-                if not tamarin_path.exists():
-                    notification_manager.error(
-                        f"⚠️ Tamarin executable not found: {tamarin_path}"
-                    )
-                    tamarin_version.test_success = False
-                    continue
-
-                if not tamarin_path.is_file():
-                    notification_manager.error(
-                        f"⚠️ Tamarin path is not a file: {tamarin_path}"
-                    )
-                    tamarin_version.test_success = False
-                    continue
-
-                # Extract version information
-                extracted_version = await extract_tamarin_version(tamarin_path)
-                if extracted_version:
-                    tamarin_version.version = extracted_version
-                else:
-                    notification_manager.warning(
-                        f"⚠️ Could not extract version for {version_name}"
-                    )
-
-                # Test tamarin functionality
-                test_result = await launch_tamarin_test(tamarin_path)
-                tamarin_version.test_success = test_result
-
-                if test_result:
-                    notification_manager.info(
-                        f"✅ Tamarin version '{version_name}' validated successfully "
-                        f"(version: {tamarin_version.version})"
-                    )
-                else:
-                    notification_manager.error(
-                        f"❌ Tamarin version '{version_name}' failed validation test"
-                    )
-
-            except Exception as e:
-                notification_manager.error(
-                    f"⚠️ Failed to revalidate tamarin version '{version_name}': {e}"
-                )
-                tamarin_version.test_success = False
 
     @staticmethod
     def recipe_to_executable_tasks(recipe: TamarinRecipe) -> List[ExecutableTask]:
@@ -267,28 +223,28 @@ class ConfigManager:
             if not output_dir.exists():
                 try:
                     output_dir.mkdir(parents=True, exist_ok=True)
-                    notification_manager.info(f"Created output directory: {output_dir}")
-                except Exception as e:
-                    raise ConfigError(
-                        f"Cannot create output directory {output_dir}: {e}"
+                    notification_manager.debug(
+                        f"[ConfigManager] Created output directory: {output_dir}"
                     )
+                except Exception as e:
+                    error_msg = f"[ConfigManager] Failed to create output directory {output_dir}: {e}"
+                    raise ConfigError(error_msg) from e
 
             if not output_dir.is_dir():
-                raise ConfigError(
-                    f"Output directory path is not a directory: {output_dir}"
+                error_msg = (
+                    f"[ConfigManager] Output path is not a directory: {output_dir}"
                 )
+                raise ConfigError(error_msg)
 
             for task_name, task in recipe.tasks.items():
                 # Validate theory file exists
                 theory_file = Path(task.theory_file)
                 if not theory_file.exists():
-                    raise ConfigError(
-                        f"Theory file not found for task '{task_name}': {theory_file}"
-                    )
+                    error_msg = f"[ConfigManager] Theory file not found for task '{task_name}': {theory_file}"
+                    raise ConfigError(error_msg)
                 if not theory_file.is_file():
-                    raise ConfigError(
-                        f"Theory file path is not a file for task '{task_name}': {theory_file}"
-                    )
+                    error_msg = f"[ConfigManager] Theory file path is not a file for task '{task_name}': {theory_file}"
+                    raise ConfigError(error_msg)
 
                 # Get effective resources for this task
                 resources = recipe.get_task_resources(task_name)
@@ -300,22 +256,18 @@ class ConfigManager:
 
                 # Validate resource constraints against global limits
                 if max_cores > recipe.config.global_max_cores:
-                    raise ConfigError(
-                        f"Task '{task_name}' max_cores ({max_cores}) exceeds "
-                        f"global_max_cores ({recipe.config.global_max_cores})"
-                    )
+                    error_msg = f"Task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
+                    raise ConfigError(error_msg)
 
                 if max_memory > recipe.config.global_max_memory:
-                    raise ConfigError(
-                        f"Task '{task_name}' max_memory ({max_memory}) exceeds "
-                        f"global_max_memory ({recipe.config.global_max_memory})"
-                    )
+                    error_msg = f"Task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
+                    raise ConfigError(error_msg)
 
                 # Expand task for each specified tamarin version
                 for version_name in task.tamarin_versions:
                     if version_name not in recipe.tamarin_versions:
                         raise ConfigError(
-                            f"Task '{task_name}' references undefined tamarin version: '{version_name}'"
+                            f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
                         )
 
                     tamarin_version = recipe.tamarin_versions[version_name]
@@ -324,12 +276,12 @@ class ConfigManager:
                     # Validate tamarin executable exists
                     if not tamarin_executable.exists():
                         raise ConfigError(
-                            f"Tamarin executable not found for version '{version_name}': {tamarin_executable}"
+                            f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
                         )
 
                     if not tamarin_executable.is_file():
                         raise ConfigError(
-                            f"Tamarin executable path is not a file for version '{version_name}': {tamarin_executable}"
+                            f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
                         )
 
                     # Generate output filename with version suffix
@@ -384,12 +336,13 @@ class ConfigManager:
                         executable_tasks.append(executable_task)
 
             notification_manager.info(
-                f"✅ Generated {len(executable_tasks)} executable task(s) from recipe"
+                f"[ConfigManager] Generated {len(executable_tasks)} executable task(s) from recipe"
             )
 
             return executable_tasks
 
         except Exception as e:
-            error_msg = f"Failed to convert recipe to executable tasks: {e}"
-            notification_manager.error(error_msg)
+            error_msg = (
+                f"[ConfigManager] Failed to convert recipe to executable tasks: {e}"
+            )
             raise ConfigError(error_msg) from e
