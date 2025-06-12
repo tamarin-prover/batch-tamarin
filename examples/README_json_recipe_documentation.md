@@ -38,9 +38,7 @@ Defines named aliases for different Tamarin prover executables:
 {
   "tamarin_versions": {
     "stable": {
-      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
-      "version": "1.8.0",
-      "test_success": true
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
     },
     "dev": {
       "path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover",
@@ -55,6 +53,7 @@ Defines named aliases for different Tamarin prover executables:
 - **`path`** (string, required): File path to the Tamarin prover executable
 - **`version`** (string, optional): Version identifier for this Tamarin prover
 - **`test_success`** (boolean, optional): Whether this executable passed connectivity tests
+
 `version` and `test_success` will be created by the UI in case of autodetection of tamarin or if `--revalidate` flag is given
 
 ### Tasks (`tasks`)
@@ -71,7 +70,7 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
       "ressources": {
         "max_cores": 4,
         "max_memory": 8,
-        "task_timeout": 3200
+        "timeout": 3200
       }
     }
   }
@@ -91,21 +90,33 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
 
 ## Lemma Configuration
 
-Lemmas can be specified as objects with individual timeouts:
+Lemmas support comprehensive per-lemma configuration with full inheritance from task-level settings:
 
 ```json
 {
   "lemmas": [
     {
       "name": "secrecy",
-      "timeout": 1200
+      "tamarin_versions": ["stable"],
+      "ressources": {
+        "max_cores": 2,
+        "max_memory": 4,
+        "timeout": 1200
+      }
     },
     {
       "name": "authentication",
-      "timeout": 900
+      "tamarin_options": ["--heuristic=S"],
+      "preprocess_flags": ["AuthOptimization"],
+      "ressources": {
+        "max_cores": 8,
+        "max_memory": 16,
+        "timeout": 3600
+      }
     },
     {
       "name": "basic_lemma"
+      // Inherits all task-level configuration
     }
   ]
 }
@@ -113,7 +124,17 @@ Lemmas can be specified as objects with individual timeouts:
 
 #### Lemma Properties:
 - **`name`** (string, required): Name of the lemma to prove
-- **`timeout`** (integer, optional): Specific timeout in seconds for this lemma, this will overwrite the `task_timeout` property.
+- **`tamarin_versions`** (array of strings, optional): Override which tamarin versions to use for this lemma
+- **`tamarin_options`** (array of strings, optional): Override tamarin command-line options for this lemma
+- **`preprocess_flags`** (array of strings, optional): Override preprocessor flags for this lemma
+- **`ressources`** (object, optional): Override resource allocation for this lemma
+
+#### Inheritance Rules:
+1. **Global Defaults**: 4 cores, 8GB memory, `default_timeout` from config
+2. **Task Level**: Overrides global defaults for all lemmas in the task
+3. **Lemma Level**: Overrides task-level settings for specific lemmas
+
+**Override Behavior**: Lemma-level properties completely replace task-level properties (no merging).
 
 ## Resource Management
 
@@ -131,7 +152,7 @@ Tasks can override defaults in the `ressources` section:
   "ressources": {
     "max_cores": 4,
     "max_memory": 8,
-    "task_timeout": 3200
+    "timeout": 3200
   }
 }
 ```
@@ -160,20 +181,70 @@ tamarin-prover protocols/example.spthy --prove --output=example_basic_results.tx
 tamarin-prover protocols/complex_protocol.spthy --prove=secrecy --prove=authentication --diff -D=GoodKeysOnly -D=bindkttoct --output=complex_results.txt
 ```
 
+## Output File Naming
+
+Output files are automatically named based on the configuration to avoid conflicts:
+
+### Tasks without specific lemmas:
+- Pattern: `{output_file}_{tamarin_version}`
+- Example: `results.txt` → `results_stable.txt`, `results_dev.txt`
+
+### Tasks with specific lemmas:
+- Pattern: `{output_file}_{lemma_name}_{tamarin_version}`
+- Example: With lemma "auth" → `results_auth_stable.txt`, `results_auth_dev.txt`
+
+### Per-lemma tamarin versions:
+When lemmas specify different `tamarin_versions`, each combination creates a separate output file:
+```json
+{
+  "output_file": "analysis.txt",
+  "lemmas": [
+    {
+      "name": "secrecy",
+      "tamarin_versions": ["stable"]
+    },
+    {
+      "name": "auth",
+      "tamarin_versions": ["stable", "dev"]
+    }
+  ]
+}
+```
+Creates: `analysis_secrecy_stable.txt`, `analysis_auth_stable.txt`, `analysis_auth_dev.txt`
+
 ## Multi-Version Execution
 
-When a task specifies multiple `tamarin_versions`, the same parameters are duplicated across each version:
+The system supports both task-level and lemma-level version specification:
 
+### Task-level (traditional):
 ```json
 {
   "tamarin_versions": ["stable", "dev"]
 }
 ```
+All lemmas run on both versions.
 
-This creates separate executions:
-1. Using the "stable" Tamarin version with all task parameters
-2. Using the "dev" Tamarin version with identical parameters
+### Lemma-level (new):
+```json
+{
+  "tamarin_versions": ["stable", "dev", "legacy"],
+  "lemmas": [
+    {
+      "name": "fast_lemma",
+      "tamarin_versions": ["stable"]
+    },
+    {
+      "name": "complex_lemma",
+      "tamarin_versions": ["dev", "legacy"]
+    }
+  ]
+}
+```
+- `fast_lemma` runs only on "stable"
+- `complex_lemma` runs on "dev" and "legacy"
 
-## Example Configuration
+## Example Configurations
 
-See [`example_config_unimplemented.json`](example_config_unimplemented.json) for a complete working example demonstrating all features.
+See the following examples for complete working configurations:
+- [`example_config.json`](example_config.json) - Basic usage with enhanced lemma configuration
+- [`wpa2.json`](wpa2.json) - Advanced per-lemma resource allocation and version selection

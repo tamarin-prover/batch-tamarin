@@ -1,13 +1,13 @@
 import json
 import shutil
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import typer
 from pydantic import ValidationError
 
 from model.executable_task import ExecutableTask
-from model.tamarin_recipe import TamarinRecipe
+from model.tamarin_recipe import GlobalConfig, Lemma, TamarinRecipe, Task
 from modules.tamarin_test_cmd import check_tamarin_integrity
 from utils.notifications import notification_manager
 
@@ -74,6 +74,76 @@ class ConfigManager:
         except Exception as e:
             error_msg = f"[ConfigManager] Failed to load JSON configuration from {config_path}: {e}"
             raise ConfigError(error_msg) from e
+
+    @staticmethod
+    def _get_lemma_effective_resources(
+        lemma: Lemma, task: Task, global_config: GlobalConfig
+    ) -> Tuple[int, int, int]:
+        """
+        Get effective resources for a lemma with proper inheritance.
+
+        Args:
+            lemma: The lemma object
+            task: The parent task object
+            global_config: Global configuration
+
+        Returns:
+            Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
+        """
+        # Start with global defaults
+        max_cores = 4
+        max_memory = 8
+        timeout = global_config.default_timeout
+
+        # Apply task-level overrides if task has resources
+        if task.ressources:
+            if task.ressources.max_cores is not None:
+                max_cores = task.ressources.max_cores
+            if task.ressources.max_memory is not None:
+                max_memory = task.ressources.max_memory
+            if task.ressources.timeout is not None:
+                timeout = task.ressources.timeout
+
+        # Apply lemma-level overrides if lemma has resources
+        if lemma.ressources:
+            if lemma.ressources.max_cores is not None:
+                max_cores = lemma.ressources.max_cores
+            if lemma.ressources.max_memory is not None:
+                max_memory = lemma.ressources.max_memory
+            if lemma.ressources.timeout is not None:
+                timeout = lemma.ressources.timeout
+
+        return max_cores, max_memory, timeout
+
+    @staticmethod
+    def _get_task_effective_resources(
+        task: Task, global_config: GlobalConfig
+    ) -> Tuple[int, int, int]:
+        """
+        Get effective resources for a task with defaults applied.
+
+        Args:
+            task: The task object
+            global_config: Global configuration
+
+        Returns:
+            Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
+        """
+        # Start with global defaults
+        max_cores = 4
+        max_memory = 8
+        timeout = global_config.default_timeout
+
+        # Apply task-level overrides if task has resources
+        if task.ressources:
+            if task.ressources.max_cores is not None:
+                max_cores = task.ressources.max_cores
+            if task.ressources.max_memory is not None:
+                max_memory = task.ressources.max_memory
+            if task.ressources.timeout is not None:
+                timeout = task.ressources.timeout
+
+        return max_cores, max_memory, timeout
 
     @staticmethod
     def recipe_to_executable_tasks(recipe: TamarinRecipe) -> List[ExecutableTask]:
@@ -148,79 +218,140 @@ class ConfigManager:
                     error_msg = f"[ConfigManager] Theory file path is not a file for task '{task_name}': {theory_file}"
                     raise ConfigError(error_msg)
 
-                # Get effective resources for this task
-                resources = recipe.get_task_resources(task_name)
-
-                # Ensure we have concrete values (get_task_resources should handle defaults)
-                max_cores = resources.max_cores or 4
-                max_memory = resources.max_memory or 8
-                task_timeout = resources.task_timeout or recipe.config.default_timeout
-
-                # Validate resource constraints against global limits
-                if max_cores > recipe.config.global_max_cores:
-                    error_msg = f"Task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
-                    raise ConfigError(error_msg)
-
-                if max_memory > recipe.config.global_max_memory:
-                    error_msg = f"Task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
-                    raise ConfigError(error_msg)
-
-                # Expand task for each specified tamarin version
-                for version_name in task.tamarin_versions:
-                    if version_name not in recipe.tamarin_versions:
-                        raise ConfigError(
-                            f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
+                # Handle lemmas - create separate task for each lemma or one task for all if no lemmas specified
+                if task.lemmas:
+                    # Create separate ExecutableTask for each lemma with inheritance
+                    for lemma in task.lemmas:
+                        # Get effective configuration for this lemma (with inheritance)
+                        effective_tamarin_versions = (
+                            lemma.tamarin_versions or task.tamarin_versions
+                        )
+                        effective_tamarin_options = (
+                            lemma.tamarin_options or task.tamarin_options
+                        )
+                        effective_preprocess_flags = (
+                            lemma.preprocess_flags or task.preprocess_flags
                         )
 
-                    tamarin_version = recipe.tamarin_versions[version_name]
-                    tamarin_executable = Path(tamarin_version.path)
-
-                    # Validate tamarin executable exists
-                    if not tamarin_executable.exists():
-                        raise ConfigError(
-                            f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
-                        )
-
-                    if not tamarin_executable.is_file():
-                        raise ConfigError(
-                            f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
-                        )
-
-                    # Generate output filename with version suffix
-                    output_base = Path(task.output_file)
-                    if output_base.suffix:
-                        # Has extension: "results.txt" -> "results_stable.txt"
-                        output_filename = (
-                            f"{output_base.stem}_{version_name}{output_base.suffix}"
-                        )
-                    else:
-                        # No extension: "results" -> "results_stable"
-                        output_filename = f"{output_base.name}_{version_name}"
-
-                    output_file_path = output_dir / output_filename
-
-                    # Handle lemmas - create separate task for each lemma or one task for all
-                    if task.lemmas:
-                        # Create separate ExecutableTask for each lemma
-                        for lemma in task.lemmas:
-                            output_file_path_lemma = output_file_path.with_name(
-                                f"{output_file_path.stem}_{lemma.name}{output_file_path.suffix}"
+                        # Get effective resources with inheritance
+                        max_cores, max_memory, timeout = (
+                            ConfigManager._get_lemma_effective_resources(
+                                lemma, task, recipe.config
                             )
+                        )
+
+                        # Validate lemma tamarin_versions reference valid global versions
+                        for version_name in effective_tamarin_versions:
+                            if version_name not in recipe.tamarin_versions:
+                                raise ConfigError(
+                                    f"[ConfigManager] Lemma '{lemma.name}' in task '{task_name}' references undefined tamarin alias: '{version_name}'"
+                                )
+
+                        # Validate resource constraints against global limits
+                        if max_cores > recipe.config.global_max_cores:
+                            error_msg = f"Lemma '{lemma.name}' in task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
+                            raise ConfigError(error_msg)
+
+                        if max_memory > recipe.config.global_max_memory:
+                            error_msg = f"Lemma '{lemma.name}' in task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
+                            raise ConfigError(error_msg)
+
+                        # Create ExecutableTask for each tamarin version this lemma uses
+                        for version_name in effective_tamarin_versions:
+                            tamarin_version = recipe.tamarin_versions[version_name]
+                            tamarin_executable = Path(tamarin_version.path)
+
+                            # Validate tamarin executable exists
+                            if not tamarin_executable.exists():
+                                raise ConfigError(
+                                    f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
+                                )
+
+                            if not tamarin_executable.is_file():
+                                raise ConfigError(
+                                    f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
+                                )
+
+                            # Generate output filename: task_output_lemma_version
+                            output_base = Path(task.output_file)
+                            if output_base.suffix:
+                                # Has extension: "results.txt" -> "results_lemma_stable.txt"
+                                output_filename = f"{output_base.stem}_{lemma.name}_{version_name}{output_base.suffix}"
+                            else:
+                                # No extension: "results" -> "results_lemma_stable"
+                                output_filename = (
+                                    f"{output_base.name}_{lemma.name}_{version_name}"
+                                )
+
+                            output_file_path = output_dir / output_filename
+
                             executable_task = ExecutableTask(
-                                task_name=task_name + lemma.name,
+                                task_name=f"{task_name}_{lemma.name}",
                                 tamarin_version_name=version_name,
                                 tamarin_executable=tamarin_executable,
                                 theory_file=theory_file,
-                                output_file=output_file_path_lemma,
+                                output_file=output_file_path,
                                 lemma=lemma.name,
-                                tamarin_options=task.tamarin_options,
-                                preprocess_flags=task.preprocess_flags,
+                                tamarin_options=effective_tamarin_options,
+                                preprocess_flags=effective_preprocess_flags,
                                 max_cores=max_cores,
                                 max_memory=max_memory,
-                                task_timeout=lemma.timeout or task_timeout,
+                                task_timeout=timeout,
                             )
                             executable_tasks.append(executable_task)
-                    else:
+                            notification_manager.debug(
+                                f"[ConfigManager] Created ExecutableTask : {executable_task}"
+                            )
+                else:
+                    # No specific lemmas defined - create task for all lemmas using task-level configuration
+                    # Get effective resources for this task
+                    task_max_cores, task_max_memory, task_timeout = (
+                        ConfigManager._get_task_effective_resources(task, recipe.config)
+                    )
+
+                    # Validate resource constraints against global limits
+                    if task_max_cores > recipe.config.global_max_cores:
+                        error_msg = f"Task '{task_name}' max_cores ({task_max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
+                        raise ConfigError(error_msg)
+
+                    if task_max_memory > recipe.config.global_max_memory:
+                        error_msg = f"Task '{task_name}' max_memory ({task_max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
+                        raise ConfigError(error_msg)
+
+                    # Expand task for each specified tamarin version
+                    for version_name in task.tamarin_versions:
+                        if version_name not in recipe.tamarin_versions:
+                            raise ConfigError(
+                                f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
+                            )
+
+                        tamarin_version = recipe.tamarin_versions[version_name]
+                        tamarin_executable = Path(tamarin_version.path)
+
+                        # Validate tamarin executable exists
+                        if not tamarin_executable.exists():
+                            raise ConfigError(
+                                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
+                            )
+
+                        if not tamarin_executable.is_file():
+                            raise ConfigError(
+                                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
+                            )
+
+                        # Generate output filename with version suffix
+                        output_base = Path(task.output_file)
+                        if output_base.suffix:
+                            # Has extension: "results.txt" -> "results_stable.txt"
+                            output_filename = (
+                                f"{output_base.stem}_{version_name}{output_base.suffix}"
+                            )
+                        else:
+                            # No extension: "results" -> "results_stable"
+                            output_filename = f"{output_base.name}_{version_name}"
+
+                        output_file_path = output_dir / output_filename
+
                         # Create single ExecutableTask for all lemmas
                         executable_task = ExecutableTask(
                             task_name=task_name,
@@ -231,11 +362,14 @@ class ConfigManager:
                             lemma=None,  # None means prove all lemmas
                             tamarin_options=task.tamarin_options,
                             preprocess_flags=task.preprocess_flags,
-                            max_cores=max_cores,
-                            max_memory=max_memory,
+                            max_cores=task_max_cores,
+                            max_memory=task_max_memory,
                             task_timeout=task_timeout,
                         )
                         executable_tasks.append(executable_task)
+                        notification_manager.debug(
+                            f"[ConfigManager] Created ExecutableTask : {executable_task}"
+                        )
 
             notification_manager.info(
                 f"[ConfigManager] Generated {len(executable_tasks)} executable task(s) from recipe"

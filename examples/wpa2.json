@@ -21,26 +21,38 @@
 			"theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
 			"tamarin_versions": ["stable", "dev", "legacy"],
 			"output_file": "wpa2.txt",
+            "preprocess_flags": ["yes"],
+            "tamarin_options" : ["-v"],
 			"ressources": {
 				"max_cores": 4,
-				"max_memory": 8
+				"max_memory": 8,
+                "timeout": 3600
 			},
             "lemmas" : [
                 {
                     "name": "nonce_reuse_key_type",
-                    "timeout": 60
+                    "ressources": {
+                        "max_cores": 1,
+                        "max_memory": 1
+                    }
                 },
                 {
                     "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
-                    "timeout": 360
+                    "tamarin_versions": ["stable", "dev"],
+                    "ressources": {
+                        "max_cores": 8,
+                        "max_memory": 16,
+                        "timeout": 360
+                    }
                 },
                 {
                     "name": "supplicant_rcv_m1_must_be_preceded_by_associate",
-                    "timeout": 60
+                    "tamarin_versions": ["dev"],
+                    "tamarin_options": ["--heuristic=S"],
+                    "preprocess_flags": ["no"]
                 },
                 {
-                    "name": "authenticator_installed_is_unique_for_anonce",
-                    "timeout" : 60
+                    "name": "authenticator_installed_is_unique_for_anonce"
                 }
             ]
 		}

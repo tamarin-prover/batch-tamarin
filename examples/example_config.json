@@ -25,7 +25,7 @@
       "ressources": {
         "max_cores": 4,
         "max_memory": 8,
-        "task_timeout": 3200
+        "timeout": 3200
       }
     },
     "complex_protocol_analysis": {
@@ -35,7 +35,13 @@
       "lemmas": [
         {
           "name": "executable",
-          "timeout": 1200
+          "tamarin_versions": ["stable"],
+          "tamarin_options": ["--heuristic=S"],
+          "ressources": {
+            "max_cores": 2,
+            "max_memory": 4,
+            "timeout": 1200
+          }
         }
       ]
     },

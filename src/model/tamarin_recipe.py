@@ -14,9 +14,31 @@ class Lemma(BaseModel):
     """Individual lemma specification for proving."""
 
     name: str = Field(..., description="Name of the lemma to prove")
-    timeout: Optional[int] = Field(
-        None, ge=1, description="Specific timeout in seconds for this lemma"
+    tamarin_versions: Optional[List[str]] = Field(
+        None,
+        min_length=1,
+        description="List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
     )
+    tamarin_options: Optional[List[str]] = Field(
+        None,
+        description="Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
+    )
+    preprocess_flags: Optional[List[str]] = Field(
+        None,
+        description="Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
+    )
+    ressources: Optional["Resources"] = Field(
+        None,
+        description="Resource allocation for this lemma. If not specified, inherits from task",
+    )
+
+    @field_validator("tamarin_versions")
+    @classmethod
+    def tamarin_versions_unique(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Ensure tamarin_versions are unique."""
+        if v is not None and len(v) != len(set(v)):
+            raise ValueError("tamarin_versions must contain unique items")
+        return v
 
 
 class Resources(BaseModel):
@@ -28,10 +50,10 @@ class Resources(BaseModel):
     max_memory: Optional[int] = Field(
         default=8, ge=1, description="Maximum memory in GB for this task (default: 8)"
     )
-    task_timeout: Optional[int] = Field(
+    timeout: Optional[int] = Field(
         default=None,
         ge=1,
-        description="Timeout in seconds for this task (uses global default_timeout if not specified)",
+        description="Timeout in seconds (alias for task_timeout, used in lemma resources)",
     )
 
 
@@ -159,12 +181,12 @@ class TamarinRecipe(BaseModel):
         if task.ressources is None:
             # Apply defaults: 4 cores, 8GB memory, default_timeout from global config
             return Resources(
-                max_cores=4, max_memory=8, task_timeout=self.config.default_timeout
+                max_cores=4, max_memory=8, timeout=self.config.default_timeout
             )
 
-        # Apply global default_timeout if task_timeout is not specified
+        # Apply global default_timeout if timeout is not specified
         resources = task.ressources.model_copy()
-        if resources.task_timeout is None:
-            resources.task_timeout = self.config.default_timeout
+        if resources.timeout is None:
+            resources.timeout = self.config.default_timeout
 
         return resources
