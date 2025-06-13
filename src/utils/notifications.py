@@ -9,6 +9,8 @@ from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
 
+from modules.task_manager import ExecutionSummary
+
 
 class TamarinHighlighter(RegexHighlighter):
     """Custom highlighter for Tamarin wrapper output with rich formatting"""
@@ -216,7 +218,7 @@ class NotificationManager:
         try:
             return (
                 Prompt.ask(
-                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {'[Y/n]' if default else '[y/N]'}",
+                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} \\[y/n]",
                     choices=["y", "n"],
                     default="y" if default else "n",
                     show_choices=False,
@@ -227,6 +229,131 @@ class NotificationManager:
             # Handle Ctrl+C gracefully
             self.warning("Operation cancelled by user")
             return default
+
+    def task_execution_summary(self, summary: ExecutionSummary) -> None:
+        """
+        Display a comprehensive task execution summary using Rich formatting.
+
+        Args:
+            summary: ExecutionSummary with complete execution statistics
+        """
+        from rich.console import Group
+        from rich.markdown import Markdown
+        from rich.panel import Panel
+        from rich.table import Table
+
+        # Import TaskStatus from the model
+        from model.executable_task import TaskStatus
+
+        # Overview metrics table
+        overview_table = Table(show_header=True, header_style="bold magenta")
+        overview_table.add_column("Metric", style="cyan")
+        overview_table.add_column("Value", justify="right")
+
+        # Calculate additional metrics
+        timeout_tasks = sum(
+            1 for r in summary.task_results if r.status == TaskStatus.TIMEOUT
+        )
+        failed_tasks_other = summary.failed_tasks - timeout_tasks
+        avg_duration = (
+            summary.total_duration / summary.total_tasks
+            if summary.total_tasks > 0
+            else 0
+        )
+
+        overview_table.add_row("Total Tasks", str(summary.total_tasks))
+        overview_table.add_row(
+            "✅ Successful", f"[green]{summary.successful_tasks}[/green]"
+        )
+        overview_table.add_row("❌ Failed", f"[red]{failed_tasks_other}[/red]")
+        overview_table.add_row("⏱️ Timed Out", f"[yellow]{timeout_tasks}[/yellow]")
+        overview_table.add_row(
+            "🕒 Total Duration", f"{self._format_duration(summary.total_duration)}"
+        )
+        overview_table.add_row("⚡ Avg Task Duration", f"{avg_duration:.1f}s")
+
+        # Task details table
+        details_table = Table(
+            title="Task Details", show_header=True, header_style="bold blue"
+        )
+        details_table.add_column("Task", style="cyan", no_wrap=True)
+        details_table.add_column("Status", justify="center")
+        details_table.add_column("Duration", justify="right", style="dim")
+
+        for result in summary.task_results:
+            # Format status with color and icon
+            if result.status == TaskStatus.COMPLETED:
+                status_display = "[green]✅ PASS[/green]"
+            elif result.status == TaskStatus.TIMEOUT:
+                status_display = "[yellow]⏱️ TIMEOUT[/yellow]"
+            else:
+                status_display = "[red]❌ FAIL[/red]"
+
+            details_table.add_row(
+                result.task_id, status_display, f"{result.duration:.1f}s"
+            )
+
+        # Create components list
+        from typing import Any, List
+
+        components: List[Any] = [
+            Panel(overview_table, title="Overview", border_style="blue"),
+            details_table,
+        ]
+
+        # Add failed task details if any
+        failed_results = [
+            r
+            for r in summary.task_results
+            if r.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+        ]
+
+        if failed_results:
+            error_details = Markdown("**❌ Failed Tasks Details:**")
+            components.append(error_details)
+
+            for result in failed_results[:3]:  # Show max 3 failed tasks
+                error_type = (
+                    "Timeout" if result.status == TaskStatus.TIMEOUT else "Error"
+                )
+                brief_error = (
+                    result.stderr[:60] + "..."
+                    if len(result.stderr) > 60
+                    else result.stderr
+                )
+                components.append(
+                    Markdown(f"  • **{result.task_id}**: {error_type} - {brief_error}")
+                )
+
+            if len(failed_results) > 3:
+                components.append(
+                    Markdown(f"  ... and {len(failed_results) - 3} more failed tasks")
+                )
+
+        # Single comprehensive output
+        final_panel = Panel(
+            Group(*components),
+            title="📊 Task Execution Summary",
+            border_style="blue",
+            padding=(1, 2),
+        )
+
+        # Use single console print call as requested
+        self._console.print("")  # spacing
+        self._console.print(final_panel)
+
+    def _format_duration(self, seconds: float) -> str:
+        """Format duration in human-readable format."""
+        if seconds < 60:
+            return f"{seconds:.1f}s"
+        elif seconds < 3600:
+            minutes = int(seconds // 60)
+            secs = seconds % 60
+            return f"{minutes}m {secs:.1f}s"
+        else:
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            return f"{hours}h {minutes}m"
 
 
 # Create a singleton instance that can be imported and used throughout the app

@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Set
 
 from model.executable_task import (
     ExecutableTask,
-    ExecutionSummary,
     TaskResult,
     TaskStatus,
 )
@@ -122,14 +121,11 @@ class TaskRunner:
             # Start main scheduling loop
             await self._execute_task_pool(tasks)
 
-            # Summary Phase
-            notification_manager.phase_separator("Summary")
-
             # Generate final execution summary
             summary = self.task_manager.generate_execution_summary()
 
-            # Display enhanced final statistics
-            self._display_enhanced_summary(summary)
+            # Display enhanced final statistics using new Rich summary
+            notification_manager.task_execution_summary(summary)
 
         except Exception as e:
             notification_manager.error(
@@ -442,82 +438,6 @@ class TaskRunner:
         self._pending_tasks.clear()
 
         notification_manager.info("[TaskRunner] Force shutdown cleanup completed")
-
-    def _display_enhanced_summary(self, summary: ExecutionSummary) -> None:
-        """
-        Display an enhanced execution summary with detailed statistics.
-
-        Args:
-            summary: ExecutionSummary object with execution statistics
-        """
-        # Count different types of failures
-        timeout_tasks = sum(
-            1 for result in summary.task_results if result.status == TaskStatus.TIMEOUT
-        )
-        oom_tasks = sum(
-            1
-            for result in summary.task_results
-            if "out of memory" in result.stderr.lower()
-            or "memory" in result.stderr.lower()
-        )
-        failed_tasks_other = summary.failed_tasks - timeout_tasks - oom_tasks
-
-        # Calculate percentages
-        total = summary.total_tasks
-        success_percent = (summary.successful_tasks / total * 100) if total > 0 else 0
-        failed_percent = (failed_tasks_other / total * 100) if total > 0 else 0
-        timeout_percent = (timeout_tasks / total * 100) if total > 0 else 0
-        oom_percent = (oom_tasks / total * 100) if total > 0 else 0
-
-        # Display main statistics
-        notification_manager.success(
-            f"Successful Tasks: {summary.successful_tasks}/{total} ({success_percent:.1f}%)"
-        )
-
-        if failed_tasks_other > 0:
-            notification_manager.error(
-                f"Failed Tasks: {failed_tasks_other}/{total} ({failed_percent:.1f}%)"
-            )
-
-        if timeout_tasks > 0:
-            notification_manager.warning(
-                f"Timed Out Tasks: {timeout_tasks}/{total} ({timeout_percent:.1f}%)"
-            )
-
-        if oom_tasks > 0:
-            notification_manager.error(
-                f"Out of Memory Tasks: {oom_tasks}/{total} ({oom_percent:.1f}%)"
-            )
-
-        notification_manager.info(
-            f"Total Duration: {summary.total_duration:.2f} seconds"
-        )
-
-        # Display failed task details if any
-        failed_results = [
-            r
-            for r in summary.task_results
-            if r.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
-        ]
-        if failed_results:
-            notification_manager.warning("Failed Task Details:")
-            for result in failed_results[:5]:  # Show max 5 failed tasks
-                error_type = (
-                    "Timeout" if result.status == TaskStatus.TIMEOUT else "Error"
-                )
-                brief_error = (
-                    result.stderr[:100] + "..."
-                    if len(result.stderr) > 100
-                    else result.stderr
-                )
-                notification_manager.error(
-                    f"  • {result.task_id}: {error_type} - {brief_error}"
-                )
-
-            if len(failed_results) > 5:
-                notification_manager.info(
-                    f"  ... and {len(failed_results) - 5} more failed tasks"
-                )
 
     def _get_task_id(self, task: ExecutableTask) -> str:
         """
