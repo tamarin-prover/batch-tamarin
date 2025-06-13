@@ -5,8 +5,29 @@ This module provides a centralized way to send notifications via Rich formatting
 """
 
 from rich.console import Console
+from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
+
+
+class TamarinHighlighter(RegexHighlighter):
+    """Custom highlighter for Tamarin wrapper output with rich formatting"""
+
+    base_style = "tamarin."
+    highlights = [
+        # Section borders (═══════════...)
+        r"(?P<border>═+)",
+        # Component tags
+        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager)\])",
+        # File paths
+        r"(?P<filepath>[a-zA-Z0-9_\-./]+\.(?:json|txt|spthy))\b",
+        # Resource allocation info
+        r"(?P<allocated>Allocated:)",
+        # Task completion messages
+        r"(?P<task_success>Task completed successfully:)",
+        r"(?P<task_failed>Task failed:)",
+        r"(?P<task_timeout>Task timed out:)",
+    ]
 
 
 class NotificationManager:
@@ -28,10 +49,18 @@ class NotificationManager:
                 "critical": "bold #ffffff on #8b0000",  # White on dark red
                 "debug": "bold #888888",  # Dim gray (reduced opacity)
                 "phase_separator": "bold #00aaaa",  # Cyan
+                # Tamarin highlighter styles
+                "tamarin.border": "dim #00aaaa",
+                "tamarin.component": "bold magenta",
+                "tamarin.filepath": "dim #00aaaa",
+                "tamarin.allocated": "bold blue",
+                "tamarin.task_success": "#00aa00",
+                "tamarin.task_failed": "#ff0000",
+                "tamarin.task_timeout": "#ff8c00",
             }
         )
 
-        self._console = Console(theme=self._theme)
+        self._console = Console(theme=self._theme, highlighter=TamarinHighlighter())
 
     def notify(self, message: str, severity: str = "information"):
         """
@@ -187,7 +216,7 @@ class NotificationManager:
         try:
             return (
                 Prompt.ask(
-                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {"\[Y/n]" if default else "\[y/N]"}",  # type: ignore
+                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {'[Y/n]' if default else '[y/N]'}",
                     choices=["y", "n"],
                     default="y" if default else "n",
                     show_choices=False,
