@@ -15,12 +15,13 @@
 
         pythonEnv = python.withPackages (ps: with ps; [
           pip
-          black
-          isort
-          autoflake
           typer
           pydantic
           psutil
+          # Development dependencies
+          black
+          isort
+          autoflake
         ]);
       in
       {
@@ -28,7 +29,9 @@
           buildInputs = with pkgs; [
             pythonEnv
             python3Packages.pip
+            python3Packages.build
             python3Packages.setuptools
+            python3Packages.twine
             python3Packages.wheel
             pre-commit
 
