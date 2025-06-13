@@ -77,17 +77,10 @@ class TaskManager:
 
             if return_code == 0:
                 status = TaskStatus.COMPLETED
-                notification_manager.debug(
-                    f"[TaskManager] Task completed successfully: {task_id}"
-                )
             elif return_code == -1 and stderr == "Process timed out":
                 status = TaskStatus.TIMEOUT
-                notification_manager.warning(f"[TaskManager] Task timed out: {task_id}")
             else:
                 status = TaskStatus.FAILED
-                notification_manager.error(
-                    f"[TaskManager] Task failed: {task_id} (exit code: {return_code})"
-                )
 
             # Create task result
             task_result = TaskResult(

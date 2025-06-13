@@ -82,7 +82,9 @@ async def launch_tamarin_test(path: Path) -> bool:
                 f"[TamarinTest] Test command failed with return code {return_code}"
             )
             if stderr:
-                notification_manager.error(f"[TamarinTest] Error output: {stderr}")
+                notification_manager.debug(
+                    f"[#ff0000][ERROR][/#ff0000][TamarinTest] Error output: {stderr}"
+                )
             return False
 
         # Parse the output to verify test success
@@ -124,7 +126,7 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
 
             # Check if executable exists
             if not tamarin_path.exists():
-                notification_manager.error(
+                notification_manager.critical(
                     f"[TamarinTest] Tamarin executable not found: {tamarin_path}"
                 )
                 tamarin_version.version = ""
@@ -132,7 +134,7 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
                 continue
 
             if not tamarin_path.is_file():
-                notification_manager.error(
+                notification_manager.critical(
                     f"[TamarinTest] Tamarin path is not a file: {tamarin_path}"
                 )
                 tamarin_version.version = ""
@@ -153,14 +155,23 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
             tamarin_version.test_success = test_result
 
             if test_result:
-                notification_manager.info(
+                notification_manager.success(
                     f"[TamarinTest] Tamarin alias '{version_name}' passed integrity test "
                     f"(reported {tamarin_version.version})"
                 )
             else:
+                # Use interactive prompt for integrity test failures
                 notification_manager.warning(
-                    f"[TamarinTest] Tamarin alias '{version_name}' failed integrity test"
+                    f"Tamarin integrity test failed for alias '{version_name}'"
                 )
+                should_continue = notification_manager.prompt_user(
+                    "Would you like to continue anyway ?", default=True
+                )
+
+                if not should_continue:
+                    notification_manager.critical(
+                        f"[TamarinTest] User chose to stop execution due to integrity test failure for '{version_name}'"
+                    )
 
         except Exception as e:
             notification_manager.error(

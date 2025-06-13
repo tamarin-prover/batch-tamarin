@@ -10,7 +10,6 @@ import os
 from typing import Dict, List
 
 import psutil
-import typer
 
 from model.executable_task import ExecutableTask
 from utils.notifications import notification_manager
@@ -42,7 +41,7 @@ class ResourceManager:
                 notification_manager.warning(
                     f"[ResourceManager] Global max cores ({global_max_cores}) exceeds available CPU cores ({cores}). "
                 )
-                fallback = typer.confirm(
+                fallback = notification_manager.prompt_user(
                     "Do you want to fallback to maximum available cores?"
                 )
                 if fallback:
@@ -62,7 +61,7 @@ class ResourceManager:
             notification_manager.warning(
                 f"[ResourceManager] Global max memory ({global_max_memory}GB) exceeds available system memory ({system_memory_gb}GB). "
             )
-            fallback = typer.confirm(
+            fallback = notification_manager.prompt_user(
                 "Do you want to fallback to maximum available memory?"
             )
             if fallback:

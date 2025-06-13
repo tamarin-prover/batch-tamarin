@@ -4,7 +4,9 @@ Notification management system for the Tamarin wrapper.
 This module provides a centralized way to send notifications via Rich formatting.
 """
 
-import typer
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.theme import Theme
 
 
 class NotificationManager:
@@ -16,46 +18,46 @@ class NotificationManager:
     def __init__(self, debug_enabled: bool = False):
         self._debug_enabled = debug_enabled
 
+        # Create a Rich console with custom theme for notifications using truecolor
+        self._theme = Theme(
+            {
+                "info": "bold blue",
+                "success": "bold #00aa00",  # Bright green
+                "warning": "bold #ff8c00",  # Dark orange
+                "error": "bold #ff0000",  # Bright red
+                "critical": "bold #ffffff on #8b0000",  # White on dark red
+                "debug": "bold #888888",  # Dim gray (reduced opacity)
+                "phase_separator": "bold #00aaaa",  # Cyan
+            }
+        )
+
+        self._console = Console(theme=self._theme)
+
     def notify(self, message: str, severity: str = "information"):
         """
         Send a notification that will be displayed in the TUI or console.
 
         Args:
             message: The notification message to display
-            severity: The severity level ("information", "warning", "error", "debug")
+            severity: The severity level ("information", "warning", "error", "debug", "success", "critical")
         """
-        # Define styling for different severity levels using Typer's style system
+        # Map severity to Rich styled output with symbols and enhanced colors
         if severity == "error":
-            # Red styling for errors
-            prefix = typer.style("[ERROR]", fg=typer.colors.RED, bold=True)
-            message = typer.style(f"{message}", fg=typer.colors.BRIGHT_RED)
-            styled_message = f"{prefix} {message}"
+            self._console.print(f"[error][ERROR][/error] {message}")
+        elif severity == "critical":
+            self._console.print(f"[critical][CRITICAL][/critical] {message}")
         elif severity == "warning":
-            # Yellow/orange styling for warnings
-            prefix = typer.style("[WARN]", fg=typer.colors.YELLOW, bold=True)
-            message = typer.style(message, fg=typer.colors.BRIGHT_YELLOW)
-            styled_message = f"{prefix} {message}"
+            self._console.print(f"[warning][WARN][/warning] {message}")
+        elif severity == "success":
+            self._console.print(f"[success][SUCCESS][/success] {message}")
         elif severity == "information":
-            # Black styling for information
-            prefix = typer.style("[INFO]", fg=typer.colors.RESET, bold=True)
-            message = typer.style(message, fg=typer.colors.RESET)
-            styled_message = f"{prefix} {message}"
+            self._console.print(f"[info][INFO][/info] {message}")
         elif severity == "debug":
             if self._debug_enabled:
-                # Gray/dim styling for debug
-                prefix = typer.style("[DEBUG]", fg=typer.colors.BRIGHT_BLACK, bold=True)
-                message = typer.style(message, fg=typer.colors.BRIGHT_BLACK)
-                styled_message = f"{prefix} {message}"
-            else:
-                styled_message = None
+                self._console.print(f"[debug][DEBUG][/debug] {message}")
         else:
-            # Default styling
-            prefix = typer.style("[INFO]", fg=typer.colors.RESET, bold=True)
-            message = typer.style(message, fg=typer.colors.RESET)
-            styled_message = f"{prefix} {message}"
-
-        if styled_message:
-            typer.echo(styled_message)
+            # Default to information
+            self._console.print(f"[info][INFO][/info] {message}")
 
     def error(self, message: str):
         """
@@ -65,6 +67,30 @@ class NotificationManager:
             message: The error message to display
         """
         self.notify(message, "error")
+
+    def critical(self, message: str):
+        """
+        Send a critical error notification that indicates a failure that stops execution.
+        This will automatically exit the application with code 1.
+
+        Args:
+            message: The critical error message to display
+        """
+        self.notify(message, "critical")
+        # Critical errors should stop execution immediately
+        # Use sys.exit for more reliable termination in async contexts
+        import sys
+
+        sys.exit(1)
+
+    def success(self, message: str):
+        """
+        Send a success notification for positive outcomes.
+
+        Args:
+            message: The success message to display
+        """
+        self.notify(message, "success")
 
     def info(self, message: str):
         """
@@ -93,6 +119,42 @@ class NotificationManager:
         """
         self.notify(message, "debug")
 
+    def phase_separator(self, phase_name: str):
+        """
+        Display a visual phase separator with the given phase name.
+
+        Args:
+            phase_name: The name of the phase to display
+        """
+        separator_line = "═" * 63
+        phase_emoji = self._get_phase_emoji(phase_name)
+
+        self._console.print()  # Empty line before
+        self._console.print(f"[phase_separator]{separator_line}[/phase_separator]")
+        self._console.print(
+            f"[phase_separator]{phase_emoji} {phase_name.upper()}[/phase_separator]"
+        )
+        self._console.print(f"[phase_separator]{separator_line}[/phase_separator]")
+        self._console.print()  # Empty line after
+
+    def _get_phase_emoji(self, phase_name: str) -> str:
+        """
+        Get the appropriate emoji for a phase name.
+
+        Args:
+            phase_name: The name of the phase
+
+        Returns:
+            Emoji string for the phase
+        """
+        phase_emojis = {
+            "configuration": "🔧",
+            "tamarin integrity testing": "🧪",
+            "task execution": "⚡",
+            "summary": "📊",
+        }
+        return phase_emojis.get(phase_name.lower(), "🔄")
+
     def set_debug(self, enabled: bool):
         """
         Enable or disable debug output.
@@ -110,6 +172,33 @@ class NotificationManager:
             True if debug output is enabled, False otherwise
         """
         return self._debug_enabled
+
+    def prompt_user(self, message: str, default: bool = True) -> bool:
+        """
+        Prompt the user with a yes/no question using Rich.
+
+        Args:
+            message: The message to display to the user
+            default: Default answer if user just presses Enter (True for Yes, False for No)
+
+        Returns:
+            True if user wants to continue, False otherwise
+        """
+        try:
+            return (
+                Prompt.ask(
+                    # type: ignore
+                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {"\[Y/n]" if default else "\[y/N]"}",
+                    choices=["y", "n"],
+                    default="y" if default else "n",
+                    show_choices=False,
+                )
+                == "y"
+            )
+        except KeyboardInterrupt:
+            # Handle Ctrl+C gracefully
+            self.warning("Operation cancelled by user")
+            return default
 
 
 # Create a singleton instance that can be imported and used throughout the app

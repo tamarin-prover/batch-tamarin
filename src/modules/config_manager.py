@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from typing import List, Tuple
 
-import typer
 from pydantic import ValidationError
 
 from model.executable_task import ExecutableTask
@@ -38,12 +37,12 @@ class ConfigManager:
         """
         try:
             if not config_path.exists():
-                raise ConfigError(
+                notification_manager.critical(
                     f"[ConfigManager] Configuration file not found: {config_path}"
                 )
 
             if not config_path.is_file():
-                raise ConfigError(
+                notification_manager.critical(
                     f"[ConfigManager] Configuration path is not a file: {config_path}"
                 )
 
@@ -54,9 +53,11 @@ class ConfigManager:
 
             # Handle revalidation if requested
             if revalidate:
+                notification_manager.phase_separator("Tamarin Integrity Testing")
                 await check_tamarin_integrity(recipe.tamarin_versions)
 
-            notification_manager.info(
+            notification_manager.phase_separator("Configuration")
+            notification_manager.success(
                 f"[ConfigManager] JSON recipe loaded from {config_path} with "
                 f"({len(recipe.tamarin_versions)} tamarin version(s), {len(recipe.tasks)} task(s))"
             )
@@ -184,8 +185,8 @@ class ConfigManager:
                 # Check if directory is empty
                 if any(output_dir.iterdir()):
                     # Directory is not empty, prompt user
-                    should_wipe = typer.confirm(
-                        f"Output directory '{output_dir}' is not empty. Do you want to DELETE its contents?",
+                    should_wipe = notification_manager.prompt_user(
+                        f"Output directory '{output_dir}' is not empty. Do you want to [bold #ff0000]DELETE[/bold #ff0000] its contents?",
                         default=False,
                     )
 
@@ -371,8 +372,8 @@ class ConfigManager:
                             f"[ConfigManager] Created ExecutableTask : {executable_task}"
                         )
 
-            notification_manager.info(
-                f"[ConfigManager] Generated {len(executable_tasks)} executable task(s) from recipe"
+            notification_manager.success(
+                f"[ConfigManager] Generated {len(executable_tasks)} executable task{'s' if len(executable_tasks) > 1 else ''} from recipe"
             )
 
             return executable_tasks
