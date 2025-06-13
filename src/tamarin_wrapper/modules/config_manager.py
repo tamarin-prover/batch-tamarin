@@ -5,10 +5,10 @@ from typing import List, Tuple
 
 from pydantic import ValidationError
 
-from model.executable_task import ExecutableTask
-from model.tamarin_recipe import GlobalConfig, Lemma, TamarinRecipe, Task
-from modules.tamarin_test_cmd import check_tamarin_integrity
-from utils.notifications import notification_manager
+from ..model.executable_task import ExecutableTask
+from ..model.tamarin_recipe import GlobalConfig, Lemma, TamarinRecipe, Task
+from ..utils.notifications import notification_manager
+from .tamarin_test_cmd import check_tamarin_integrity
 
 
 class ConfigError(Exception):

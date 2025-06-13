@@ -3,9 +3,10 @@ from pathlib import Path
 
 import typer
 
-from modules.config_manager import ConfigManager
-from runner import TaskRunner
-from utils.notifications import notification_manager
+from . import __version__
+from .modules.config_manager import ConfigManager
+from .runner import TaskRunner
+from .utils.notifications import notification_manager
 
 app = typer.Typer(help="Tamarin-wrapper")
 
@@ -54,7 +55,7 @@ def main(
         notification_manager.debug("[NotificationUtil] DEBUG Enabled")
 
     if version:
-        print("Tamarin-wrapper v0.1")
+        print(f"Tamarin-wrapper v{__version__}")
         return
 
     # Execute config file tasks
@@ -67,6 +68,11 @@ def main(
     except Exception as e:
         notification_manager.error(f"Failed to process JSON recipe : {e}")
         raise typer.Exit(1)
+
+
+def cli():
+    """Entry point for the CLI when installed via pip."""
+    typer.run(main)
 
 
 if __name__ == "__main__":

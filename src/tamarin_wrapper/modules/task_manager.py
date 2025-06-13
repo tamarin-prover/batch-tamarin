@@ -8,15 +8,15 @@ built on top of the ProcessManager for actual process execution.
 import asyncio
 from typing import Dict
 
-from model.executable_task import (
+from ..model.executable_task import (
     ExecutableTask,
     ExecutionSummary,
     ProgressReport,
     TaskResult,
     TaskStatus,
 )
-from modules.process_manager import process_manager
-from utils.notifications import notification_manager
+from ..utils.notifications import notification_manager
+from .process_manager import process_manager
 
 
 class TaskManager:

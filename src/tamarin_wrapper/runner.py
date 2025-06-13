@@ -10,15 +10,15 @@ import asyncio
 import signal
 from typing import Any, Dict, List, Optional, Set
 
-from model.executable_task import (
+from .model.executable_task import (
     ExecutableTask,
     TaskResult,
     TaskStatus,
 )
-from model.tamarin_recipe import GlobalConfig
-from modules.resource_manager import ResourceManager
-from modules.task_manager import TaskManager
-from utils.notifications import notification_manager
+from .model.tamarin_recipe import GlobalConfig
+from .modules.resource_manager import ResourceManager
+from .modules.task_manager import TaskManager
+from .utils.notifications import notification_manager
 
 
 class TaskRunner:
@@ -418,7 +418,7 @@ class TaskRunner:
                 task.cancel()
 
         # Force kill all processes via ProcessManager
-        from modules.process_manager import process_manager
+        from .modules.process_manager import process_manager
 
         await process_manager.kill_all_processes()
 

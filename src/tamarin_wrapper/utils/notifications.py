@@ -9,8 +9,6 @@ from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
 
-from modules.task_manager import ExecutionSummary
-
 
 class TamarinHighlighter(RegexHighlighter):
     """Custom highlighter for Tamarin wrapper output with rich formatting"""
@@ -230,7 +228,7 @@ class NotificationManager:
             self.warning("Operation cancelled by user")
             return default
 
-    def task_execution_summary(self, summary: ExecutionSummary) -> None:
+    def task_execution_summary(self, summary) -> None:
         """
         Display a comprehensive task execution summary using Rich formatting.
 
@@ -242,8 +240,8 @@ class NotificationManager:
         from rich.panel import Panel
         from rich.table import Table
 
-        # Import TaskStatus from the model
-        from model.executable_task import TaskStatus
+        # Import TaskStatus from the model - use relative import
+        from ..model.executable_task import TaskStatus
 
         # Overview metrics table
         overview_table = Table(show_header=True, header_style="bold magenta")

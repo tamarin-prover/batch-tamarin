@@ -11,18 +11,23 @@ The Tamarin Python Wrapper provides scripts to run one or multiple models using 
 - Parse and summarize execution outputs into comprehensive reports.
 - Interactive UI for managing Tamarin paths and configurations.
 - Notification system for execution status and results.
-
 ## Installation
 
-### Using Nix Flakes
+### From PyPI (Production Use)
 
-Enter the development environment with :
+```sh
+pip install tamarin-wrapper
+```
+
+### Using Nix Flakes (Development)
+
+Enter the development environment with:
 
 ```sh
 nix develop
 ```
 
-### Using Python Virtual Environment
+### Using Python Virtual Environment (Development)
 
 Prerequisites:
 
@@ -32,19 +37,36 @@ Prerequisites:
 - pre-commit
 
 ```sh
-cd src
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+### From Source
+
+```sh
+git clone https://github.com/yourusername/tamarin-wrapper
+cd tamarin-wrapper
+pip install -e .
+```
 ```
 
 ## Usage
 
+After installation, you can use the `tamarin-wrapper` command:
+
 ```sh
-python main.py                   # launch UI (auto-detect)
-python main.py -v                # show version
-python main.py config.json -m    # modify existing config
-python main.py config.json -m -r # modify with re-validation
+tamarin-wrapper --help                    # Show help
+tamarin-wrapper --version                 # Show version
+tamarin-wrapper config.json               # Run with config file
+tamarin-wrapper config.json --debug       # Run with debug output
+tamarin-wrapper config.json --revalidate  # Run with tamarin binary validation
+```
+
+For development (if installed with `-e .`):
+
+```sh
+python -m tamarin_wrapper.main --help     # Alternative way to run
 ```
 
 ## Configuration Example

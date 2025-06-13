@@ -11,8 +11,8 @@ from typing import Dict, List
 
 import psutil
 
-from model.executable_task import ExecutableTask
-from utils.notifications import notification_manager
+from ..model.executable_task import ExecutableTask
+from ..utils.notifications import notification_manager
 
 
 class ResourceManager:

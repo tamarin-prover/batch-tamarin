@@ -2,9 +2,9 @@ import re
 from pathlib import Path
 from typing import Dict
 
-from model.tamarin_recipe import TamarinVersion
-from modules.process_manager import process_manager
-from utils.notifications import notification_manager
+from ..model.tamarin_recipe import TamarinVersion
+from ..utils.notifications import notification_manager
+from .process_manager import process_manager
 
 
 async def extract_tamarin_version(path: Path) -> str:

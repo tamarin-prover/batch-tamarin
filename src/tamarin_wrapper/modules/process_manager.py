@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
-from utils.notifications import notification_manager
+from ..utils.notifications import notification_manager
 
 
 @dataclass
