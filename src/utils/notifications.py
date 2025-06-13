@@ -187,8 +187,7 @@ class NotificationManager:
         try:
             return (
                 Prompt.ask(
-                    # type: ignore
-                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {"\[Y/n]" if default else "\[y/N]"}",
+                    f"[bold #ffffff on #000000][?][/bold #ffffff on #000000] {message} {"\[Y/n]" if default else "\[y/N]"}",  # type: ignore
                     choices=["y", "n"],
                     default="y" if default else "n",
                     show_choices=False,
