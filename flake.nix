@@ -15,11 +15,10 @@
 
         pythonEnv = python.withPackages (ps: with ps; [
           pip
-          typer
-          textual
           black
           isort
           autoflake
+          typer
           pydantic
           psutil
         ]);
