@@ -151,11 +151,12 @@ tamarin-wrapper --version
 Since the package uses proper Python packaging structure, you cannot run `python src/tamarin_wrapper/main.py` directly. Use one of these methods:
 
 ```bash
-# Method 1 (Recommended) : Use the CLI command (after pip install -e .)
-tamarin-wrapper --version
+# Method 1 (Recommended) : Use the CLI command
+pip install -e .  # Or reload your nix environment to do this
+tamarin-wrapper
 
 # Method 2: Run as Python module
-python -m tamarin_wrapper.main --version
+python -m tamarin_wrapper.main
 
 # Method 3: Test built package (Useful before publishing)
 python -m build

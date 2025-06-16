@@ -6,7 +6,7 @@ This document explains how to package and publish tamarin-wrapper to PyPI.
 
 1. **Clean previous builds:**
    ```bash
-   rm -rf dist/ build/ *.egg-info/
+   rm -rf dist/ build/ **/*.egg-info/
    ```
 
 2. **Build the package:**
