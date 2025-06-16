@@ -2,7 +2,8 @@ include README.md
 include LICENSE
 include pyproject.toml
 include requirements.txt
-include requirements-dev.txt
+include RECIPE_GUIDE.md
+include PACKAGING.md
 recursive-include src/tamarin_wrapper *.json
 recursive-include examples *.json *.md
 prune examples/__pycache__

@@ -8,8 +8,11 @@ in a non-blocking manner, with support for timeouts and proper termination.
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
+import psutil
+
+from ..model.executable_task import MemoryStats
 from ..utils.notifications import notification_manager
 
 
@@ -38,9 +41,9 @@ class ProcessManager:
 
     async def run_command(
         self, executable: Path, args: List[str], timeout: float = 30.0
-    ) -> tuple[int, str, str]:
+    ) -> tuple[int, str, str, Optional[MemoryStats]]:
         """
-        Launch a command in a non-blocking manner.
+        Launch a command in a non-blocking manner with memory monitoring.
 
         Args:
             executable: Path to the executable
@@ -48,7 +51,7 @@ class ProcessManager:
             timeout: Timeout in seconds
 
         Returns:
-            Tuple (return_code, stdout, stderr)
+            Tuple (return_code, stdout, stderr, memory_stats)
         """
         process_id = f"cmd_{self._process_counter}"
         self._process_counter += 1
@@ -61,8 +64,11 @@ class ProcessManager:
                 *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
 
-            # Create the task
+            # Create the task for process execution
             task = asyncio.create_task(self._wait_for_process(process))
+
+            # Start memory monitoring
+            memory_task = asyncio.create_task(self._monitor_memory(process))
 
             # Register the process
             process_info = ProcessInfo(
@@ -79,22 +85,51 @@ class ProcessManager:
             )
 
             try:
-                # Wait with timeout
-                result = await asyncio.wait_for(task, timeout=timeout)
-                return result
+                # Wait with timeout for both tasks
+                done, _ = await asyncio.wait(
+                    [task, memory_task],
+                    timeout=timeout,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                if task in done:
+                    # Process completed normally
+                    result = await task
+                    memory_task.cancel()
+
+                    # Get memory stats if available
+                    memory_stats = None
+                    try:
+                        memory_stats = await asyncio.wait_for(memory_task, timeout=1.0)
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                        pass
+
+                    return (*result, memory_stats)
+                else:
+                    # Timeout occurred
+                    notification_manager.warning(
+                        f"[ProcessManager] Command timed out: {' '.join(command)}"
+                    )
+                    await self._kill_process(process_id)
+
+                    # Cancel memory monitoring
+                    memory_task.cancel()
+
+                    return (-1, "", "Process timed out", None)
 
             except asyncio.TimeoutError:
                 notification_manager.warning(
                     f"[ProcessManager] Command timed out: {' '.join(command)}"
                 )
                 await self._kill_process(process_id)
-                return (-1, "", "Process timed out")
+                memory_task.cancel()
+                return (-1, "", "Process timed out", None)
 
         except Exception as e:
             notification_manager.error(
                 f"[ProcessManager] Error running command {' '.join(command)}: {e}"
             )
-            return (-1, "", str(e))
+            return (-1, "", str(e), None)
 
         finally:
             # Clean up the process
@@ -112,6 +147,84 @@ class ProcessManager:
         stderr_str = stderr.decode() if stderr else ""
 
         return (return_code, stdout_str, stderr_str)
+
+    async def _monitor_memory(
+        self, process: asyncio.subprocess.Process
+    ) -> Optional[MemoryStats]:
+        """
+        Monitor memory usage of a process during execution.
+
+        Samples memory usage every 1 second and calculates peak and average memory efficiently.
+
+        Args:
+            process: The subprocess to monitor
+
+        Returns:
+            MemoryStats with peak and average memory usage in MB, or None if monitoring failed
+        """
+        peak_memory_mb: float = 0.0
+        avg_memory_mb: float = 0.0
+        sample_count: int = 0
+
+        try:
+            # Get the psutil process object
+            if not process.pid:
+                return None
+
+            psutil_process: psutil.Process = psutil.Process(process.pid)
+
+            while process.returncode is None:
+                try:
+                    # Get memory info for the process and all its children
+                    memory_info = psutil_process.memory_info()
+                    memory_mb: float = float(
+                        # Convert bytes to MB
+                        getattr(memory_info, "rss", 0)
+                    ) / (1024 * 1024)
+
+                    # Also include memory from child processes
+                    try:
+                        children: List[psutil.Process] = psutil_process.children(recursive=True)  # type: ignore
+                        for child in children:
+                            child_memory = child.memory_info()
+                            child_rss = float(getattr(child_memory, "rss", 0))
+                            memory_mb += child_rss / (1024 * 1024)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        # Child processes may have terminated or we don't have access
+                        pass
+
+                    # Update peak memory
+                    peak_memory_mb = max(peak_memory_mb, memory_mb)
+
+                    # Calculate running average efficiently
+                    sample_count += 1
+                    avg_memory_mb = (
+                        avg_memory_mb + (memory_mb - avg_memory_mb) / sample_count
+                    )
+
+                    # Sample every 1 second
+                    await asyncio.sleep(1.0)
+
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    # Process terminated or we don't have access
+                    break
+
+        except (psutil.NoSuchProcess, ValueError):
+            # Process doesn't exist or invalid PID
+            return None
+        except asyncio.CancelledError:
+            # Monitoring was cancelled (normal when process completes)
+            pass
+        except Exception as e:
+            notification_manager.debug(f"[ProcessManager] Memory monitoring error: {e}")
+
+        # Return memory stats if we have at least one sample
+        if sample_count > 0:
+            return MemoryStats(
+                peak_memory_mb=peak_memory_mb, avg_memory_mb=avg_memory_mb
+            )
+
+        return None
 
     async def _kill_process(self, process_id: str) -> None:
         """Kill a process gracefully."""

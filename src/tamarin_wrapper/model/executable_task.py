@@ -77,7 +77,6 @@ class ExecutableTask:
         # Add Haskell RTS flags for performance limiting
         command.extend(["+RTS", f"-N{self.max_cores}"])
 
-        # FIXME: Memory limiting with -M{size}G flag reportedly doesn't work with Tamarin
         # Consider alternative memory limiting approaches if needed
         command.append(f"-M{self.max_memory}G")
         command.append("-RTS")
@@ -119,6 +118,14 @@ class TaskStatus(Enum):
 
 
 @dataclass
+class MemoryStats:
+    """Memory usage statistics for a task execution."""
+
+    peak_memory_mb: float
+    avg_memory_mb: float
+
+
+@dataclass
 class TaskResult:
     """Result of a completed task execution."""
 
@@ -130,6 +137,7 @@ class TaskResult:
     start_time: float
     end_time: float
     duration: float
+    memory_stats: Optional[MemoryStats] = None
 
 
 @dataclass

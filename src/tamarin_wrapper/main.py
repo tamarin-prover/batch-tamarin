@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -29,7 +30,9 @@ async def process_config_file(config_path: Path, revalidate: bool = False) -> No
 
 
 def main(
-    config_file: str = typer.Argument(..., help="JSON recipe file to execute"),
+    config_file: Optional[str] = typer.Argument(
+        None, help="JSON recipe file to execute"
+    ),
     version: bool = typer.Option(
         False, "--version", "-v", help="Show Tamarin-wrapper version."
     ),
@@ -57,6 +60,13 @@ def main(
     if version:
         print(f"Tamarin-wrapper v{__version__}")
         return
+
+    # Check if config file is provided when not showing version
+    if not config_file:
+        print("Error: Missing argument 'CONFIG_FILE'.")
+        print("Usage: tamarin-wrapper [OPTIONS] CONFIG_FILE")
+        print("Try 'tamarin-wrapper --help' for help.")
+        raise typer.Exit(1)
 
     # Execute config file tasks
     config_path = Path(config_file)

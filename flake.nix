@@ -15,7 +15,7 @@
         # Build the tamarin-wrapper package properly
         tamarin-wrapper = python.pkgs.buildPythonPackage rec {
           pname = "tamarin-wrapper";
-          version = "0.1.2";
+          version = "0.1.3";
           format = "pyproject";
 
           src = ./.;
@@ -79,7 +79,7 @@
 
           shellHook = ''
             echo "🚀 Tamarin-wrapper development environment"
-            echo "📦 Package: tamarin-wrapper v0.1.2"
+            echo "📦 Package: tamarin-wrapper v${tamarin-wrapper.version}"
             echo "🔧 Available commands:"
             echo "  tamarin-wrapper --version    # Test CLI"
             echo "  tamarin-wrapper --help       # Show help"

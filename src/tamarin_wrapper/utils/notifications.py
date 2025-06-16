@@ -261,16 +261,46 @@ class NotificationManager:
             else 0
         )
 
-        overview_table.add_row("Total Tasks", str(summary.total_tasks))
+        overview_table.add_row("Total Tasks", f"[bold]{summary.total_tasks}[/bold]")
         overview_table.add_row(
-            "✅ Successful", f"[green]{summary.successful_tasks}[/green]"
+            "✅ Successful", f"[bold green]{summary.successful_tasks}[/bold green]"
         )
-        overview_table.add_row("❌ Failed", f"[red]{failed_tasks_other}[/red]")
-        overview_table.add_row("⏱️ Timed Out", f"[yellow]{timeout_tasks}[/yellow]")
+        overview_table.add_row(
+            "❌ Failed", f"[bold red]{failed_tasks_other}[/bold red]"
+        )
+        overview_table.add_row(
+            "⏱️ Timed Out", f"[bold #ff8c00]{timeout_tasks}[/bold #ff8c00]"
+        )
         overview_table.add_row(
             "🕒 Total Duration", f"{self._format_duration(summary.total_duration)}"
         )
         overview_table.add_row("⚡ Avg Task Duration", f"{avg_duration:.1f}s")
+
+        # Calculate memory statistics
+        tasks_with_memory = [
+            r for r in summary.task_results if r.memory_stats is not None
+        ]
+        if tasks_with_memory:
+            # Extract peak memory values safely
+            peak_memory_values = [
+                r.memory_stats.peak_memory_mb
+                for r in tasks_with_memory
+                if r.memory_stats
+            ]
+            if peak_memory_values:
+                total_peak_memory = sum(peak_memory_values)
+                max_peak_memory = max(peak_memory_values)
+                avg_peak_memory = sum(peak_memory_values) / len(peak_memory_values)
+
+                overview_table.add_row(
+                    "🧠 Total Peak Memory", f"{self._format_memory(total_peak_memory)}"
+                )
+                overview_table.add_row(
+                    "🔥 Max Peak Memory", f"{self._format_memory(max_peak_memory)}"
+                )
+                overview_table.add_row(
+                    "📊 Avg Peak Memory", f"{self._format_memory(avg_peak_memory)}"
+                )
 
         # Task details table
         details_table = Table(
@@ -278,7 +308,9 @@ class NotificationManager:
         )
         details_table.add_column("Task", style="cyan", no_wrap=True)
         details_table.add_column("Status", justify="center")
-        details_table.add_column("Duration", justify="right", style="dim")
+        details_table.add_column("Duration", justify="right")
+        details_table.add_column("Peak Memory", justify="right")
+        details_table.add_column("Avg Memory", justify="right")
 
         for result in summary.task_results:
             # Format status with color and icon
@@ -289,8 +321,25 @@ class NotificationManager:
             else:
                 status_display = "[red]❌ FAIL[/red]"
 
+            # Format memory display
+            peak_memory_display = (
+                self._format_memory(result.memory_stats.peak_memory_mb)
+                if result.memory_stats
+                else "N/A"
+            )
+
+            avg_memory_display = (
+                self._format_memory(result.memory_stats.avg_memory_mb)
+                if result.memory_stats
+                else "N/A"
+            )
+
             details_table.add_row(
-                result.task_id, status_display, f"{result.duration:.1f}s"
+                result.task_id,
+                status_display,
+                f"{result.duration:.1f}s",
+                peak_memory_display,
+                avg_memory_display,
             )
 
         # Create components list
@@ -354,6 +403,23 @@ class NotificationManager:
             hours = int(seconds // 3600)
             minutes = int((seconds % 3600) // 60)
             return f"{hours}h {minutes}m"
+
+    def _format_memory(self, memory_mb: float) -> str:
+        """
+        Format memory usage in human-readable format.
+        Automatically switches between MB and GB based on size.
+
+        Args:
+            memory_mb: Memory usage in megabytes
+
+        Returns:
+            Formatted memory string (e.g., "256 MB" or "1.5 GB")
+        """
+        if memory_mb < 1024:
+            return f"{memory_mb:.1f} MB"
+        else:
+            memory_gb = memory_mb / 1024
+            return f"{memory_gb:.1f} GB"
 
 
 # Create a singleton instance that can be imported and used throughout the app

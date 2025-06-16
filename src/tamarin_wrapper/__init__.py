@@ -1,6 +1,6 @@
 """Tamarin Python Wrapper - Run Tamarin Prover models with JSON recipes."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.3"
 __author__ = "Luca Mandrelli"
 __email__ = "luca.mandrelli@icloud.com"
 

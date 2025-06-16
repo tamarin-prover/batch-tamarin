@@ -66,9 +66,11 @@ class TaskManager:
         notification_manager.debug(f"[TaskManager] Starting task: {task_id}")
 
         try:
-            # Execute the command using existing run_command method
-            return_code, stdout, stderr = await process_manager.run_command(
-                executable, args, timeout=float(task.task_timeout)
+            # Execute the command using existing run_command method (now returns memory stats)
+            return_code, stdout, stderr, memory_stats = (
+                await process_manager.run_command(
+                    executable, args, timeout=float(task.task_timeout)
+                )
             )
 
             # Determine final status based on return code
@@ -82,7 +84,7 @@ class TaskManager:
             else:
                 status = TaskStatus.FAILED
 
-            # Create task result
+            # Create task result with memory statistics
             task_result = TaskResult(
                 task_id=task_id,
                 status=status,
@@ -92,6 +94,7 @@ class TaskManager:
                 start_time=start_time,
                 end_time=end_time,
                 duration=duration,
+                memory_stats=memory_stats,
             )
 
             # Update tracking
@@ -118,6 +121,7 @@ class TaskManager:
                 start_time=start_time,
                 end_time=end_time,
                 duration=duration,
+                memory_stats=None,
             )
 
             # Update tracking
