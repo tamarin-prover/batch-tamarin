@@ -2,30 +2,6 @@
 
 This document explains how to package and publish tamarin-wrapper to PyPI.
 
-## Prerequisites
-
-- Python 3.9+
-- PyPI account (and TestPyPI account for testing)
-
-## Setup Build Tools
-
-### Using Nix (Recommended)
-
-```bash
-nix develop  # Includes all packaging dependencies
-```
-
-### Using pip
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-Or install just the packaging tools:
-```bash
-pip install build twine setuptools wheel
-```
-
 ## Building the Package
 
 1. **Clean previous builds:**
@@ -42,7 +18,7 @@ pip install build twine setuptools wheel
    - `dist/tamarin_wrapper-0.1.0.tar.gz` (source distribution)
    - `dist/tamarin_wrapper-0.1.0-py3-none-any.whl` (wheel distribution)
 
-## Testing the Package
+## Uploading the Package
 
 ### Test on TestPyPI
 

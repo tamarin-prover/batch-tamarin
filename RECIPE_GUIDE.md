@@ -54,7 +54,7 @@ Defines named aliases for different Tamarin prover executables:
 - **`version`** (string, optional): Version identifier for this Tamarin prover
 - **`test_success`** (boolean, optional): Whether this executable passed connectivity tests
 
-`version` and `test_success` will be created by the UI in case of autodetection of tamarin or if `--revalidate` flag is given
+`version` and `test_success` are overwritten by the `--revalidate` flag. These fields are usually filled by the UI tool to generate a JSON recipe, there is no real reason to use them manually.
 
 ### Tasks (`tasks`)
 

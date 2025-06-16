@@ -1,113 +1,212 @@
 # Tamarin Python Wrapper
 
-## Description
-
-The Tamarin Python Wrapper provides scripts to run one or multiple models using one or multiple Tamarin binaries. Configure your "recipe" in a JSON file, and get a detailed execution report with parsed output.
+A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
 ## Features
 
-- Run single or multiple models across one or more Tamarin binaries.
-- Define execution recipes via a JSON configuration file.
-- Parse and summarize execution outputs into comprehensive reports.
-- Interactive UI for managing Tamarin paths and configurations.
-- Notification system for execution status and results.
+- **Batch Execution**: Run multiple Tamarin models across different Tamarin binary versions
+- **JSON Configuration**: Define execution recipes using simple JSON configuration files
+- **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
+- **Progress Tracking**: Real-time progress updates with Rich-formatted output
+- **CLI Interface**: Easy-to-use command-line interface with comprehensive options
+
 ## Installation
 
-### From PyPI (Production Use)
+### From TestPyPI (Current)
 
-```sh
-pip install tamarin-wrapper
+```bash
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tamarin-wrapper
 ```
 
-### Using Nix Flakes (Development)
+### Prerequisites
 
-Enter the development environment with:
-
-```sh
-nix develop
-```
-
-### Using Python Virtual Environment (Development)
-
-Prerequisites:
-
-- Python 3.9+
-- venv
-- Tamarin Prover binaries
-- pre-commit
-
-```sh
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements-dev.txt
-```
-
-### From Source
-
-```sh
-git clone https://github.com/yourusername/tamarin-wrapper
-cd tamarin-wrapper
-pip install -e .
-```
-```
+- **Python 3.9+**
+- **Tamarin Prover binaries** (install separately)
 
 ## Usage
 
-After installation, you can use the `tamarin-wrapper` command:
+### Basic Commands
 
-```sh
-tamarin-wrapper --help                    # Show help
-tamarin-wrapper --version                 # Show version
-tamarin-wrapper config.json               # Run with config file
-tamarin-wrapper config.json --debug       # Run with debug output
-tamarin-wrapper config.json --revalidate  # Run with tamarin binary validation
+```bash
+# Show version
+tamarin-wrapper --version
+
+# Show help
+tamarin-wrapper --help
+
+# Run with configuration file
+tamarin-wrapper recipe.json
+
+# Run with debug output
+tamarin-wrapper recipe.json --debug
+
+# Run with Tamarin binary validation
+tamarin-wrapper recipe.json --revalidate
 ```
 
-For development (if installed with `-e .`):
+### Configuration Example
 
-```sh
-python -m tamarin_wrapper.main --help     # Alternative way to run
-```
-
-## Configuration Example
-
-Preview of `example_config.json`:
+Create a JSON configuration file based on the WPA2 example:
 
 ```json
 {
-  "tamarin_path": [
-    {
-      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
-      "version": "1.8.0",
-      "test_success": true
+  "config": {
+    "global_max_cores": 10,
+    "global_max_memory": 32,
+    "default_timeout": 7200,
+    "output_directory": "./results"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
     },
-    {
-      "path": "tamarin-binaries/tamarin-prover-1.6.1/1.6.1/bin/tamarin-prover",
-      "version": "1.6.1",
-      "test_success": false
-    },
-    {
-      "path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover",
-      "version": "1.11.0",
-      "test_success": false
+    "legacy": {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
     }
-  ]
+  },
+  "tasks": {
+    "wpa2": {
+      "theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
+      "tamarin_versions": ["stable", "legacy"],
+      "output_file": "wpa2.txt",
+      "preprocess_flags": ["yes"],
+      "tamarin_options": ["-v"],
+      "ressources": {
+        "max_cores": 2,
+        "max_memory": 8,
+        "timeout": 3600
+      },
+      "lemmas": [
+        {
+          "name": "nonce_reuse_key_type",
+          "ressources": {
+            "max_cores": 1
+          }
+        },
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": ["stable"],
+          "ressources": {
+            "max_cores": 4,
+            "max_memory": 16,
+            "timeout": 30
+          }
+        }
+      ]
+    }
+  }
 }
 ```
 
-## Implementation Guide
+Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
 
-For detailed architecture, module overview, and workflow, see [`IMPLEMENTATION_GUIDE.md`](IMPLEMENTATION_GUIDE.md).
+## Development
 
-## Contributing
+### Contributing
 
-1. Fork the repository and create a feature branch:
-   ```sh
+1. **Fork the repository** and create a feature branch:
+   ```bash
    git checkout -b feature/my-awesome-feature
    ```
-2. Install pre-commit hooks (that will format your code automatically):
-   ```sh
-   ./setup-hooks.sh
+
+2. **Set up development environment** (see options below)
+
+3. **Install pre-commit hooks**:
+   ```bash
+   pre-commit install
    ```
-3. Commit your changes and push to your branch.
-4. Open a pull request.
+
+4. **Make your changes** and commit them
+
+5. **Push to your branch** and open a pull request
+
+### Development Environment Options
+
+#### Using Nix
+
+```bash
+# Enter development environment with all dependencies
+nix develop
+
+# The tamarin-wrapper command is immediately available
+tamarin-wrapper --version
+```
+
+#### Using Python Virtual Environment
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements.txt
+
+# The package is installed in editable mode automatically
+tamarin-wrapper --version
+```
+
+### Testing During Development
+
+Since the package uses proper Python packaging structure, you cannot run `python src/tamarin_wrapper/main.py` directly. Use one of these methods:
+
+```bash
+# Method 1 (Recommended) : Use the CLI command (after pip install -e .)
+tamarin-wrapper --version
+
+# Method 2: Run as Python module
+python -m tamarin_wrapper.main --version
+
+# Method 3: Test built package (Useful before publishing)
+python -m build
+pip install dist/tamarin_wrapper-*.whl
+```
+
+## Packaging/Publishing
+
+### Building the Package
+
+```bash
+# Clean previous builds
+rm -rf dist/ build/ *.egg-info/ # Be careful, it's still a rm -rf command
+
+# Build wheel and source distribution
+python -m build
+```
+
+### Publishing
+
+#### Test Upload (TestPyPI)
+```bash
+python -m twine upload --repository testpypi dist/*
+```
+
+#### Production Upload (PyPI)
+```bash
+python -m twine upload dist/*
+```
+
+For detailed packaging instructions, see [`PACKAGING.md`](PACKAGING.md).
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
+
+See the [LICENSE](LICENSE) file for the full license text.
+
+### License Summary
+
+- ✅ **Use**: Commercial and private use allowed
+- ✅ **Modify**: Modifications and derivatives allowed
+- ✅ **Distribute**: Distribution allowed
+- ❗ **Share Alike**: Derivatives must be licensed under GPL-3.0+
+- ❗ **Disclose Source**: Source code must be made available
+- ❗ **Include License**: License and copyright notice must be included
+
+## Implementation Details
+
+For detailed architecture, module overview, and workflow documentation, see [`IMPLEMENTATION_GUIDE.md`](IMPLEMENTATION_GUIDE.md).
+
+---
+
+**Note**: This package requires Tamarin Prover to be installed separately. Visit the [Tamarin Prover website](https://tamarin-prover.com) for installation instructions.
