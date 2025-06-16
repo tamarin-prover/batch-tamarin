@@ -9,6 +9,8 @@ from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
 
+from ..model.executable_task import ExecutionSummary
+
 
 class TamarinHighlighter(RegexHighlighter):
     """Custom highlighter for Tamarin wrapper output with rich formatting"""
@@ -52,7 +54,7 @@ class NotificationManager:
                 # Tamarin highlighter styles
                 "tamarin.border": "dim #00aaaa",
                 "tamarin.component": "bold magenta",
-                "tamarin.filepath": "dim #00aaaa",
+                "tamarin.filepath": "#005f7c",
                 "tamarin.allocated": "bold blue",
                 "tamarin.task_success": "#00aa00",
                 "tamarin.task_failed": "#ff0000",
@@ -228,7 +230,7 @@ class NotificationManager:
             self.warning("Operation cancelled by user")
             return default
 
-    def task_execution_summary(self, summary) -> None:
+    def task_execution_summary(self, summary: ExecutionSummary) -> None:
         """
         Display a comprehensive task execution summary using Rich formatting.
 
