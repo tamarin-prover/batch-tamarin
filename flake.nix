@@ -15,7 +15,7 @@
         # Build the tamarin-wrapper package properly
         tamarin-wrapper = python.pkgs.buildPythonPackage rec {
           pname = "tamarin-wrapper";
-          version = "0.1.6";
+          version = "0.1.7";
           format = "pyproject";
 
           src = ./.;

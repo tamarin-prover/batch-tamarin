@@ -9,7 +9,7 @@ information, and proof statistics.
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from ..model.executable_task import TaskResult
 from ..model.output_models import LemmaResult, ParsedTamarinOutput
@@ -87,6 +87,15 @@ class TamarinOutputProcessor:
         notification_manager.debug(
             f"[OutputProcessor] Processing output for task: {task_id}"
         )
+
+        # Check if task failed and already reported in failed_tasks/
+        if self._is_failed_task_already_reported(task_id):
+            notification_manager.info(
+                f"[OutputProcessor] Skipping failed task {task_id} - already reported in failed_tasks/"
+            )
+            return (
+                self.processed_dir / f"result_{task_id}.json"
+            )  # Return expected path without processing
 
         # Parse output from multiple sources
         parsed_output = self._parse_tamarin_output(
@@ -202,35 +211,27 @@ class TamarinOutputProcessor:
         total_time_ms = 0
         total_steps = 0
 
-        in_summary = False
-
+        # Parse all lines for lemma results (no need to track summary section)
         for line in lines:
             line = line.strip()
             if not line:
                 continue
 
-            # Check for summary section
+            # Check for summary section (optional - some outputs don't have this marker)
             if self.TAMARIN_PATTERNS["summary_start"].search(line):
-                in_summary = True
                 continue
 
-            # Skip processing if we're not in summary yet (lemma results are in summary)
-            if not in_summary:
-                continue
-
-            # Parse analyzed file
+            # Parse analyzed file (can be anywhere)
             analyzed_match = self.TAMARIN_PATTERNS["analyzed_file"].match(line)
             if analyzed_match:
-                analyzed_match.group(1).strip()
                 continue
 
-            # Parse output file
+            # Parse output file (can be anywhere)
             output_match = self.TAMARIN_PATTERNS["output_file"].match(line)
             if output_match:
-                output_match.group(1).strip()
                 continue
 
-            # Parse processing time
+            # Parse processing time (can be anywhere)
             time_match = self.TAMARIN_PATTERNS["processing_time"].match(line)
             if time_match:
                 time_value = float(time_match.group(1))
@@ -244,13 +245,11 @@ class TamarinOutputProcessor:
                     total_time_ms = int(time_value * 60 * 1000)
                 continue
 
-            # Parse lemma result lines
+            # Parse lemma result lines (can be anywhere, not just in summary)
             lemma_match = self.TAMARIN_PATTERNS["lemma_result_line"].match(line)
             if lemma_match:
                 lemma_name = lemma_match.group(1)
-                lemma_type = lemma_match.group(
-                    2
-                )  # e.g., "all-traces" or "exists-trace"
+                # lemma_type = lemma_match.group(2)  # e.g., "all-traces" or "exists-trace" - not used
                 status = lemma_match.group(3)
                 steps = int(lemma_match.group(4))
 
@@ -271,7 +270,11 @@ class TamarinOutputProcessor:
                 total_steps += steps
                 continue
 
-            # Check for warnings and errors
+            # Check for warnings (including wellformedness warnings)
+            if "wellformedness check failed" in line.lower():
+                warnings.append(line)
+                continue
+
             warning_match = self.TAMARIN_PATTERNS["warning"].search(line)
             if warning_match:
                 warnings.append(warning_match.group(1).strip())
@@ -361,6 +364,7 @@ class TamarinOutputProcessor:
     ) -> Path:
         """
         Generate a result.json file with the parsed output.
+        Only includes global execution metadata, parsing results, and proof information.
 
         Args:
             task_id: Task identifier
@@ -370,25 +374,10 @@ class TamarinOutputProcessor:
         Returns:
             Path to the generated result.json file
         """
-        result_data: Dict[str, object] = {
+        # Global execution metadata (only id, execution time, memory_stats)
+        global_metadata: Dict[str, Union[str, int, Optional[Dict[str, float]]]] = {
             "task_id": task_id,
-            "timestamp": task_result.start_time,
-            "status": task_result.status.value,
-            "return_code": task_result.return_code,
-            "duration_ms": int(task_result.duration * 1000),
-            "total_time_ms": parsed_output.total_time_ms,
-            "total_steps": parsed_output.total_steps,
-            "lemma_results": {
-                name: {
-                    "name": result.name,
-                    "status": result.status,
-                    "time_ms": result.time_ms,
-                    "steps": result.steps,
-                }
-                for name, result in parsed_output.lemma_results.items()
-            },
-            "warnings": parsed_output.warnings,
-            "errors": parsed_output.errors,
+            "execution_time_ms": int(task_result.duration * 1000),
             "memory_stats": (
                 {
                     "peak_memory_mb": task_result.memory_stats.peak_memory_mb,
@@ -397,6 +386,45 @@ class TamarinOutputProcessor:
                 if task_result.memory_stats
                 else None
             ),
+        }
+
+        # Stdout parsing results (warnings, errors, verified/falsified lemmas with time/steps)
+        verified_lemmas: List[Dict[str, Union[str, Optional[int]]]] = []
+        falsified_lemmas: List[Dict[str, Union[str, Optional[int]]]] = []
+        incomplete_lemma_proofs: List[Dict[str, Union[str, Optional[int]]]] = []
+
+        # Categorize lemmas by status
+        for _lemma_name, lemma_result in parsed_output.lemma_results.items():
+            lemma_info: Dict[str, Union[str, Optional[int]]] = {
+                "name": lemma_result.name,
+                "time_ms": lemma_result.time_ms,
+                "steps": lemma_result.steps,
+            }
+
+            if lemma_result.status == "verified":
+                verified_lemmas.append(lemma_info)
+            elif lemma_result.status == "falsified":
+                falsified_lemmas.append(lemma_info)
+            elif lemma_result.status == "analysis_incomplete":
+                incomplete_lemma_proofs.append(lemma_info)
+
+        parsing_results: Dict[str, Any] = {
+            "warnings": parsed_output.warnings,
+            "errors": parsed_output.errors,
+            "verified_lemmas": verified_lemmas,
+            "falsified_lemmas": falsified_lemmas,
+            "incomplete_lemma_proofs": incomplete_lemma_proofs,
+        }
+
+        # Proof information from spthy file (if available)
+        proof_info = self._extract_proof_from_spthy(
+            self._find_tamarin_output_file(task_id)
+        )
+
+        result_data: Dict[str, Any] = {
+            "global_metadata": global_metadata,
+            "parsing_results": parsing_results,
+            "proof_info": proof_info,
         }
 
         # Generate result file path
@@ -475,16 +503,31 @@ class TamarinOutputProcessor:
         # 2. {task_id}.txt or {task_id}.spthy (in main output directory)
         # 3. Any .spthy files in output directory containing task_id
 
+        # Extract the lemma name from task_id if it follows the pattern task_lemma_version
+        # For example: "stable_wpa2_nonce_reuse_key_type_stable" -> "nonce_reuse_key_type"
+        parts = task_id.split("_")
+        if len(parts) >= 4:
+            # Remove version prefix and suffix to get lemma name
+            lemma_name = "_".join(
+                parts[2:-1]
+            )  # Skip first 2 (version_protocol) and last 1 (version)
+        else:
+            lemma_name = task_id
+
         patterns = [
             f"tam_{task_id}.spthy",
+            f"tam_*{lemma_name}*.spthy",
             f"{task_id}.txt",
             f"{task_id}.spthy",
             f"*{task_id}*.spthy",
+            f"*{lemma_name}*.spthy",
         ]
 
         search_dirs = [self.tamarin_output_dir, self.output_directory]
 
         for search_dir in search_dirs:
+            if not search_dir.exists():
+                continue
             for pattern in patterns:
                 tamarin_files = list(search_dir.glob(pattern))
                 if tamarin_files:
@@ -496,4 +539,124 @@ class TamarinOutputProcessor:
                         return max(tamarin_files, key=lambda p: p.stat().st_mtime)
                     return tamarin_files[0]
 
+        notification_manager.debug(
+            f"[OutputProcessor] No Tamarin output file found for {task_id}, searched patterns: {patterns}"
+        )
         return None
+
+    def _is_failed_task_already_reported(self, task_id: str) -> bool:
+        """
+        Check if a failed task is already reported in failed_tasks/ directory.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            True if task is already reported as failed, False otherwise
+        """
+        failed_tasks_dir = self.output_directory / "failed_tasks"
+        if not failed_tasks_dir.exists():
+            return False
+
+        # Look for any file containing the task_id in the failed_tasks directory
+        for _failed_file in failed_tasks_dir.glob(f"*{task_id}*"):
+            return True
+
+        return False
+
+    def _extract_proof_from_spthy(self, spthy_file: Optional[Path]) -> Dict[str, Any]:
+        """
+        Extract proof information from the spthy file.
+
+        Args:
+            spthy_file: Path to the .spthy file
+
+        Returns:
+            Dictionary containing proof information
+        """
+        if not spthy_file or not spthy_file.exists():
+            return {"proofs": [], "source": "spthy_not_available"}
+
+        try:
+            content = spthy_file.read_text(encoding="utf-8")
+            proofs = self._parse_spthy_proofs(content)
+            return {
+                "proofs": proofs,
+                "source": str(spthy_file.name),
+            }
+        except Exception as e:
+            notification_manager.warning(
+                f"[OutputProcessor] Failed to parse spthy file {spthy_file}: {e}"
+            )
+            return {"proofs": [], "source": "spthy_parse_error", "error": str(e)}
+
+    def _parse_spthy_proofs(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse proof information from spthy file content.
+
+        Args:
+            content: Content of the spthy file
+
+        Returns:
+            List of proof dictionaries
+        """
+        proofs: List[Dict[str, Any]] = []
+        lines = content.split("\n")
+
+        # Pattern to match lemma definitions and their proofs
+        lemma_pattern = re.compile(
+            r"^lemma\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[[^\]]*\])?\s*:"
+        )
+        proof_start_pattern = re.compile(r"^(simplify|solve|by\s+)")
+        proof_end_pattern = re.compile(r"^qed$")
+
+        current_lemma = None
+        current_proof_lines = []
+        in_proof = False
+
+        for _line_num, line in enumerate(lines, 1):
+            line = line.strip()
+
+            # Check for lemma start
+            lemma_match = lemma_pattern.match(line)
+            if lemma_match:
+                # Save previous lemma if exists
+                if current_lemma and current_proof_lines:
+                    proof_dict: Dict[str, Any] = {
+                        "lemma_name": current_lemma,
+                        "proof_lines": current_proof_lines,
+                        "line_count": len(current_proof_lines),
+                    }
+                    proofs.append(proof_dict)
+
+                current_lemma = lemma_match.group(1)
+                current_proof_lines = []
+                in_proof = False
+                continue
+
+            # Check for proof start
+            if not in_proof and proof_start_pattern.match(line):
+                in_proof = True
+                current_proof_lines = [line]
+                continue
+
+            # Check for proof end
+            if in_proof and proof_end_pattern.match(line):
+                current_proof_lines.append(line)
+                in_proof = False
+                continue
+
+            # Collect proof lines
+            if in_proof:
+                current_proof_lines.append(line)
+
+        # Handle last lemma
+        if current_lemma and current_proof_lines:
+            final_proof_dict: Dict[str, Any] = {
+                "lemma_name": current_lemma,
+                "proof_lines": current_proof_lines,
+                "line_count": len(current_proof_lines),
+            }
+            proofs.append(final_proof_dict)
+
+        return proofs
