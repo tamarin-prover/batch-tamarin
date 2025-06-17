@@ -24,7 +24,7 @@ class ExecutableTask:
     timeout handling with --prove=lemma.
     """
 
-    task_name: str
+    task_id: str
     """Name of the original task"""
 
     tamarin_version_name: str

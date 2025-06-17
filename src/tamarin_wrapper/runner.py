@@ -8,6 +8,7 @@ for parallel Tamarin proof execution.
 
 import asyncio
 import signal
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from .model.executable_task import (
@@ -15,7 +16,8 @@ from .model.executable_task import (
     TaskResult,
     TaskStatus,
 )
-from .model.tamarin_recipe import GlobalConfig
+from .model.tamarin_recipe import GlobalConfig, OutputConfig
+from .modules.output_manager import TaskOutputManager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
 from .utils.notifications import notification_manager
@@ -44,6 +46,14 @@ class TaskRunner:
             global_max_cores=global_config.global_max_cores,
             global_max_memory=global_config.global_max_memory,
         )
+
+        # Initialize storage system
+        output_directory = Path(global_config.output_directory)
+        output_config: OutputConfig = global_config.output or OutputConfig()
+
+        # Initialize output storage manager
+        self.storage_manager = TaskOutputManager(output_directory)
+        self.output_config = output_config
 
         # Initialize TaskManager for execution
         self.task_manager = TaskManager()
@@ -180,7 +190,7 @@ class TaskRunner:
             if not self._shutdown_requested and not self._force_shutdown_requested:
                 for task in schedulable_tasks:
                     if self.resource_manager.allocate_resources(task):
-                        task_id = self._get_task_id(task)
+                        task_id = task.task_id
 
                         # Create and start background coroutine
                         coroutine = self._execute_single_task(task)
@@ -210,7 +220,7 @@ class TaskRunner:
                     # Find the corresponding ExecutableTask
                     corresponding_task: Optional[ExecutableTask] = None
                     for task in all_tasks:
-                        if self._get_task_id(task) == task_id:
+                        if task.task_id == task_id:
                             corresponding_task = task
                             break
 
@@ -268,7 +278,7 @@ class TaskRunner:
             return await self.task_manager.run_executable_task(task)
         except Exception as e:
             # Create error result if task execution fails unexpectedly
-            task_id = self._get_task_id(task)
+            task_id = task.task_id
             notification_manager.error(
                 f"[TaskRunner] Unexpected error executing task {task_id}: {e}"
             )
@@ -291,6 +301,7 @@ class TaskRunner:
         Handle individual task completion.
 
         - Release resources via ResourceManager
+        - Capture task output using OutputCapture
         - Log completion status
         - Update internal tracking
 
@@ -298,10 +309,36 @@ class TaskRunner:
             task: The ExecutableTask that completed
             result: The TaskResult from execution
         """
-        task_id = self._get_task_id(task)
+        task_id = task.task_id
 
         # Release resources
         self.resource_manager.release_resources(task)
+
+        # Store raw output if configured
+        if self.output_config.store_raw_output:
+            try:
+                self.storage_manager.store_raw_output(
+                    task_id, result.stdout, result.stderr
+                )
+                notification_manager.debug(
+                    f"[TaskRunner] Stored raw output for {task_id}"
+                )
+            except Exception as e:
+                notification_manager.error(
+                    f"[TaskRunner] Failed to store raw output for {task_id}: {e}"
+                )
+
+        # Store failed task information if needed
+        if result.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]:
+            try:
+                self.storage_manager.store_failed_task(task_id, result)
+                notification_manager.debug(
+                    f"[TaskRunner] Stored failed task info for {task_id}"
+                )
+            except Exception as e:
+                notification_manager.error(
+                    f"[TaskRunner] Failed to store failed task info for {task_id}: {e}"
+                )
 
         # Update internal tracking
         self._task_results[task_id] = result
@@ -312,6 +349,7 @@ class TaskRunner:
                 f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.TIMEOUT:
+            self._failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s)"
             )
@@ -438,15 +476,3 @@ class TaskRunner:
         self._pending_tasks.clear()
 
         notification_manager.info("[TaskRunner] Force shutdown cleanup completed")
-
-    def _get_task_id(self, task: ExecutableTask) -> str:
-        """
-        Generate a unique identifier for a task.
-
-        Args:
-            task: The ExecutableTask to generate an ID for
-
-        Returns:
-            Unique string identifier combining task name and tamarin version
-        """
-        return f"{task.tamarin_version_name}_{task.task_name}"

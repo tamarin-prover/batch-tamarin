@@ -10,6 +10,13 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+class OutputConfig(BaseModel):
+    """Configuration for output capture and storage."""
+
+    store_raw_output: bool = True
+    """Whether to store the raw stdout/stderr from tasks."""
+
+
 class Lemma(BaseModel):
     """Individual lemma specification for proving."""
 
@@ -127,6 +134,9 @@ class GlobalConfig(BaseModel):
     )
     output_directory: str = Field(
         ..., description="Base directory path for all output files"
+    )
+    output: Optional[OutputConfig] = Field(
+        default=None, description="Output processing configuration"
     )
 
 

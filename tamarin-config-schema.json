@@ -34,6 +34,18 @@
 				"output_directory": {
 					"type": "string",
 					"description": "Base directory path for all output files"
+				},
+				"output": {
+					"type": "object",
+					"description": "Output processing configuration",
+					"properties": {
+						"store_raw_output": {
+							"type": "boolean",
+							"default": false,
+							"description": "Whether to store the raw stdout/stderr from tasks"
+						}
+					},
+					"additionalProperties": false
 				}
 			},
 			"additionalProperties": false

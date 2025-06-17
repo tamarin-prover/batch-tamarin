@@ -184,7 +184,9 @@ class ProcessManager:
 
                     # Also include memory from child processes
                     try:
-                        children: List[psutil.Process] = psutil_process.children(recursive=True)  # type: ignore
+                        children: List[psutil.Process] = psutil_process.children(  # type: ignore
+                            recursive=True
+                        )
                         for child in children:
                             child_memory = child.memory_info()
                             child_rss = float(getattr(child_memory, "rss", 0))

@@ -47,7 +47,7 @@ class TaskManager:
             TaskResult with complete execution information
         """
         # Generate task identifier
-        task_id = f"{task.task_name}_{task.tamarin_version_name}"
+        task_id = f"{task.task_id}_{task.tamarin_version_name}"
 
         # Initialize task tracking
         start_time = asyncio.get_event_loop().time()
@@ -289,7 +289,3 @@ class TaskManager:
             notification_manager.info(
                 f"[TaskManager] Cleared {len(tasks_to_remove)} completed tasks from tracking : {tasks_to_remove}"
             )
-
-
-# Global instance of the task manager
-task_manager = TaskManager()

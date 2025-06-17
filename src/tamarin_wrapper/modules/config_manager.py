@@ -1,7 +1,7 @@
 import json
 import shutil
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from pydantic import ValidationError
 
@@ -64,15 +64,15 @@ class ConfigManager:
 
             return recipe
 
-        except ValidationError as e:
+        except ValidationError as e:  # type: ignore
             error_msg = f"[ConfigManager] Invalid JSON structure in {config_path}: {e}"
             raise ConfigError(error_msg) from e
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError as e:  # type: ignore
             error_msg = (
                 f"[ConfigManager] Invalid JSON in configuration file {config_path}: {e}"
             )
             raise ConfigError(error_msg) from e
-        except Exception as e:
+        except Exception as e:  # type: ignore
             error_msg = f"[ConfigManager] Failed to load JSON configuration from {config_path}: {e}"
             raise ConfigError(error_msg) from e
 
@@ -147,6 +147,25 @@ class ConfigManager:
         return max_cores, max_memory, timeout
 
     @staticmethod
+    def _get_unique_task_id(base_task_id: str, task_id_counter: Dict[str, int]) -> str:
+        """
+        Generate a unique task ID, adding a counter if duplicates exist.
+
+        Args:
+            base_task_id: The base task ID to make unique
+            task_id_counter: Dictionary tracking task ID usage counts
+
+        Returns:
+            Unique task ID (with counter suffix if needed)
+        """
+        if base_task_id not in task_id_counter:
+            task_id_counter[base_task_id] = 1
+            return base_task_id
+        else:
+            task_id_counter[base_task_id] += 1
+            return f"{base_task_id}_{task_id_counter[base_task_id]}"
+
+    @staticmethod
     def recipe_to_executable_tasks(recipe: TamarinRecipe) -> List[ExecutableTask]:
         """
         Convert TamarinRecipe to list of ExecutableTask objects.
@@ -161,6 +180,8 @@ class ConfigManager:
             ConfigError: If conversion fails due to validation errors
         """
         executable_tasks: List[ExecutableTask] = []
+        # Track task IDs to handle duplicates
+        task_id_counter: Dict[str, int] = {}
 
         try:
             # Validate that output directory exists or can be created
@@ -171,7 +192,7 @@ class ConfigManager:
                     notification_manager.debug(
                         f"[ConfigManager] Created output directory: {output_dir}"
                     )
-                except Exception as e:
+                except Exception as e:  # type: ignore
                     error_msg = f"[ConfigManager] Failed to create output directory {output_dir}: {e}"
                     raise ConfigError(error_msg) from e
             else:
@@ -201,7 +222,7 @@ class ConfigManager:
                             notification_manager.info(
                                 f"[ConfigManager] Wiped contents of output directory: {output_dir}"
                             )
-                        except Exception as e:
+                        except Exception as e:  # type: ignore
                             error_msg = f"[ConfigManager] Failed to wipe output directory {output_dir}: {e}"
                             raise ConfigError(error_msg) from e
                     else:
@@ -273,21 +294,19 @@ class ConfigManager:
                                     f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
                                 )
 
-                            # Generate output filename: task_output_lemma_version
-                            output_base = Path(task.output_file)
-                            if output_base.suffix:
-                                # Has extension: "results.txt" -> "results_lemma_stable.txt"
-                                output_filename = f"{output_base.stem}_{lemma.name}_{version_name}{output_base.suffix}"
-                            else:
-                                # No extension: "results" -> "results_lemma_stable"
-                                output_filename = (
-                                    f"{output_base.name}_{lemma.name}_{version_name}"
-                                )
-
-                            output_file_path = output_dir / output_filename
+                            # Generate unique task_id and use it for the output filename: tam_{task_id}.spthy
+                            # Task ID format: {version_name}_{task_name}_{lemma_name}
+                            base_task_id = f"{version_name}_{task_name}_{lemma.name}"
+                            task_id = ConfigManager._get_unique_task_id(
+                                base_task_id, task_id_counter
+                            )
+                            output_filename = f"tam_{task_id}.spthy"
+                            output_file_path = (
+                                output_dir / "tamarin_output_models" / output_filename
+                            )
 
                             executable_task = ExecutableTask(
-                                task_name=f"{task_name}_{lemma.name}",
+                                task_id=task_id,
                                 tamarin_version_name=version_name,
                                 tamarin_executable=tamarin_executable,
                                 theory_file=theory_file,
@@ -340,22 +359,20 @@ class ConfigManager:
                                 f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
                             )
 
-                        # Generate output filename with version suffix
-                        output_base = Path(task.output_file)
-                        if output_base.suffix:
-                            # Has extension: "results.txt" -> "results_stable.txt"
-                            output_filename = (
-                                f"{output_base.stem}_{version_name}{output_base.suffix}"
-                            )
-                        else:
-                            # No extension: "results" -> "results_stable"
-                            output_filename = f"{output_base.name}_{version_name}"
-
-                        output_file_path = output_dir / output_filename
+                        # Generate unique task_id and use it for the output filename: tam_{task_id}.spthy
+                        # Task ID format: {version_name}_{task_name}
+                        base_task_id = f"{version_name}_{task_name}"
+                        task_id = ConfigManager._get_unique_task_id(
+                            base_task_id, task_id_counter
+                        )
+                        output_filename = f"tam_{task_id}.spthy"
+                        output_file_path = (
+                            output_dir / "tamarin_output_models" / output_filename
+                        )
 
                         # Create single ExecutableTask for all lemmas
                         executable_task = ExecutableTask(
-                            task_name=task_name,
+                            task_id=task_id,
                             tamarin_version_name=version_name,
                             tamarin_executable=tamarin_executable,
                             theory_file=theory_file,
@@ -378,7 +395,7 @@ class ConfigManager:
 
             return executable_tasks
 
-        except Exception as e:
+        except Exception as e:  # type: ignore
             error_msg = (
                 f"[ConfigManager] Failed to convert recipe to executable tasks: {e}"
             )
@@ -410,6 +427,6 @@ class ConfigManager:
                 f"[ConfigManager] JSON recipe saved to {config_path}"
             )
 
-        except Exception as e:
+        except Exception as e:  # type: ignore
             error_msg = f"[ConfigManager] Failed to save JSON configuration to {config_path}: {e}"
             raise ConfigError(error_msg) from e

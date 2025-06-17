@@ -12,13 +12,24 @@ from .utils.notifications import notification_manager
 app = typer.Typer(help="Tamarin-wrapper")
 
 
-async def process_config_file(config_path: Path, revalidate: bool = False) -> None:
+async def process_config_file(
+    config_path: Path, revalidate: bool = False, store_raw_output: bool = False
+) -> None:
     """Process configuration file and execute tasks."""
     try:
         # Load recipe and convert to executable tasks
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path, revalidate)
         executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
+
+        # Override or set the output config with CLI flag
+        if recipe.config.output is None:
+            from .model.tamarin_recipe import OutputConfig
+
+            recipe.config.output = OutputConfig(store_raw_output=store_raw_output)
+        else:
+            # CLI flag overrides configuration file
+            recipe.config.output.store_raw_output = store_raw_output
 
         # Execute all tasks using runner
         runner = TaskRunner(recipe.config)
@@ -48,6 +59,11 @@ def main(
         "-d",
         help="Enable debug output.",
     ),
+    store_raw_output: bool = typer.Option(
+        False,
+        "--raw",
+        help="Store raw stdout/stderr from tasks, --debug also enables this option.",
+    ),
 ) -> None:
     """
     Entry point for the Tamarin-wrapper application.
@@ -56,6 +72,9 @@ def main(
     if debug:
         notification_manager.set_debug(True)
         notification_manager.debug("[NotificationUtil] DEBUG Enabled")
+
+    # Debug mode also enables raw output storage
+    enable_raw_output = store_raw_output or debug
 
     if version:
         print(f"Tamarin-wrapper v{__version__}")
@@ -71,7 +90,7 @@ def main(
     # Execute config file tasks
     config_path = Path(config_file)
     try:
-        asyncio.run(process_config_file(config_path, revalidate))
+        asyncio.run(process_config_file(config_path, revalidate, enable_raw_output))
     except typer.Exit:
         # Re-raise typer.Exit to maintain proper exit codes
         raise
