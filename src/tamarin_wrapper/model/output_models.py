@@ -2,14 +2,14 @@
 Data models for output processing and analysis.
 
 This module defines the data structures used for capturing, storing,
-and analyzing Tamarin execution outputs.
+and analyzing Tamarin execution outputs using a hybrid regex + tree-sitter approach.
 """
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 @dataclass
@@ -47,6 +47,9 @@ class LemmaResult:
 
     status: str
     """Status: 'verified', 'falsified', or 'analysis_incomplete'."""
+
+    analysis_type: str
+    """Analysis type: 'all-traces' or 'exists-trace'."""
 
     time_ms: Optional[int] = None
     """Time taken to verify the lemma in milliseconds."""
@@ -154,3 +157,286 @@ class Suggestion:
 
     explanation: str
     """Detailed explanation of why this suggestion might help."""
+
+
+# Enhanced data models for hybrid parsing approach
+
+
+@dataclass
+class StdoutAnalysis:
+    """Results from parsing stdout using regex patterns."""
+
+    analyzed_file: str
+    """Path to the analyzed theory file."""
+
+    output_file: str
+    """Path to the generated output file."""
+
+    processing_time: float
+    """Total processing time in seconds."""
+
+    warnings: List[str]
+    """List of warning messages from stdout."""
+
+    lemma_results: Dict[str, LemmaResult]
+    """Map of lemma names to their verification results."""
+
+    maude_version_warning: Optional[str] = None
+    """Maude version compatibility warning if present."""
+
+    tool_version_info: Optional[str] = None
+    """Tool version information if present."""
+
+
+@dataclass
+class StderrAnalysis:
+    """Results from analyzing stderr for error patterns."""
+
+    error_type: Optional[ErrorType]
+    """Categorized type of error if detected."""
+
+    error_patterns_found: List[str]
+    """List of error patterns that were matched."""
+
+    context_lines: List[str]
+    """Relevant context lines around errors."""
+
+    is_critical_error: bool
+    """Whether this is a critical error that prevents execution."""
+
+    tamarin_logs: List[str]
+    """Tamarin debug/info logs separated from errors."""
+
+
+@dataclass
+class SpthyLemmaInfo:
+    """Detailed lemma information extracted from spthy file."""
+
+    name: str
+    """Lemma name."""
+
+    attributes: List[str]
+    """Lemma attributes like [sources], [reuse], etc."""
+
+    analysis_type: str
+    """Analysis type: all-traces, exists-trace."""
+
+    formula: str
+    """The lemma formula."""
+
+    proof_status: str
+    """Proof status: proven, unproven, failed."""
+
+    proof_method: Optional[str] = None
+    """Proof method: induction, contradiction, etc."""
+
+    proof_steps: Optional[List[str]] = None
+    """List of proof steps if available."""
+
+    line_number: int = 0
+    """Line number where lemma starts."""
+
+    end_line: int = 0
+    """Line number where lemma ends."""
+
+
+@dataclass
+class FunctionDeclaration:
+    """Function declaration from spthy file."""
+
+    name: str
+    signature: str
+    line_number: int
+
+
+@dataclass
+class RuleDeclaration:
+    """Rule declaration from spthy file."""
+
+    name: str
+    premises: List[str]
+    conclusions: List[str]
+    line_number: int
+
+
+@dataclass
+class RestrictionDeclaration:
+    """Restriction declaration from spthy file."""
+
+    name: str
+    formula: str
+    line_number: int
+
+
+@dataclass
+class SpthyAnalysis:
+    """Results from tree-sitter based spthy file parsing."""
+
+    theory_name: str
+    """Name of the theory."""
+
+    lemmas: Dict[str, SpthyLemmaInfo]
+    """Map of lemma names to detailed lemma information."""
+
+    functions: List[FunctionDeclaration]
+    """List of function declarations."""
+
+    rules: List[RuleDeclaration]
+    """List of rule declarations."""
+
+    restrictions: List[RestrictionDeclaration]
+    """List of restriction declarations."""
+
+    parsing_errors: List[str]
+    """List of parsing errors encountered."""
+
+
+@dataclass
+class EnhancedLemmaResult:
+    """Combined lemma info from stdout parsing and spthy analysis."""
+
+    name: str
+    """Lemma name."""
+
+    status: str
+    """Status: verified, falsified, analysis_incomplete."""
+
+    analysis_type: str
+    """Analysis type: all-traces, exists-trace."""
+
+    steps: Optional[int] = None
+    """Number of proof steps."""
+
+    time_ms: Optional[int] = None
+    """Time taken in milliseconds."""
+
+    # Enhanced from spthy analysis
+    proof_method: Optional[str] = None
+    """Proof method used."""
+
+    proof_details: Optional[List[str]] = None
+    """Detailed proof steps."""
+
+    attributes: List[str] = field(default_factory=lambda: [])
+    """Lemma attributes."""
+
+    formula: Optional[str] = None
+    """Lemma formula."""
+
+    line_number: Optional[int] = None
+    """Line number in source file."""
+
+
+@dataclass
+class ProcessingMetadata:
+    """Metadata about the processing operation."""
+
+    analyzed_file: str
+    """Path to the analyzed file."""
+
+    output_file: str
+    """Path to the output file."""
+
+    theory_name: Optional[str]
+    """Name of the theory."""
+
+    total_lemmas_found: int
+    """Total number of lemmas found."""
+
+    lemmas_with_proofs: int
+    """Number of lemmas with proof information."""
+
+    parsing_errors: List[str]
+    """List of parsing errors."""
+
+    maude_version_warning: Optional[str] = None
+    """Maude version warning if present."""
+
+
+@dataclass
+class ProcessedTaskResult:
+    """Final processed result for successful tasks."""
+
+    task_id: str
+    """Task identifier."""
+
+    status: str
+    """Overall task status."""
+
+    processing_time: float
+    """Total processing time."""
+
+    lemma_results: Dict[str, EnhancedLemmaResult]
+    """Map of lemma names to enhanced results."""
+
+    warnings: List[str]
+    """List of warnings."""
+
+    metadata: ProcessingMetadata
+    """Processing metadata."""
+
+    spthy_analysis: Optional[SpthyAnalysis] = None
+    """Optional spthy file analysis."""
+
+    timestamp: datetime = field(default_factory=datetime.now)
+    """When the processing was completed."""
+
+
+@dataclass
+class RawOutputSummary:
+    """Summary of raw outputs for failed tasks."""
+
+    last_stdout_lines: List[str]
+    """Last few lines from stdout."""
+
+    last_stderr_lines: List[str]
+    """Last few lines from stderr."""
+
+    stdout_length: int
+    """Total length of stdout."""
+
+    stderr_length: int
+    """Total length of stderr."""
+
+
+@dataclass
+class FailureContext:
+    """Additional context for failure analysis."""
+
+    theory_name: Optional[str]
+    """Name of the theory if parseable."""
+
+    partial_lemma_results: Dict[str, LemmaResult]
+    """Any lemma results that were parsed before failure."""
+
+    last_successful_lemma: Optional[str]
+    """Last lemma that was successfully processed."""
+
+    failure_point: Optional[str]
+    """Point in execution where failure occurred."""
+
+    resource_usage: Optional[Dict[str, Any]]
+    """Resource usage information if available."""
+
+
+@dataclass
+class FailedTaskResult:
+    """Enhanced failure analysis with suggestions."""
+
+    task_id: str
+    """Task identifier."""
+
+    error_analysis: ErrorAnalysis
+    """Detailed error analysis."""
+
+    suggested_modifications: TaskModifications
+    """Suggested modifications for retry."""
+
+    raw_outputs: RawOutputSummary
+    """Summary of raw outputs."""
+
+    context_info: FailureContext
+    """Additional failure context."""
+
+    timestamp: datetime = field(default_factory=datetime.now)
+    """When the failure analysis was completed."""

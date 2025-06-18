@@ -185,7 +185,7 @@ class ConfigManager:
 
         try:
             # Validate that output directory exists or can be created
-            output_dir = Path(recipe.config.output_directory)
+            output_dir = Path(recipe.config.output_directory).resolve()
             if not output_dir.exists():
                 try:
                     output_dir.mkdir(parents=True, exist_ok=True)
@@ -232,7 +232,7 @@ class ConfigManager:
 
             for task_name, task in recipe.tasks.items():
                 # Validate theory file exists
-                theory_file = Path(task.theory_file)
+                theory_file = Path(task.theory_file).resolve()
                 if not theory_file.exists():
                     error_msg = f"[ConfigManager] Theory file not found for task '{task_name}': {theory_file}"
                     raise ConfigError(error_msg)
@@ -281,7 +281,7 @@ class ConfigManager:
                         # Create ExecutableTask for each tamarin version this lemma uses
                         for version_name in effective_tamarin_versions:
                             tamarin_version = recipe.tamarin_versions[version_name]
-                            tamarin_executable = Path(tamarin_version.path)
+                            tamarin_executable = Path(tamarin_version.path).resolve()
 
                             # Validate tamarin executable exists
                             if not tamarin_executable.exists():
@@ -346,7 +346,7 @@ class ConfigManager:
                             )
 
                         tamarin_version = recipe.tamarin_versions[version_name]
-                        tamarin_executable = Path(tamarin_version.path)
+                        tamarin_executable = Path(tamarin_version.path).resolve()
 
                         # Validate tamarin executable exists
                         if not tamarin_executable.exists():

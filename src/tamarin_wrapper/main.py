@@ -88,7 +88,7 @@ def main(
         raise typer.Exit(1)
 
     # Execute config file tasks
-    config_path = Path(config_file)
+    config_path = Path(config_file).resolve()
     try:
         asyncio.run(process_config_file(config_path, revalidate, enable_raw_output))
     except typer.Exit:
