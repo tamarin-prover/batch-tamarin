@@ -4,23 +4,22 @@ Storage manager for task outputs.
 This module handles the storage and retrieval of task outputs.
 """
 
-import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
-from ..model.executable_task import TaskResult
 from ..utils.notifications import notification_manager
 
 
 class TaskOutputManager:
     """Handles storage and retrieval of task outputs."""
 
-    def __init__(self, output_directory: Path):
+    def __init__(self, output_directory: Path, raw_outputs: bool = False):
         """
         Initialize the storage manager.
 
         Args:
             output_directory: Base directory for storing outputs
+            raw_outputs: Whether to create raw outputs directory
         """
         self.output_directory = Path(output_directory)
 
@@ -28,18 +27,19 @@ class TaskOutputManager:
         self.output_directory.mkdir(parents=True, exist_ok=True)
 
         # Create subdirectories for organization
-        self.raw_outputs_dir = self.output_directory / "raw_outputs"
-        self.failed_tasks_dir = self.output_directory / "failed_tasks"
+        if raw_outputs:
+            self.raw_outputs_dir = self.output_directory / "raw_outputs"
         self.processed_dir = self.output_directory / "processed"
         self.tamarin_output_models = self.output_directory / "tamarin_output_models"
 
         for directory in [
-            self.raw_outputs_dir,
-            self.failed_tasks_dir,
             self.processed_dir,
             self.tamarin_output_models,
         ]:
             directory.mkdir(parents=True, exist_ok=True)
+
+        if raw_outputs:
+            self.raw_outputs_dir.mkdir(parents=True, exist_ok=True)
 
     def store_raw_output(
         self,
@@ -88,55 +88,6 @@ class TaskOutputManager:
             )
             raise
 
-    def store_failed_task(self, task_id: str, task_result: TaskResult) -> Path:
-        """
-        Store information about a failed task.
-
-        Args:
-            task_id: Unique identifier for the task
-            task_result: TaskResult containing failure information
-
-        Returns:
-            Path to the stored failed task file
-        """
-        filename = f"failed_{task_id}.json"
-        failed_path = self.failed_tasks_dir / filename
-
-        # Create a comprehensive failure record
-        failure_data: Dict[str, Any] = {
-            "task_id": task_id,
-            "status": task_result.status.value,
-            "return_code": task_result.return_code,
-            "stderr": task_result.stderr,
-            "stdout": task_result.stdout,
-            "start_time": task_result.start_time,
-            "end_time": task_result.end_time,
-            "duration": task_result.duration,
-            "memory_stats": (
-                {
-                    "peak_memory_mb": task_result.memory_stats.peak_memory_mb,
-                    "avg_memory_mb": task_result.memory_stats.avg_memory_mb,
-                }
-                if task_result.memory_stats
-                else None
-            ),
-        }
-
-        try:
-            with open(failed_path, "w", encoding="utf-8") as f:
-                json.dump(failure_data, f, indent=2)
-
-            notification_manager.debug(
-                f"[StorageManager] Stored failed task info: {failed_path}"
-            )
-            return failed_path
-
-        except Exception as e:
-            notification_manager.error(
-                f"[StorageManager] Failed to store failed task info for {task_id}: {e}"
-            )
-            raise
-
     def get_tamarin_output_content(self, task_id: str) -> Optional[str]:
         """
         Get the Tamarin output content for a task.
@@ -171,12 +122,3 @@ class TaskOutputManager:
                 f"[StorageManager] Failed to read Tamarin output for {task_id}: {e}"
             )
             return None
-
-    def list_failed_tasks(self) -> list[Path]:
-        """
-        List all stored failed task files.
-
-        Returns:
-            List of paths to failed task JSON files
-        """
-        return list(self.failed_tasks_dir.glob("failed_*.json"))

@@ -31,6 +31,7 @@ dependencies = [
     "typer>=0.15.0",
     "pydantic>=2.11.0",
     "psutil>=7.0.0",
+    "tree-sitter>=0.20.4",
 ]
 
 [project.optional-dependencies]
@@ -57,9 +58,11 @@ tamarin-wrapper = "tamarin_wrapper.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["tamarin_wrapper*"]
 
 [tool.setuptools.package-data]
 tamarin_wrapper = ["*.json"]
+"tamarin_wrapper.modules.parsers" = ["build/*.so"]
 
 [tool.black]
 line-length = 88

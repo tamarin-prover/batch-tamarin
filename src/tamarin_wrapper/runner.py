@@ -53,7 +53,9 @@ class TaskRunner:
         output_config: OutputConfig = global_config.output or OutputConfig()
 
         # Initialize output storage manager
-        self.storage_manager = TaskOutputManager(output_directory)
+        self.storage_manager = TaskOutputManager(
+            output_directory, output_config.store_raw_output
+        )
         self.output_config = output_config
 
         # Initialize output processor
@@ -331,18 +333,6 @@ class TaskRunner:
             except Exception as e:
                 notification_manager.error(
                     f"[TaskRunner] Failed to store raw output for {task_id}: {e}"
-                )
-
-        # Store failed task information if needed
-        if result.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]:
-            try:
-                self.storage_manager.store_failed_task(task_id, result)
-                notification_manager.debug(
-                    f"[TaskRunner] Stored failed task info for {task_id}"
-                )
-            except Exception as e:
-                notification_manager.error(
-                    f"[TaskRunner] Failed to store failed task info for {task_id}: {e}"
                 )
 
         # Process output to generate result.json (for both successful and failed tasks)

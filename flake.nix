@@ -24,12 +24,17 @@
             setuptools
             wheel
             build
-          ];
+          ] ++ (with pkgs; [
+            # C compiler and Node.js for tree-sitter compilation
+            gcc
+            nodejs
+          ]);
 
           propagatedBuildInputs = with python.pkgs; [
             typer
             pydantic
             psutil
+            tree-sitter
           ];
 
           # Don't run tests during build (they require Tamarin binaries)
@@ -75,6 +80,11 @@
             ghc
             zlib
             libffi
+
+            # Tree-sitter build dependencies
+            gcc
+            nodejs
+            git
           ];
 
           shellHook = ''
