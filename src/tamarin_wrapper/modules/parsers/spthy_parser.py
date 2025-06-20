@@ -6,14 +6,7 @@ tree-sitter grammar to extract lemmas, proofs, and other structural information.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
-
-try:
-    from tree_sitter import Language, Node, Parser
-
-    TREE_SITTER_AVAILABLE = True
-except ImportError:
-    TREE_SITTER_AVAILABLE = False
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...model.output_models import (
     FunctionDeclaration,
@@ -22,6 +15,19 @@ from ...model.output_models import (
     SpthyAnalysis,
     SpthyLemmaInfo,
 )
+from ...setup.tree_sitter import get_language
+
+try:
+    from tree_sitter import Node, Parser
+
+    tree_sitter_available = True
+except ImportError:
+    tree_sitter_available = False
+    if TYPE_CHECKING:
+        from tree_sitter import Node, Parser
+    else:
+        Node = Any
+        Parser = Any
 
 
 class SpthyFileParser:
@@ -32,22 +38,17 @@ class SpthyFileParser:
 
     def __init__(self):
         """Initialize the parser with the compiled Tamarin grammar."""
-        if not TREE_SITTER_AVAILABLE:
+        if not tree_sitter_available:
             raise ImportError("tree-sitter not available. Run: pip install tree-sitter")
 
-        # Load the compiled Tamarin spthy language from build directory
-        grammar_path = Path(__file__).parent / "build" / "tamarin-spthy.so"
-
-        if not grammar_path.exists():
-            raise FileNotFoundError(
-                f"Tamarin grammar not found at {grammar_path}. "
-                f"Run: python setup_treesitter.py"
-            )
-
         try:
-            self.language = Language(str(grammar_path), "spthy")
+            # Use the proper tree-sitter setup from our setup module
+            self.language = get_language()
+            if self.language is None:
+                raise RuntimeError("Failed to load Tamarin grammar")
+
             self.parser = Parser()
-            self.parser.set_language(self.language)
+            self.parser.set_language(self.language)  # type: ignore
         except Exception as e:
             raise RuntimeError(f"Failed to load Tamarin grammar: {e}")
 
@@ -71,7 +72,13 @@ class SpthyFileParser:
         try:
             content = file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError as e:
-            raise UnicodeDecodeError(f"Cannot decode file {file_path}: {e}")
+            raise UnicodeDecodeError(
+                e.encoding,
+                e.object,
+                e.start,
+                e.end,
+                f"Cannot decode file {file_path}: {e.reason}",
+            ) from e
 
         tree = self.parser.parse(content.encode("utf8"))
 

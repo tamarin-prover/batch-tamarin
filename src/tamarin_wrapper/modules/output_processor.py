@@ -7,7 +7,7 @@ stdout/stderr analysis with tree-sitter based spthy file parsing.
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from ..model.executable_task import TaskResult, TaskStatus
 from ..model.output_models import (
@@ -254,7 +254,7 @@ class TamarinOutputProcessor:
         Returns:
             Dictionary mapping summary types to file paths
         """
-        summary_files = {}
+        summary_files: dict[str, Path] = {}
 
         # Separate successful and failed results
         # Note: This would need to be enhanced to actually load the processed results
@@ -262,7 +262,7 @@ class TamarinOutputProcessor:
 
         # Generate overall summary
         summary_file = self.output_directory / "batch_summary.json"
-        summary_data = {
+        summary_data: dict[str, Any] = {
             "total_tasks": len(task_results),
             "successful_tasks": sum(
                 1 for r in task_results if r.status == TaskStatus.COMPLETED
