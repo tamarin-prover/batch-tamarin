@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from ...model.executable_task import TaskResult
 from ...model.output_models import (
     EnhancedLemmaResult,
     ProcessedTaskResult,
@@ -32,6 +33,7 @@ class ProcessedOutputGenerator:
         metadata: ProcessingMetadata,
         spthy_analysis: SpthyAnalysis | None,
         output_path: Path,
+        task_result: TaskResult | None,
     ) -> Path:
         """
         Generate a processed result JSON file.
@@ -61,7 +63,7 @@ class ProcessedOutputGenerator:
         )
 
         # Convert to JSON-serializable format
-        result_data = self._convert_to_json_format(processed_result)
+        result_data = self._convert_to_json_format(processed_result, task_result)
 
         # Write to file
         output_path.write_text(
@@ -70,12 +72,15 @@ class ProcessedOutputGenerator:
 
         return output_path
 
-    def _convert_to_json_format(self, result: ProcessedTaskResult) -> Dict[str, Any]:
+    def _convert_to_json_format(
+        self, result: ProcessedTaskResult, task_result: TaskResult | None = None
+    ) -> Dict[str, Any]:
         """
         Convert ProcessedTaskResult to JSON-serializable format.
 
         Args:
             result: ProcessedTaskResult to convert
+            task_result: Optional TaskResult for resource usage information
 
         Returns:
             Dictionary ready for JSON serialization
@@ -107,10 +112,26 @@ class ProcessedOutputGenerator:
 
         # Calculate resource usage if available
         wrapper_resource_usage: Dict[str, Any] = {
-            "peak_memory_mb": None,  # Would be filled by process manager
+            "peak_memory_mb": None,
             "average_memory_mb": None,
             "execution_time_s": result.processing_time,
         }
+
+        # Fill resource usage from task_result if available
+        if (
+            task_result
+            and hasattr(task_result, "memory_stats")
+            and task_result.memory_stats
+        ):
+            wrapper_resource_usage["peak_memory_mb"] = (
+                task_result.memory_stats.peak_memory_mb
+            )
+            wrapper_resource_usage["average_memory_mb"] = (
+                task_result.memory_stats.avg_memory_mb
+            )
+
+        if task_result and hasattr(task_result, "duration"):
+            wrapper_resource_usage["execution_time_s"] = task_result.duration
 
         return {
             "task_id": result.task_id,

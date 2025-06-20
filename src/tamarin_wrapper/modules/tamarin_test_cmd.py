@@ -162,7 +162,7 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
             else:
                 # Use interactive prompt for integrity test failures
                 notification_manager.warning(
-                    f"Tamarin integrity test failed for alias '{version_name}'"
+                    f"[TamarinTest] Tamarin integrity test failed for alias '{version_name}'"
                 )
                 should_continue = notification_manager.prompt_user(
                     "Would you like to continue anyway ?", default=True

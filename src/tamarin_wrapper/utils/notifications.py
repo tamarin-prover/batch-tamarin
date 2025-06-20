@@ -20,7 +20,7 @@ class TamarinHighlighter(RegexHighlighter):
         # Section borders (═══════════...)
         r"(?P<border>═+)",
         # Component tags
-        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager)\])",
+        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager|OutputProcessor)\])",
         # File paths
         r"(?P<filepath>[a-zA-Z0-9_\-./]+\.(?:json|txt|spthy))\b",
         # Resource allocation info
@@ -183,6 +183,7 @@ class NotificationManager:
             "tamarin integrity testing": "🧪",
             "task execution": "⚡",
             "summary": "📊",
+            "output processing initialization": "📝",
         }
         return phase_emojis.get(phase_name.lower(), "🔄")
 

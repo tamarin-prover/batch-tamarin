@@ -16,6 +16,7 @@ from ..model.output_models import (
     ProcessingMetadata,
     StderrAnalysis,
 )
+from ..utils.notifications import notification_manager
 from .analyzers.error_analyzer import ErrorAnalyzer
 from .analyzers.lemma_analyzer import LemmaAnalyzer
 from .analyzers.proof_analyzer import ProofAnalyzer
@@ -41,6 +42,11 @@ class TamarinOutputProcessor:
         Args:
             output_directory: Directory where output files are stored
         """
+        notification_manager.phase_separator("Output Processing Initialization")
+        notification_manager.debug(
+            "[OutputProcessor] Initializing TamarinOutputProcessor"
+        )
+
         self.output_directory = Path(output_directory)
         self.processed_dir = self.output_directory / "processed"
         self.failed_tasks_dir = self.output_directory / "failed_tasks"
@@ -49,25 +55,56 @@ class TamarinOutputProcessor:
         self.processed_dir.mkdir(parents=True, exist_ok=True)
         self.failed_tasks_dir.mkdir(parents=True, exist_ok=True)
 
+        notification_manager.debug(
+            f"[OutputProcessor] Output directories created: {self.processed_dir}, {self.failed_tasks_dir}"
+        )
+
         # Initialize parsers
+        notification_manager.debug("[OutputProcessor] Initializing parsers...")
         self.stdout_parser = StdoutParser()
         self.stderr_parser = StderrParser()
+
+        # Try to initialize tree-sitter parser
         try:
+            notification_manager.debug(
+                "[OutputProcessor] Attempting to initialize tree-sitter spthy parser..."
+            )
             self.spthy_parser = SpthyFileParser()
             self.spthy_available = True
+            notification_manager.success(
+                "[OutputProcessor] Tree-sitter spthy parser initialized successfully"
+            )
         except (ImportError, FileNotFoundError, RuntimeError) as e:
-            print(f"Warning: Tree-sitter spthy parser not available: {e}")
+            notification_manager.error(
+                f"[OutputProcessor] Tree-sitter spthy parser not available: {e}"
+            )
+            ignore_tree_sitter = notification_manager.prompt_user(
+                "Tree-sitter parser initialization failed. Do you want to continue without it?",
+                False,
+            )
+            if not ignore_tree_sitter:
+                notification_manager.critical(
+                    "[OutputProcessor] Exiting due to user choice to not ignore tree-sitter"
+                )
             self.spthy_parser = None
             self.spthy_available = False
 
         # Initialize analyzers
+        notification_manager.debug("[OutputProcessor] Initializing analyzers...")
         self.error_analyzer = ErrorAnalyzer()
         self.lemma_analyzer = LemmaAnalyzer()
         self.proof_analyzer = ProofAnalyzer()
 
         # Initialize generators
+        notification_manager.debug(
+            "[OutputProcessor] Initializing result generators..."
+        )
         self.processed_generator = ProcessedOutputGenerator()
         self.failed_generator = FailedTaskGenerator()
+
+        notification_manager.info(
+            f"[OutputProcessor] TamarinOutputProcessor initialized (tree-sitter: {'[bold green]✓[/bold green]' if self.spthy_available else '[bold #ff0000]✗[/bold #ff0000]'})"
+        )
 
     def process_task_output(
         self,
@@ -87,39 +124,86 @@ class TamarinOutputProcessor:
             Path to the generated result file (either processed or failed)
         """
         task_id = task_result.task_id
+        notification_manager.debug(
+            f"[OutputProcessor] Processing output for task: {task_id}"
+        )
 
         try:
-            # Parse stderr first to detect critical errors
+            # Step 1: Parse stderr first to detect critical errors
+            notification_manager.debug(
+                "[OutputProcessor] Step 1: Analyzing stderr for critical errors..."
+            )
             stderr_analysis = self.stderr_parser.analyze(task_result.stderr)
+
+            if stderr_analysis.error_type:
+                notification_manager.debug(
+                    f"[OutputProcessor] Detected error type: {stderr_analysis.error_type.value}"
+                )
 
             # If critical error detected, generate failed result
             if stderr_analysis.is_critical_error:
+                notification_manager.debug(
+                    f"[OutputProcessor] Tamarin error detected in task {task_id}, generating failed result"
+                )
                 return self._handle_critical_error(task_result, stderr_analysis)
 
-            # Parse stdout for execution results
+            # Step 2: Parse stdout for execution results
+            notification_manager.debug(
+                "[OutputProcessor] Step 2: Parsing stdout for execution results..."
+            )
             stdout_analysis = self.stdout_parser.parse(task_result.stdout)
 
-            # Parse spthy file if available and tree-sitter is working
-            spthy_analysis = None
-            if (
-                tamarin_output_file
-                and tamarin_output_file.exists()
-                and self.spthy_available
-                and self.spthy_parser is not None
-            ):
-                try:
-                    spthy_analysis = self.spthy_parser.parse_file(tamarin_output_file)
-                except Exception as e:
-                    print(
-                        f"Warning: Failed to parse spthy file {tamarin_output_file}: {e}"
-                    )
+            notification_manager.debug(
+                f"[OutputProcessor] Found {len(stdout_analysis.lemma_results)} lemma results from stdout"
+            )
+            notification_manager.debug(
+                f"[OutputProcessor] Processing time: {stdout_analysis.processing_time}s"
+            )
 
-            # Combine analyses to create enhanced lemma results
+            # Step 3: Parse spthy file if available and tree-sitter is working
+            spthy_analysis = None
+            if tamarin_output_file and tamarin_output_file.exists():
+                notification_manager.debug(
+                    f"[OutputProcessor] Step 3: Attempting to parse spthy file: {tamarin_output_file}"
+                )
+
+                if self.spthy_available and self.spthy_parser is not None:
+                    try:
+                        spthy_analysis = self.spthy_parser.parse_file(
+                            tamarin_output_file
+                        )
+                        notification_manager.debug(
+                            f"[OutputProcessor] Successfully parsed spthy file, found {len(spthy_analysis.lemmas)} lemmas"
+                        )
+                    except Exception as e:
+                        notification_manager.debug(
+                            f"[OutputProcessor] Failed to parse spthy file {tamarin_output_file}: {e}"
+                        )
+                else:
+                    notification_manager.debug(
+                        "[OutputProcessor] Tree-sitter parser not available, skipping spthy analysis"
+                    )
+            else:
+                notification_manager.debug(
+                    "[OutputProcessor] No spthy output file provided or file doesn't exist"
+                )
+
+            # Step 4: Combine analyses to create enhanced lemma results
+            notification_manager.debug(
+                "[OutputProcessor] Step 4: Combining analyses to create enhanced lemma results..."
+            )
             enhanced_lemmas = self.lemma_analyzer.combine_analyses(
                 stdout_analysis, spthy_analysis
             )
 
-            # Create processing metadata
+            notification_manager.debug(
+                f"[OutputProcessor] Created {len(enhanced_lemmas)} enhanced lemma results"
+            )
+
+            # Step 5: Create processing metadata
+            notification_manager.debug(
+                "[OutputProcessor] Step 5: Creating processing metadata..."
+            )
             metadata = ProcessingMetadata(
                 analyzed_file=stdout_analysis.analyzed_file,
                 output_file=stdout_analysis.output_file,
@@ -134,9 +218,13 @@ class TamarinOutputProcessor:
                 maude_version_warning=stdout_analysis.maude_version_warning,
             )
 
-            # Generate processed result file
+            # Step 6: Generate processed result file
+            notification_manager.debug(
+                "[OutputProcessor] Step 6: Generating processed result file..."
+            )
             result_file = self.processed_dir / f"result_{task_id}.json"
-            return self.processed_generator.generate_result_file(
+
+            generated_file = self.processed_generator.generate_result_file(
                 task_id=task_id,
                 processing_time=stdout_analysis.processing_time,
                 lemma_results=enhanced_lemmas,
@@ -144,11 +232,19 @@ class TamarinOutputProcessor:
                 metadata=metadata,
                 spthy_analysis=spthy_analysis,
                 output_path=result_file,
+                task_result=task_result,  # Pass task_result for resource usage
             )
+
+            notification_manager.success(
+                f"[OutputProcessor] Successfully processed task {task_id} result in {generated_file}"
+            )
+            return generated_file
 
         except Exception as e:
             # Unexpected error during processing
-            print(f"Error processing task {task_id}: {e}")
+            notification_manager.error(
+                f"[OutputProcessor] Error processing task {task_id}: {e}"
+            )
             return self._handle_processing_error(task_result, str(e))
 
     def _handle_critical_error(
@@ -187,13 +283,18 @@ class TamarinOutputProcessor:
 
         # Generate failed result file
         result_file = self.failed_tasks_dir / f"failed_{task_result.task_id}.json"
-        return self.failed_generator.generate_failed_result_file(
+        generated_file = self.failed_generator.generate_failed_result_file(
             task_result=task_result,
             error_analysis=error_analysis,
             suggested_modifications=suggested_modifications,
             failure_context=failure_context,
             output_path=result_file,
         )
+
+        notification_manager.debug(
+            f"[OutputProcessor] Generated failed result file: {generated_file}"
+        )
+        return generated_file
 
     def _handle_processing_error(
         self, task_result: TaskResult, error_message: str
@@ -236,13 +337,18 @@ class TamarinOutputProcessor:
 
         # Generate failed result file
         result_file = self.failed_tasks_dir / f"failed_{task_result.task_id}.json"
-        return self.failed_generator.generate_failed_result_file(
+        generated_file = self.failed_generator.generate_failed_result_file(
             task_result=task_result,
             error_analysis=error_analysis,
             suggested_modifications=suggested_modifications,
             failure_context=failure_context,
             output_path=result_file,
         )
+
+        notification_manager.debug(
+            f"[OutputProcessor] Generated failed result file: {generated_file}"
+        )
+        return generated_file
 
     def generate_batch_summary(self, task_results: list[TaskResult]) -> dict[str, Path]:
         """
@@ -283,5 +389,9 @@ class TamarinOutputProcessor:
             json.dumps(summary_data, indent=2, ensure_ascii=False), encoding="utf-8"
         )
         summary_files["overall"] = summary_file
+
+        notification_manager.info(
+            f"[OutputProcessor] Generated batch summary: {summary_file}"
+        )
 
         return summary_files
