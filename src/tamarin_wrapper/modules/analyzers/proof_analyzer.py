@@ -104,7 +104,7 @@ class ProofAnalyzer:
         Returns:
             Dictionary with complexity assessment
         """
-        complexity_assessment = {
+        complexity_assessment: Dict[str, Any] = {
             "total_lemmas": len(spthy_analysis.lemmas),
             "complexity_score": 0.0,
             "complexity_factors": [],

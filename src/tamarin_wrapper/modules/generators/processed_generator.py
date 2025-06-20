@@ -81,12 +81,12 @@ class ProcessedOutputGenerator:
             Dictionary ready for JSON serialization
         """
         # Categorize lemmas by status
-        verified_lemmas = {}
-        falsified_lemmas = {}
-        analysis_incomplete_lemmas = []
+        verified_lemmas: Dict[str, Dict[str, Any]] = {}
+        falsified_lemmas: Dict[str, Dict[str, Any]] = {}
+        analysis_incomplete_lemmas: list[str] = []
 
         for lemma_name, lemma in result.lemma_results.items():
-            lemma_data = {
+            lemma_data: Dict[str, Any] = {
                 "name": lemma.name,
                 "analysis_type": lemma.analysis_type,
                 "steps": lemma.steps,
@@ -106,7 +106,7 @@ class ProcessedOutputGenerator:
                 analysis_incomplete_lemmas.append(lemma_name)
 
         # Calculate resource usage if available
-        wrapper_resource_usage = {
+        wrapper_resource_usage: Dict[str, Any] = {
             "peak_memory_mb": None,  # Would be filled by process manager
             "average_memory_mb": None,
             "execution_time_s": result.processing_time,
@@ -146,7 +146,7 @@ class ProcessedOutputGenerator:
             Path to the generated summary file
         """
         if not results:
-            summary_data = {
+            summary_data: Dict[str, Any] = {
                 "total_tasks": 0,
                 "successful_tasks": 0,
                 "total_lemmas": 0,
@@ -177,7 +177,7 @@ class ProcessedOutputGenerator:
                 if lemma.status == "analysis_incomplete"
             )
 
-            summary_data = {
+            summary_data: Dict[str, Any] = {
                 "total_tasks": len(results),
                 "successful_tasks": len(results),
                 "total_lemmas": total_lemmas,
