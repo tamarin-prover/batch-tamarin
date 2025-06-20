@@ -58,8 +58,8 @@ class ConfigManager:
 
             notification_manager.phase_separator("Configuration")
             notification_manager.success(
-                f"[ConfigManager] JSON recipe loaded from {config_path} with "
-                f"({len(recipe.tamarin_versions)} tamarin version(s), {len(recipe.tasks)} task(s))"
+                f"[ConfigManager] JSON recipe loaded from {config_path} "
+                f"({len(recipe.tamarin_versions)} tamarin version{('s' if len(recipe.tamarin_versions) > 1 else '')}, {len(recipe.tasks)} theory file{('s' if len(recipe.tasks) > 1 else '')})"
             )
 
             return recipe
@@ -234,8 +234,9 @@ class ConfigManager:
                 # Validate theory file exists
                 theory_file = Path(task.theory_file).resolve()
                 if not theory_file.exists():
-                    error_msg = f"[ConfigManager] Theory file not found for task '{task_name}': {theory_file}"
-                    raise ConfigError(error_msg)
+                    notification_manager.critical(
+                        f"[ConfigManager] Theory file not found for task '{task_name}': {theory_file}"
+                    )
                 if not theory_file.is_file():
                     error_msg = f"[ConfigManager] Theory file path is not a file for task '{task_name}': {theory_file}"
                     raise ConfigError(error_msg)
