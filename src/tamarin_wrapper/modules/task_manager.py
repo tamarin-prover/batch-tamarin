@@ -69,7 +69,12 @@ class TaskManager:
             # Execute the command using existing run_command method (now returns memory stats)
             return_code, stdout, stderr, memory_stats = (
                 await process_manager.run_command(
-                    executable, args, timeout=float(task.task_timeout)
+                    executable,
+                    args,
+                    timeout=float(task.task_timeout),
+                    memory_limit_mb=(
+                        float(task.max_memory) * 1024 if task.max_memory else None
+                    ),
                 )
             )
 
@@ -79,8 +84,26 @@ class TaskManager:
 
             if return_code == 0:
                 status = TaskStatus.COMPLETED
-            elif return_code == -1 and stderr == "Process timed out":
+            elif return_code == -1 and (
+                "Process timed out" in stderr or "timeout" in stderr.lower()
+            ):
                 status = TaskStatus.TIMEOUT
+            elif return_code == -2:
+                # Return code -2 is specifically set by ProcessManager for OOM conditions
+                status = TaskStatus.OUT_OF_MEMORY
+            elif stderr and any(
+                pattern in stderr.lower()
+                for pattern in [
+                    "heap exhausted",
+                    "current maximum heap size",
+                    "allocation failed",
+                    "cannot allocate",
+                    "stack space overflow",
+                ]
+            ):
+                # Only detect OOM from stderr if we see specific Tamarin/Haskell memory errors
+                # Avoid generic "out of memory" or "killed" messages that could be from system kills
+                status = TaskStatus.OUT_OF_MEMORY
             else:
                 status = TaskStatus.FAILED
 
@@ -154,7 +177,8 @@ class TaskManager:
         failed_tasks = sum(
             1
             for status in self._task_status.values()
-            if status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.OUT_OF_MEMORY]
         )
 
         total_tasks = len(self._task_status)
@@ -210,14 +234,15 @@ class TaskManager:
                 task_results=[],
             )
 
-        # Count successful and failed tasks
+        # Count successful, failed, and out_of_memory tasks
         successful_tasks = sum(
             1 for result in task_results if result.status == TaskStatus.COMPLETED
         )
         failed_tasks = sum(
             1
             for result in task_results
-            if result.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if result.status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.OUT_OF_MEMORY]
         )
 
         # Calculate total duration (earliest start to latest end)
@@ -270,6 +295,7 @@ class TaskManager:
             TaskStatus.COMPLETED,
             TaskStatus.FAILED,
             TaskStatus.TIMEOUT,
+            TaskStatus.OUT_OF_MEMORY,
         }
 
         # Get task IDs to remove

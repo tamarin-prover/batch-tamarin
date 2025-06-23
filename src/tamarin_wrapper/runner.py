@@ -11,11 +11,7 @@ import signal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from .model.executable_task import (
-    ExecutableTask,
-    TaskResult,
-    TaskStatus,
-)
+from .model.executable_task import ExecutableTask, TaskResult, TaskStatus
 from .model.tamarin_recipe import GlobalConfig, OutputConfig
 from .modules.output_manager import TaskOutputManager
 from .modules.output_processor import TamarinOutputProcessor
@@ -359,21 +355,31 @@ class TaskRunner:
         # Update internal tracking
         self._task_results[task_id] = result
 
+        # Create memory info string for logging
+        memory_info = ""
+        if result.memory_stats:
+            memory_info = f", peak_memory: {result.memory_stats.peak_memory_mb:.1f}MB, avg_memory: {result.memory_stats.avg_memory_mb:.1f}MB"
+
         if result.status == TaskStatus.COMPLETED:
             self._completed_tasks.add(task_id)
             notification_manager.success(
-                f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
+                f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s{memory_info})"
             )
         elif result.status == TaskStatus.TIMEOUT:
             self._failed_tasks.add(task_id)
             notification_manager.warning(
-                f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s)"
+                f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s{memory_info})"
+            )
+        elif result.status == TaskStatus.OUT_OF_MEMORY:
+            self._failed_tasks.add(task_id)
+            notification_manager.error(
+                f"[TaskRunner] Task failed due to OUT OF MEMORY: {task_id} (duration: {result.duration:.2f}s{memory_info})"
             )
         else:
             self._failed_tasks.add(task_id)
             notification_manager.error(
                 f"[TaskRunner] Task failed: {task_id} (status: {result.status.value}, "
-                f"return_code: {result.return_code}, duration: {result.duration:.2f}s)"
+                f"return_code: {result.return_code}, duration: {result.duration:.2f}s{memory_info})"
             )
 
     def _display_progress_update(self) -> None:

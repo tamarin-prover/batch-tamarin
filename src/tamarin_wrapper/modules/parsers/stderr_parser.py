@@ -21,13 +21,19 @@ class StderrParser:
             re.compile(r"Heap exhausted", re.IGNORECASE),
             re.compile(r"Current maximum heap size", re.IGNORECASE),
             re.compile(r"out of memory", re.IGNORECASE),
+            re.compile(r"killed due to out of memory", re.IGNORECASE),
+            re.compile(r"memory limit exceeded", re.IGNORECASE),
             re.compile(r"Allocation failed", re.IGNORECASE),
             re.compile(r"cannot allocate", re.IGNORECASE),
             re.compile(r"Stack space overflow", re.IGNORECASE),
+            re.compile(r"process killed.*memory", re.IGNORECASE),
+            re.compile(r"oom-killer", re.IGNORECASE),
         ],
         ErrorType.TIMEOUT: [
             re.compile(r"Process timed out", re.IGNORECASE),
             re.compile(r"timeout", re.IGNORECASE),
+            re.compile(r"killed.*signal.*15", re.IGNORECASE),
+            re.compile(r"terminated.*timeout", re.IGNORECASE),
         ],
         ErrorType.SYNTAX_ERROR: [
             re.compile(r"Parse error", re.IGNORECASE),
@@ -226,7 +232,17 @@ class StderrParser:
             return True
 
         # Timeout might not be critical (could be a partial result)
+        # But if we see explicit kill messages, it's more critical
         if error_type == ErrorType.TIMEOUT:
+            # Check if this was a hard kill vs soft timeout
+            kill_patterns = [
+                r"killed.*signal",
+                r"terminated.*timeout",
+                r"process.*killed",
+            ]
+            for pattern in kill_patterns:
+                if re.search(pattern, stderr, re.IGNORECASE):
+                    return True
             return False
 
         # Proof failures are not critical (expected in some cases)

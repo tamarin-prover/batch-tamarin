@@ -255,7 +255,10 @@ class NotificationManager:
         timeout_tasks = sum(
             1 for r in summary.task_results if r.status == TaskStatus.TIMEOUT
         )
-        failed_tasks_other = summary.failed_tasks - timeout_tasks
+        oom_tasks = sum(
+            1 for r in summary.task_results if r.status == TaskStatus.OUT_OF_MEMORY
+        )
+        failed_tasks_other = summary.failed_tasks - timeout_tasks - oom_tasks
         avg_duration = (
             summary.total_duration / summary.total_tasks
             if summary.total_tasks > 0
@@ -272,6 +275,7 @@ class NotificationManager:
         overview_table.add_row(
             "⏱️ Timed Out", f"[bold #ff8c00]{timeout_tasks}[/bold #ff8c00]"
         )
+        overview_table.add_row("💥 Out of Memory", f"[bold red]{oom_tasks}[/bold red]")
         overview_table.add_row(
             "🕒 Total Duration", f"{self._format_duration(summary.total_duration)}"
         )
@@ -319,6 +323,8 @@ class NotificationManager:
                 status_display = "[green]✅ PASS[/green]"
             elif result.status == TaskStatus.TIMEOUT:
                 status_display = "[yellow]⏱️ TIMEOUT[/yellow]"
+            elif result.status == TaskStatus.OUT_OF_MEMORY:
+                status_display = "[red]💥 OUT OF MEMORY[/red]"
             else:
                 status_display = "[red]❌ FAIL[/red]"
 
@@ -326,12 +332,13 @@ class NotificationManager:
             peak_memory_display = (
                 self._format_memory(result.memory_stats.peak_memory_mb)
                 if result.memory_stats
+                and hasattr(result.memory_stats, "peak_memory_mb")
                 else "N/A"
             )
 
             avg_memory_display = (
                 self._format_memory(result.memory_stats.avg_memory_mb)
-                if result.memory_stats
+                if result.memory_stats and hasattr(result.memory_stats, "avg_memory_mb")
                 else "N/A"
             )
 
@@ -355,30 +362,38 @@ class NotificationManager:
         failed_results = [
             r
             for r in summary.task_results
-            if r.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if r.status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.OUT_OF_MEMORY]
         ]
 
         if failed_results:
             error_details = Markdown("**❌ Failed Tasks Details:**")
             components.append(error_details)
 
-            for result in failed_results[:3]:  # Show max 3 failed tasks
-                error_type = (
-                    "Timeout" if result.status == TaskStatus.TIMEOUT else "Error"
+            for result in failed_results:
+                if result.status == TaskStatus.TIMEOUT:
+                    error_type = "Timeout"
+                elif result.status == TaskStatus.OUT_OF_MEMORY:
+                    error_type = "Out of Memory"
+                else:
+                    error_type = "Error"
+
+                # Show last 2 lines of stderr, or all if less than 2 lines
+                stderr_lines = result.stderr.strip().splitlines()
+                last_lines = (
+                    stderr_lines[-2:] if len(stderr_lines) >= 2 else stderr_lines
                 )
-                brief_error = (
-                    result.stderr[:60] + "..."
-                    if len(result.stderr) > 60
-                    else result.stderr
-                )
-                components.append(
-                    Markdown(f"  • **{result.task_id}**: {error_type} - {brief_error}")
+                last_lines_str = (
+                    "\n".join(f"      {line}" for line in last_lines)
+                    if last_lines
+                    else ""
                 )
 
-            if len(failed_results) > 3:
-                components.append(
-                    Markdown(f"  ... and {len(failed_results) - 3} more failed tasks")
-                )
+                # Compose error message
+                base_msg = f"  • **{result.task_id}**: {error_type}"
+                if last_lines_str:
+                    base_msg += f"\n{last_lines_str}"
+                components.append(Markdown(base_msg))
 
         # Single comprehensive output
         final_panel = Panel(

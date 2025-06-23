@@ -296,6 +296,43 @@ class TamarinOutputProcessor:
         )
         return generated_file
 
+    def _handle_oom_error(self, task_result: TaskResult) -> Path:
+        """
+        Handle out-of-memory errors.
+        """
+        from ..model.output_models import ErrorAnalysis, ErrorType, FailureContext
+
+        error_analysis = ErrorAnalysis(
+            error_type=ErrorType.MEMORY_EXHAUSTED,
+            description="Task failed due to exceeding memory limit.",
+            context_lines=[],
+            suggested_fixes=[
+                "Increase memory limit or optimize the task to use less memory."
+            ],
+        )
+
+        suggested_modifications = self.error_analyzer.suggest_task_modifications(
+            ErrorType.MEMORY_EXHAUSTED, current_timeout=300, current_memory=4
+        )
+
+        failure_context = FailureContext(
+            theory_name=None,
+            partial_lemma_results={},
+            last_successful_lemma=None,
+            failure_point="memory",
+            resource_usage=None,
+        )
+
+        output_path = self.failed_tasks_dir / f"failed_{task_result.task_id}.json"
+        generated_file = self.failed_generator.generate_failed_result_file(
+            task_result=task_result,
+            error_analysis=error_analysis,
+            suggested_modifications=suggested_modifications,
+            failure_context=failure_context,
+            output_path=output_path,
+        )
+        return generated_file
+
     def _handle_processing_error(
         self, task_result: TaskResult, error_message: str
     ) -> Path:
@@ -375,6 +412,11 @@ class TamarinOutputProcessor:
             ),
             "failed_tasks": sum(
                 1 for r in task_results if r.status == TaskStatus.FAILED
+            ),
+            "out_of_memory_tasks": sum(
+                1
+                for r in task_results
+                if getattr(r, "status", None) == TaskStatus.OUT_OF_MEMORY
             ),
             "processing_summary": {
                 "spthy_parser_available": self.spthy_available,

@@ -115,6 +115,7 @@ class TaskStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     TIMEOUT = "timeout"
+    OUT_OF_MEMORY = "out_of_memory"
 
 
 @dataclass

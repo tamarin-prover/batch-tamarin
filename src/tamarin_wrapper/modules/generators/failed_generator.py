@@ -111,9 +111,10 @@ class FailedTaskGenerator:
         Returns:
             Dictionary ready for JSON serialization
         """
-        # Calculate resource usage
+        # Calculate resource usage - ensure we capture all available information
         resource_usage: dict[str, Any] = {
-            "peak_memory_mb": None,  # Would be filled by process manager if available
+            "peak_memory_mb": None,
+            "average_memory_mb": None,
             "execution_time_s": (
                 task_result.duration if hasattr(task_result, "duration") else None
             ),
@@ -123,6 +124,13 @@ class FailedTaskGenerator:
         if task_result.memory_stats:
             resource_usage["peak_memory_mb"] = task_result.memory_stats.peak_memory_mb
             resource_usage["average_memory_mb"] = task_result.memory_stats.avg_memory_mb
+
+        # Add status information for better error classification
+        resource_usage["task_status"] = (
+            task_result.status.value
+            if hasattr(task_result.status, "value")
+            else str(task_result.status)
+        )
 
         return {
             "task_id": failed_result.task_id,
