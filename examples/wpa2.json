@@ -10,7 +10,7 @@
 			"path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
 		},
 		"dev": {
-			"path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover"
+		  "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
 		},
         "legacy": {
             "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
