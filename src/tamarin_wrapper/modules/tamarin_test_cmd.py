@@ -19,7 +19,7 @@ async def extract_tamarin_version(path: Path) -> str:
     """
     try:
         # Execute the tamarin-prover --version command
-        return_code, stdout, stderr = await process_manager.run_command(
+        return_code, stdout, stderr, _ = await process_manager.run_command(
             path, ["--version"], timeout=30.0
         )
 
@@ -72,7 +72,7 @@ async def launch_tamarin_test(path: Path) -> bool:
     """
     try:
         # Execute the tamarin-prover test command
-        return_code, stdout, stderr = await process_manager.run_command(
+        return_code, stdout, stderr, _ = await process_manager.run_command(
             path, ["test"], timeout=60.0
         )
 
