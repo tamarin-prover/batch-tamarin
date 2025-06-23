@@ -18,10 +18,11 @@ async def process_config_file(config_path: Path, revalidate: bool = False) -> No
         # Load recipe and convert to executable tasks
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path, revalidate)
-        executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
+
+        runner = TaskRunner(recipe.config)
 
         # Execute all tasks using runner
-        runner = TaskRunner(recipe.config)
+        executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
         await runner.execute_all_tasks(executable_tasks)
 
     except Exception as e:

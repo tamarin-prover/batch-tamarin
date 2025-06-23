@@ -212,14 +212,18 @@ class ConfigManager:
                                     f"[ConfigManager] Lemma '{lemma.name}' in task '{task_name}' references undefined tamarin alias: '{version_name}'"
                                 )
 
-                        # Validate resource constraints against global limits
+                        # Validate resource constraints against global limits, fallback to max if overflow
                         if max_cores > recipe.config.global_max_cores:
-                            error_msg = f"Lemma '{lemma.name}' in task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
-                            raise ConfigError(error_msg)
+                            notification_manager.warning(
+                                f"Lemma '{lemma.name}' in task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores, falling back to this value : ({recipe.config.global_max_cores})"
+                            )
+                            max_cores = recipe.config.global_max_cores
 
                         if max_memory > recipe.config.global_max_memory:
-                            error_msg = f"Lemma '{lemma.name}' in task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
-                            raise ConfigError(error_msg)
+                            notification_manager.warning(
+                                f"Lemma '{lemma.name}' in task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory, falling back to this value : ({recipe.config.global_max_memory})"
+                            )
+                            max_memory = recipe.config.global_max_memory
 
                         for version_name in effective_tamarin_versions:
                             tamarin_version = recipe.tamarin_versions[version_name]
@@ -267,14 +271,18 @@ class ConfigManager:
                         ConfigManager._get_task_effective_resources(task, recipe.config)
                     )
 
-                    # Validate resource constraints against global limits
+                    # Validate resource constraints against global limits, fallback to max if overflow
                     if task_max_cores > recipe.config.global_max_cores:
-                        error_msg = f"Task '{task_name}' max_cores ({task_max_cores}) exceeds global_max_cores ({recipe.config.global_max_cores})"
-                        raise ConfigError(error_msg)
+                        notification_manager.warning(
+                            f"Task '{task_name}' max_cores ({task_max_cores}) exceeds global_max_cores, falling back to this value : ({recipe.config.global_max_cores})"
+                        )
+                        max_cores = recipe.config.global_max_cores
 
                     if task_max_memory > recipe.config.global_max_memory:
-                        error_msg = f"Task '{task_name}' max_memory ({task_max_memory}) exceeds global_max_memory ({recipe.config.global_max_memory})"
-                        raise ConfigError(error_msg)
+                        notification_manager.warning(
+                            f"Task '{task_name}' max_memory ({task_max_memory}) exceeds global_max_memory, falling back to this value : ({recipe.config.global_max_memory})"
+                        )
+                        max_memory = recipe.config.global_max_memory
 
                     # Expand task for each specified tamarin version
                     for version_name in task.tamarin_versions:
