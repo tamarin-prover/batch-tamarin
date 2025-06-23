@@ -20,7 +20,7 @@ class TamarinHighlighter(RegexHighlighter):
         # Section borders (═══════════...)
         r"(?P<border>═+)",
         # Component tags
-        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager)\])",
+        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager|ResourceManager|TaskManager)\])",
         # File paths
         r"(?P<filepath>[a-zA-Z0-9_\-./]+\.(?:json|txt|spthy))\b",
         # Resource allocation info
@@ -29,6 +29,7 @@ class TamarinHighlighter(RegexHighlighter):
         r"(?P<task_success>Task completed successfully:)",
         r"(?P<task_failed>Task failed:)",
         r"(?P<task_timeout>Task timed out:)",
+        r"(?P<task_memory_limit>Task exceeded memory limit:)",
     ]
 
 
@@ -59,6 +60,7 @@ class NotificationManager:
                 "tamarin.task_success": "#00aa00",
                 "tamarin.task_failed": "#ff0000",
                 "tamarin.task_timeout": "#ff8c00",
+                "tamarin.task_memory_limit": "#8b008b",
             }
         )
 
@@ -254,7 +256,14 @@ class NotificationManager:
         timeout_tasks = sum(
             1 for r in summary.task_results if r.status == TaskStatus.TIMEOUT
         )
-        failed_tasks_other = summary.failed_tasks - timeout_tasks
+        memory_limit_exceeded_tasks = sum(
+            1
+            for r in summary.task_results
+            if r.status == TaskStatus.MEMORY_LIMIT_EXCEEDED
+        )
+        failed_tasks_other = (
+            summary.failed_tasks - timeout_tasks - memory_limit_exceeded_tasks
+        )
         avg_duration = (
             summary.total_duration / summary.total_tasks
             if summary.total_tasks > 0
@@ -270,6 +279,10 @@ class NotificationManager:
         )
         overview_table.add_row(
             "⏱️ Timed Out", f"[bold #ff8c00]{timeout_tasks}[/bold #ff8c00]"
+        )
+        overview_table.add_row(
+            "🧠 Memory Limit",
+            f"[bold purple]{memory_limit_exceeded_tasks}[/bold purple]",
         )
         overview_table.add_row(
             "🕒 Total Duration", f"{self._format_duration(summary.total_duration)}"
@@ -318,6 +331,8 @@ class NotificationManager:
                 status_display = "[green]✅ PASS[/green]"
             elif result.status == TaskStatus.TIMEOUT:
                 status_display = "[yellow]⏱️ TIMEOUT[/yellow]"
+            elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
+                status_display = "[purple]🧠 MEMORY LIMIT[/purple]"
             else:
                 status_display = "[red]❌ FAIL[/red]"
 
@@ -354,30 +369,34 @@ class NotificationManager:
         failed_results = [
             r
             for r in summary.task_results
-            if r.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if r.status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
         ]
 
         if failed_results:
             error_details = Markdown("**❌ Failed Tasks Details:**")
             components.append(error_details)
 
-            for result in failed_results[:3]:  # Show max 3 failed tasks
-                error_type = (
-                    "Timeout" if result.status == TaskStatus.TIMEOUT else "Error"
-                )
-                brief_error = (
-                    result.stderr[:60] + "..."
-                    if len(result.stderr) > 60
-                    else result.stderr
-                )
+            for result in failed_results:
+                if result.status == TaskStatus.TIMEOUT:
+                    error_type = "Timeout"
+                elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
+                    error_type = "Memory Limit Exceeded"
+                else:
+                    error_type = "Error"
+                # Get the last line of stderr, prefix with ... if there are multiple lines
+                if result.stderr:
+                    stderr_lines = result.stderr.strip().splitlines()
+                    if len(stderr_lines) > 1:
+                        last_stderr = f"**sterr** : (...) {stderr_lines[-1]}"
+                    else:
+                        last_stderr = f"**stderr** : {stderr_lines[-1]}"
+                else:
+                    last_stderr = ""
                 components.append(
-                    Markdown(f"  • **{result.task_id}**: {error_type} - {brief_error}")
+                    Markdown(f"  • **{result.task_id}** -- {error_type} :")
                 )
-
-            if len(failed_results) > 3:
-                components.append(
-                    Markdown(f"  ... and {len(failed_results) - 3} more failed tasks")
-                )
+                components.append(Markdown(f"{last_stderr}"))
 
         # Single comprehensive output
         final_panel = Panel(

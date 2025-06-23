@@ -62,14 +62,14 @@ class ExecutableTask:
         Convert this task to a runnable command for ProcessManager.
 
         Generates command based on Tamarin CLI reference with Haskell RTS performance limiters:
-        tamarin-prover +RTS -N{cores} -M{memory}G -RTS [theory_file] [--prove=lemma] [tamarin_options] [preprocess_flags] --output=[output_file]
+        tamarin-prover +RTS -N{cores} -RTS [theory_file] [--prove=lemma] [tamarin_options] [preprocess_flags] --output=[output_file]
 
         Returns:
             List[str]: Command components ready for ProcessManager execution
 
         Examples:
-            All lemmas: ["tamarin-prover", "+RTS", "-N4", "-M4G", "-RTS", "protocols/example.spthy", "--prove", "--output=results_stable.txt"]
-            Specific lemma: ["tamarin-prover", "+RTS", "-N4", "-M4G", "-RTS", "protocols/complex.spthy", "--prove=secrecy",
+            All lemmas: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/example.spthy", "--prove", "--output=results_stable.txt"]
+            Specific lemma: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/complex.spthy", "--prove=secrecy",
                            "--diff", "-D=GoodKeysOnly", "--output=results_stable.txt"]
         """
         command = [str(self.tamarin_executable)]
@@ -77,8 +77,6 @@ class ExecutableTask:
         # Add Haskell RTS flags for performance limiting
         command.extend(["+RTS", f"-N{self.max_cores}"])
 
-        # Consider alternative memory limiting approaches if needed
-        command.append(f"-M{self.max_memory}G")
         command.append("-RTS")
 
         # Add theory file
@@ -115,6 +113,7 @@ class TaskStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     TIMEOUT = "timeout"
+    MEMORY_LIMIT_EXCEEDED = "memory_limit_exceeded"
 
 
 @dataclass

@@ -38,9 +38,14 @@ class ProcessManager:
     def __init__(self):
         self._active_processes: Dict[str, ProcessInfo] = {}
         self._process_counter = 0
+        self._memory_exceeded_processes: Dict[str, bool] = {}
 
     async def run_command(
-        self, executable: Path, args: List[str], timeout: float = 30.0
+        self,
+        executable: Path,
+        args: List[str],
+        timeout: float = 30.0,
+        memory_limit_mb: Optional[float] = None,
     ) -> tuple[int, str, str, Optional[MemoryStats]]:
         """
         Launch a command in a non-blocking manner with memory monitoring.
@@ -49,9 +54,11 @@ class ProcessManager:
             executable: Path to the executable
             args: Command arguments
             timeout: Timeout in seconds
+            memory_limit_mb: Memory limit in MB, process will be killed if exceeded
 
         Returns:
             Tuple (return_code, stdout, stderr, memory_stats)
+            return_code will be -2 if memory limit was exceeded
         """
         process_id = f"cmd_{self._process_counter}"
         self._process_counter += 1
@@ -68,7 +75,9 @@ class ProcessManager:
             task = asyncio.create_task(self._wait_for_process(process))
 
             # Start memory monitoring
-            memory_task = asyncio.create_task(self._monitor_memory(process))
+            memory_task = asyncio.create_task(
+                self._monitor_memory(process, memory_limit_mb, process_id)
+            )
 
             # Register the process
             process_info = ProcessInfo(
@@ -79,6 +88,7 @@ class ProcessManager:
                 start_time=asyncio.get_event_loop().time(),
             )
             self._active_processes[process_id] = process_info
+            self._memory_exceeded_processes[process_id] = False
 
             notification_manager.debug(
                 f"[ProcessManager] Running command: {' '.join(command)}"
@@ -86,13 +96,32 @@ class ProcessManager:
 
             try:
                 # Wait with timeout for both tasks
-                done, _ = await asyncio.wait(
+                done, pending = await asyncio.wait(
                     [task, memory_task],
                     timeout=timeout,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-                if task in done:
+                # Check if memory limit was exceeded
+                if self._memory_exceeded_processes.get(process_id, False):
+                    # Memory limit was exceeded
+                    # Cancel any pending tasks
+                    for pending_task in pending:
+                        pending_task.cancel()
+
+                    # Get memory stats from memory task
+                    memory_stats = None
+                    if memory_task in done:
+                        try:
+                            memory_stats = await memory_task
+                        except Exception:
+                            pass
+
+                    notification_manager.warning(
+                        f"[ProcessManager] Command exceeded memory limit: {' '.join(command)}"
+                    )
+                    return (-2, "", "Process exceeded memory limit", memory_stats)
+                elif task in done:
                     # Process completed normally
                     result = await task
                     memory_task.cancel()
@@ -112,18 +141,41 @@ class ProcessManager:
                     )
                     await self._kill_process(process_id)
 
-                    # Cancel memory monitoring
-                    memory_task.cancel()
+                    # Try to get current memory stats before cancelling
+                    memory_stats = None
+                    if not memory_task.done():
+                        try:
+                            memory_stats = await asyncio.wait_for(
+                                memory_task, timeout=0.5
+                            )
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            pass
 
-                    return (-1, "", "Process timed out", None)
+                    # Cancel memory monitoring if still running
+                    if not memory_task.done():
+                        memory_task.cancel()
+
+                    return (-1, "", "Process timed out", memory_stats)
 
             except asyncio.TimeoutError:
                 notification_manager.warning(
                     f"[ProcessManager] Command timed out: {' '.join(command)}"
                 )
                 await self._kill_process(process_id)
-                memory_task.cancel()
-                return (-1, "", "Process timed out", None)
+
+                # Try to get current memory stats before cancelling
+                memory_stats = None
+                if not memory_task.done():
+                    try:
+                        memory_stats = await asyncio.wait_for(memory_task, timeout=0.5)
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
+                        pass
+
+                # Cancel memory monitoring if still running
+                if not memory_task.done():
+                    memory_task.cancel()
+
+                return (-1, "", "Process timed out", memory_stats)
 
         except Exception as e:
             notification_manager.error(
@@ -135,6 +187,8 @@ class ProcessManager:
             # Clean up the process
             if process_id in self._active_processes:
                 del self._active_processes[process_id]
+            if process_id in self._memory_exceeded_processes:
+                del self._memory_exceeded_processes[process_id]
 
     async def _wait_for_process(
         self, process: asyncio.subprocess.Process
@@ -149,18 +203,24 @@ class ProcessManager:
         return (return_code, stdout_str, stderr_str)
 
     async def _monitor_memory(
-        self, process: asyncio.subprocess.Process
+        self,
+        process: asyncio.subprocess.Process,
+        memory_limit_mb: Optional[float] = None,
+        process_id: Optional[str] = None,
     ) -> Optional[MemoryStats]:
         """
         Monitor memory usage of a process during execution.
 
         Samples memory usage every 1 second and calculates peak and average memory efficiently.
+        If memory_limit_mb is specified, kills the process when limit is exceeded.
 
         Args:
             process: The subprocess to monitor
+            memory_limit_mb: Memory limit in MB, process will be killed if exceeded
 
         Returns:
             MemoryStats with peak and average memory usage in MB, or None if monitoring failed
+            If memory limit is exceeded, returns the MemoryStats at time of termination
         """
         peak_memory_mb: float = 0.0
         avg_memory_mb: float = 0.0
@@ -202,6 +262,35 @@ class ProcessManager:
                         avg_memory_mb + (memory_mb - avg_memory_mb) / sample_count
                     )
 
+                    # Check memory limit if specified
+                    if memory_limit_mb is not None and memory_mb > memory_limit_mb:
+                        notification_manager.warning(
+                            f"[ProcessManager] Memory limit exceeded: {memory_mb:.1f}MB > {memory_limit_mb:.1f}MB"
+                        )
+
+                        # Mark this process as memory exceeded
+                        if process_id and process_id in self._memory_exceeded_processes:
+                            self._memory_exceeded_processes[process_id] = True
+
+                        # Kill the process immediately
+                        try:
+                            if process.returncode is None:
+                                process.terminate()
+                                try:
+                                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                                except asyncio.TimeoutError:
+                                    process.kill()
+                                    await process.wait()
+                        except Exception as e:
+                            notification_manager.debug(
+                                f"[ProcessManager] Error killing process due to memory limit: {e}"
+                            )
+
+                        # Return memory stats at time of termination
+                        return MemoryStats(
+                            peak_memory_mb=peak_memory_mb, avg_memory_mb=avg_memory_mb
+                        )
+
                     # Sample every 1 second
                     await asyncio.sleep(1.0)
 
@@ -213,8 +302,12 @@ class ProcessManager:
             # Process doesn't exist or invalid PID
             return None
         except asyncio.CancelledError:
-            # Monitoring was cancelled (normal when process completes)
-            pass
+            # Monitoring was cancelled - return current stats if we have any
+            if sample_count > 0:
+                return MemoryStats(
+                    peak_memory_mb=peak_memory_mb, avg_memory_mb=avg_memory_mb
+                )
+            return None
         except Exception as e:
             notification_manager.debug(f"[ProcessManager] Memory monitoring error: {e}")
 

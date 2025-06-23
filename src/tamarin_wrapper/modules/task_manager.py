@@ -67,9 +67,14 @@ class TaskManager:
 
         try:
             # Execute the command using existing run_command method (now returns memory stats)
+            # Convert memory limit from GB to MB
+            memory_limit_mb = float(task.max_memory) * 1024
             return_code, stdout, stderr, memory_stats = (
                 await process_manager.run_command(
-                    executable, args, timeout=float(task.task_timeout)
+                    executable,
+                    args,
+                    timeout=float(task.task_timeout),
+                    memory_limit_mb=memory_limit_mb,
                 )
             )
 
@@ -81,6 +86,8 @@ class TaskManager:
                 status = TaskStatus.COMPLETED
             elif return_code == -1 and stderr == "Process timed out":
                 status = TaskStatus.TIMEOUT
+            elif return_code == -2 and stderr == "Process exceeded memory limit":
+                status = TaskStatus.MEMORY_LIMIT_EXCEEDED
             else:
                 status = TaskStatus.FAILED
 
@@ -154,7 +161,8 @@ class TaskManager:
         failed_tasks = sum(
             1
             for status in self._task_status.values()
-            if status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
         )
 
         total_tasks = len(self._task_status)
@@ -217,7 +225,8 @@ class TaskManager:
         failed_tasks = sum(
             1
             for result in task_results
-            if result.status in [TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            if result.status
+            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
         )
 
         # Calculate total duration (earliest start to latest end)
@@ -270,6 +279,7 @@ class TaskManager:
             TaskStatus.COMPLETED,
             TaskStatus.FAILED,
             TaskStatus.TIMEOUT,
+            TaskStatus.MEMORY_LIMIT_EXCEEDED,
         }
 
         # Get task IDs to remove

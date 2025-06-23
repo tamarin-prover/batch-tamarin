@@ -311,8 +311,14 @@ class TaskRunner:
                 f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.TIMEOUT:
+            self._failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s)"
+            )
+        elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
+            self._failed_tasks.add(task_id)
+            notification_manager.warning(
+                f"[TaskRunner] Task exceeded memory limit: {task_id} (duration: {result.duration:.2f}s)"
             )
         else:
             self._failed_tasks.add(task_id)
@@ -384,7 +390,7 @@ class TaskRunner:
         )
         if running_tasks:
             # Wait for tasks currently running
-            await asyncio.wait(asyncio.gather(*running_tasks, return_exceptions=True))
+            await asyncio.gather(*running_tasks, return_exceptions=True)
 
         # Clear tracking
         self._running_tasks.clear()
@@ -415,11 +421,8 @@ class TaskRunner:
 
         # Wait briefly for cancellations to complete
         if running_tasks:
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*running_tasks, return_exceptions=True), timeout=5.0
-                )
-            except asyncio.TimeoutError:
+            _, pending = await asyncio.wait(running_tasks, timeout=5.0)
+            if pending:
                 notification_manager.warning(
                     "[TaskRunner] Some tasks did not respond to cancellation within timeout"
                 )
