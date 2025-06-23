@@ -72,18 +72,18 @@ async def launch_tamarin_test(path: Path) -> bool:
     """
     try:
         # Execute the tamarin-prover test command
-        return_code, stdout, stderr, _ = await process_manager.run_command(
+        return_code, stdout, _, _ = await process_manager.run_command(
             path, ["test"], timeout=60.0
         )
 
         # Check if command executed successfully
         if return_code != 0:
             notification_manager.error(
-                f"[TamarinTest] Test command failed with return code {return_code}"
+                f"[TamarinTest] Test command failed, tamarin {path} might not work as intended."
             )
-            if stderr:
+            if stdout:
                 notification_manager.debug(
-                    f"[#ff0000][ERROR][/#ff0000][TamarinTest] Error output: {stderr}"
+                    f"[#ff0000][ERROR][/#ff0000][TamarinTest] Error output:\n {chr(10).join(stdout.strip().splitlines()[-4:])}"
                 )
             return False
 

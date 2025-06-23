@@ -21,8 +21,8 @@
 			"theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
 			"tamarin_versions": ["stable", "dev", "legacy"],
 			"output_file_prefix": "WPA2_Example",
-            "preprocess_flags": ["yes"],
-            "tamarin_options" : ["-v"],
+      "preprocess_flags": ["yes"],
+      "tamarin_options" : ["-v"],
 			"ressources": {
 				"max_cores": 2,
 				"max_memory": 8,
