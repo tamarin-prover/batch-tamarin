@@ -80,8 +80,9 @@ class Task(BaseModel):
         min_length=1,
         description="List of Tamarin version aliases to run this task on",
     )
-    output_file: str = Field(
-        ..., description="Output file name for results (relative to output_directory)"
+    output_file_prefix: str = Field(
+        ...,
+        description="Output prefix for result, filled with _{lemma}_{tamarin-version}",
     )
     lemmas: Optional[List[Lemma]] = Field(
         None,

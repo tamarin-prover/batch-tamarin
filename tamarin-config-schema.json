@@ -73,7 +73,7 @@
 					"required": [
 						"theory_file",
 						"tamarin_versions",
-						"output_file"
+						"output_file_prefix"
 					],
 					"properties": {
 						"theory_file": {
@@ -89,9 +89,9 @@
 							"minItems": 1,
 							"uniqueItems": true
 						},
-						"output_file": {
+						"output_file_prefix": {
 							"type": "string",
-							"description": "Output file name for results (relative to output_directory)"
+							"description": "Prefix for the output file, filled with _{lemma}_{tamarin-version}"
 						},
 						"lemmas": {
 							"type": "array",

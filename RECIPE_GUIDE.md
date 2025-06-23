@@ -66,7 +66,7 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
     "example_protocol_basic": {
       "theory_file": "protocols/example.spthy",
       "tamarin_versions": ["stable", "dev"],
-      "output_file": "example_basic_results.txt",
+      "output_file_prefix": "example_basic",
       "ressources": {
         "max_cores": 4,
         "max_memory": 8,
@@ -80,7 +80,9 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
 #### Required Properties:
 - **`theory_file`** (string): Path to the `.spthy` theory file to analyze
 - **`tamarin_versions`** (array of strings): List of Tamarin version aliases to run this task on
-- **`output_file`** (string): Output file name for results (relative to `output_directory`)
+- **`output_file_prefix`** (string): Prefix for output file names, format : `task_id = {output_file_prefix}\_{task_suffix}.spthy`
+
+The `task_suffix` is formatted like following : {lemma}\_{tamarin_version} (with lemma added only if a lemma is specified in config)
 
 #### Optional Properties:
 - **`lemmas`** (array): Lemmas to prove. If empty or omitted, all lemmas are proved using `--prove`

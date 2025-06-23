@@ -47,7 +47,7 @@ class TaskManager:
             TaskResult with complete execution information
         """
         # Generate task identifier
-        task_id = f"{task.task_name}_{task.tamarin_version_name}"
+        task_id = task.task_name
 
         # Initialize task tracking
         start_time = asyncio.get_event_loop().time()

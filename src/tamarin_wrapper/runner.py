@@ -16,6 +16,7 @@ from .model.executable_task import (
     TaskStatus,
 )
 from .model.tamarin_recipe import GlobalConfig
+from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
 from .utils.notifications import notification_manager
@@ -113,7 +114,7 @@ class TaskRunner:
         try:
             # Display initial status
             notification_manager.info(
-                f"[TaskRunner] Starting execution of {len(tasks)} tasks. "
+                f"[TaskRunner] Starting execution of {len(tasks)} tasks. \n"
                 f"Available resources: {self.resource_manager.get_available_cores()} cores, "
                 f"{self.resource_manager.get_available_memory()}GB memory"
             )
@@ -123,8 +124,6 @@ class TaskRunner:
 
             # Generate final execution summary
             summary = self.task_manager.generate_execution_summary()
-
-            # Display enhanced final statistics using new Rich summary
             notification_manager.task_execution_summary(summary)
 
         except Exception as e:
@@ -180,7 +179,7 @@ class TaskRunner:
             if not self._shutdown_requested and not self._force_shutdown_requested:
                 for task in schedulable_tasks:
                     if self.resource_manager.allocate_resources(task):
-                        task_id = self._get_task_id(task)
+                        task_id = task.task_name
 
                         # Create and start background coroutine
                         coroutine = self._execute_single_task(task)
@@ -210,7 +209,7 @@ class TaskRunner:
                     # Find the corresponding ExecutableTask
                     corresponding_task: Optional[ExecutableTask] = None
                     for task in all_tasks:
-                        if self._get_task_id(task) == task_id:
+                        if task.task_name == task_id:
                             corresponding_task = task
                             break
 
@@ -268,7 +267,7 @@ class TaskRunner:
             return await self.task_manager.run_executable_task(task)
         except Exception as e:
             # Create error result if task execution fails unexpectedly
-            task_id = self._get_task_id(task)
+            task_id = task.task_name
             notification_manager.error(
                 f"[TaskRunner] Unexpected error executing task {task_id}: {e}"
             )
@@ -298,7 +297,7 @@ class TaskRunner:
             task: The ExecutableTask that completed
             result: The TaskResult from execution
         """
-        task_id = self._get_task_id(task)
+        task_id = task.task_name
 
         # Release resources
         self.resource_manager.release_resources(task)
@@ -384,18 +383,12 @@ class TaskRunner:
             self._running_tasks.values()
         )
         if running_tasks:
-            try:
-                # Wait for tasks with a reasonable timeout
-                await asyncio.wait_for(
-                    asyncio.gather(*running_tasks, return_exceptions=True), timeout=30.0
-                )
-            except asyncio.TimeoutError:
-                notification_manager.warning(
-                    "[TaskRunner] Some tasks did not complete within timeout during graceful shutdown"
-                )
+            # Wait for tasks currently running
+            await asyncio.wait(asyncio.gather(*running_tasks, return_exceptions=True))
 
         # Clear tracking
         self._running_tasks.clear()
+        self._pending_tasks.clear()
 
         notification_manager.info("[TaskRunner] Graceful shutdown cleanup completed")
 
@@ -418,8 +411,6 @@ class TaskRunner:
                 task.cancel()
 
         # Force kill all processes via ProcessManager
-        from .modules.process_manager import process_manager
-
         await process_manager.kill_all_processes()
 
         # Wait briefly for cancellations to complete
@@ -438,15 +429,3 @@ class TaskRunner:
         self._pending_tasks.clear()
 
         notification_manager.info("[TaskRunner] Force shutdown cleanup completed")
-
-    def _get_task_id(self, task: ExecutableTask) -> str:
-        """
-        Generate a unique identifier for a task.
-
-        Args:
-            task: The ExecutableTask to generate an ID for
-
-        Returns:
-            Unique string identifier combining task name and tamarin version
-        """
-        return f"{task.tamarin_version_name}_{task.task_name}"

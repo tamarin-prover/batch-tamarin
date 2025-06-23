@@ -87,18 +87,6 @@ class ResourceManager:
             f"[ResourceManager] Initialized: {global_max_cores} cores, {global_max_memory}GB memory"
         )
 
-    def _get_task_id(self, task: ExecutableTask) -> str:
-        """
-        Generate a unique identifier for a task.
-
-        Args:
-            task: The ExecutableTask to generate an ID for
-
-        Returns:
-            Unique string identifier combining task name and tamarin version
-        """
-        return f"{task.task_name}_{task.tamarin_version_name}"
-
     def can_schedule_task(self, task: ExecutableTask) -> bool:
         """
         Check if a task can be scheduled given current resource usage.
@@ -118,7 +106,7 @@ class ResourceManager:
 
         if not can_schedule:
             notification_manager.debug(
-                f"[ResourceManager] Cannot schedule task {self._get_task_id(task)}: "
+                f"[ResourceManager] Cannot schedule task {task.task_name}: "
                 f"needs {task.max_cores} cores/{task.max_memory}GB, "
                 f"available {available_cores} cores/{available_memory}GB"
             )
@@ -135,7 +123,7 @@ class ResourceManager:
         Returns:
             True if allocation successful, False if insufficient resources
         """
-        task_id = self._get_task_id(task)
+        task_id = task.task_name
 
         # Check if task already has resources allocated
         if task_id in self.task_allocations:
@@ -168,7 +156,7 @@ class ResourceManager:
         Args:
             task: The ExecutableTask to release resources for
         """
-        task_id = self._get_task_id(task)
+        task_id = task.task_name
 
         # Check if task has allocated resources
         if task_id not in self.task_allocations:
@@ -233,7 +221,7 @@ class ResourceManager:
                 remaining_memory -= task.max_memory
 
                 notification_manager.debug(
-                    f"[ResourceManager] Task {self._get_task_id(task)} selected for scheduling: "
+                    f"[ResourceManager] Task {task.task_name} selected for scheduling: "
                     f"{task.max_cores} cores, {task.max_memory}GB. "
                     f"Remaining: {remaining_cores} cores, {remaining_memory}GB"
                 )

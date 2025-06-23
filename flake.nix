@@ -6,14 +6,14 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python3;
 
         # Build the tamarin-wrapper package properly
-        tamarin-wrapper = python.pkgs.buildPythonPackage rec {
+        tamarin-wrapper = python.pkgs.buildPythonPackage  {
           pname = "tamarin-wrapper";
           version = "0.1.3";
           format = "pyproject";
