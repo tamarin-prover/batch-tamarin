@@ -16,6 +16,7 @@ from ..model.executable_task import (
     TaskStatus,
 )
 from ..utils.notifications import notification_manager
+from .output_manager import output_manager
 from .process_manager import process_manager
 
 
@@ -108,6 +109,16 @@ class TaskManager:
             self._task_status[task_id] = status
             self._task_results[task_id] = task_result
 
+            # Process result with output manager if initialized
+            if output_manager.is_initialized():
+                try:
+                    output_file_name = task.output_file.name
+                    output_manager.process_task_result(task_result, output_file_name)
+                except Exception as e:
+                    notification_manager.error(
+                        f"[TaskManager] Failed to process task result with output manager: {e}"
+                    )
+
             return task_result
 
         except Exception as e:
@@ -134,6 +145,16 @@ class TaskManager:
             # Update tracking
             self._task_status[task_id] = TaskStatus.FAILED
             self._task_results[task_id] = task_result
+
+            # Process result with output manager if initialized
+            if output_manager.is_initialized():
+                try:
+                    output_file_name = task.output_file.name
+                    output_manager.process_task_result(task_result, output_file_name)
+                except Exception as e:
+                    notification_manager.error(
+                        f"[TaskManager] Failed to process task result with output manager: {e}"
+                    )
 
             return task_result
 

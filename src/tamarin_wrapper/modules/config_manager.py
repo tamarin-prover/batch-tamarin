@@ -1,5 +1,4 @@
 import json
-import shutil
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -8,6 +7,7 @@ from pydantic import ValidationError
 from ..model.executable_task import ExecutableTask
 from ..model.tamarin_recipe import GlobalConfig, Lemma, TamarinRecipe, Task
 from ..utils.notifications import notification_manager
+from .output_manager import output_manager
 from .tamarin_test_cmd import check_tamarin_integrity
 
 
@@ -125,53 +125,12 @@ class ConfigManager:
         executable_tasks: List[ExecutableTask] = []
 
         try:
-            ### REFACTOR : Move this directory creation to the OutputManager ###
-            # Validate that output directory exists or can be created
-            output_dir = Path(recipe.config.output_directory)
-            if not output_dir.exists():
-                try:
-                    output_dir.mkdir(parents=True, exist_ok=True)
-                    notification_manager.debug(
-                        f"[ConfigManager] Created output directory: {output_dir}"
-                    )
-                except Exception as e:
-                    error_msg = f"[ConfigManager] Failed to create output directory {output_dir}: {e}"
-                    raise ConfigError(error_msg) from e
-            else:
-                # Directory exists, check if it's a directory
-                if not output_dir.is_dir():
-                    error_msg = (
-                        f"[ConfigManager] Output path is not a directory: {output_dir}"
-                    )
-                    raise ConfigError(error_msg)
+            # Initialize OutputManager (handles directory creation and user prompting)
+            output_manager.initialize(Path(recipe.config.output_directory))
+            output_paths = output_manager.get_output_paths()
 
-                # Check if directory is empty
-                if any(output_dir.iterdir()):
-                    # Directory is not empty, prompt user
-                    should_wipe = notification_manager.prompt_user(
-                        f"Output directory '{output_dir}' is not empty. Do you want to [bold #ff0000]DELETE[/bold #ff0000] its contents?",
-                        default=False,
-                    )
-
-                    if should_wipe:
-                        try:
-                            # Remove all contents of the directory
-                            for item in output_dir.iterdir():
-                                if item.is_dir():
-                                    shutil.rmtree(item)
-                                else:
-                                    item.unlink()
-                            notification_manager.info(
-                                f"[ConfigManager] Wiped contents of output directory: {output_dir}"
-                            )
-                        except Exception as e:
-                            error_msg = f"[ConfigManager] Failed to wipe output directory {output_dir}: {e}"
-                            raise ConfigError(error_msg) from e
-                    else:
-                        notification_manager.info(
-                            f"[ConfigManager] Continuing with non-empty output directory: {output_dir}"
-                        )
-                ### END OF REFACTOR ###
+            # Use models directory for .spthy output files
+            models_dir = output_paths["models"]
 
             for task_name, task in recipe.tasks.items():
                 # Validate theory file exists
@@ -245,7 +204,7 @@ class ConfigManager:
                             safe_task_id = ConfigManager._get_unique_task_id(task_id)
 
                             output_filename = Path(f"{safe_task_id}.spthy")
-                            output_file_path = output_dir / output_filename
+                            output_file_path = models_dir / output_filename
 
                             executable_task = ExecutableTask(
                                 task_name=safe_task_id,
@@ -310,7 +269,7 @@ class ConfigManager:
                         safe_task_id = ConfigManager._get_unique_task_id(task_id)
 
                         output_filename = f"{safe_task_id}.spthy"
-                        output_file_path = output_dir / output_filename
+                        output_file_path = models_dir / output_filename
 
                         # Create single ExecutableTask for all lemmas
                         executable_task = ExecutableTask(
