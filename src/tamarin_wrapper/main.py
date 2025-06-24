@@ -68,7 +68,10 @@ def main(
             """
         )
         print(f"Running v{__version__}")
-        print(f"Authors: {__author__}")
+        print(f"Authored by: {__author__}")
+        print(
+            "Project initiated for an internship at CISPA, under the supervision of Pr.Dr. Cas Cremers."
+        )
         return
 
     # Check if config file is provided when not showing version
