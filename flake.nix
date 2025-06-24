@@ -36,11 +36,6 @@
           pip
         ];
 
-        # Extract author information
-        firstAuthor = builtins.head pyproject.project.authors;
-        authorName = firstAuthor.name;
-        authorEmail = firstAuthor.email;
-
         # Build the tamarin-wrapper package properly
         tamarin-wrapper = python.pkgs.buildPythonPackage {
           pname = "tamarin-wrapper";
