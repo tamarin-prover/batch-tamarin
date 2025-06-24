@@ -4,7 +4,7 @@ from typing import Optional
 
 import typer
 
-from . import __version__
+from . import __author__, __version__
 from .modules.config_manager import ConfigManager
 from .runner import TaskRunner
 from .utils.notifications import notification_manager
@@ -59,7 +59,16 @@ def main(
         notification_manager.debug("[NotificationUtil] DEBUG Enabled")
 
     if version:
-        print(f"Tamarin-wrapper v{__version__}")
+        print(
+            r"""
+▗▄▄▄▖▗▄▖ ▗▖  ▗▖ ▗▄▖ ▗▄▄▖ ▗▄▄▄▖▗▖  ▗▖    ▗▖ ▗▖▗▄▄▖  ▗▄▖ ▗▄▄▖ ▗▄▄▖ ▗▄▄▄▖▗▄▄▖
+  █ ▐▌ ▐▌▐▛▚▞▜▌▐▌ ▐▌▐▌ ▐▌  █  ▐▛▚▖▐▌    ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌ ▐▌
+  █ ▐▛▀▜▌▐▌  ▐▌▐▛▀▜▌▐▛▀▚▖  █  ▐▌ ▝▜▌    ▐▌█▐▌▐▛▀▚▖▐▛▀▜▌▐▛▀▘ ▐▛▀▘ ▐▛▀▀▘▐▛▀▚▖
+  █ ▐▌ ▐▌▐▌  ▐▌▐▌ ▐▌▐▌ ▐▌▗▄█▄▖▐▌  ▐▌    ▐▙█▟▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ▐▙▄▄▖▐▌ ▐▌
+            """
+        )
+        print(f"Running v{__version__}")
+        print(f"Authors: {__author__}")
         return
 
     # Check if config file is provided when not showing version
