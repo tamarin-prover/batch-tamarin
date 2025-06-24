@@ -228,4 +228,8 @@ pyrightconfig.json
 tamarin-binaries
 protocols
 results
+
+# Nix development environment
+.dev/
+
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,visualstudiocode

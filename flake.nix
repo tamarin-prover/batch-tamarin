@@ -12,10 +12,33 @@
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python3;
 
+        # Package version extracted from pyproject.toml
+        packageVersion = "0.1.9";
+
+        # Runtime dependencies (from pyproject.toml)
+        runtimeDeps = with python.pkgs; [
+          typer
+          pydantic
+          psutil
+        ];
+
+        # Development dependencies
+        devDeps = with python.pkgs; [
+          black
+          isort
+          autoflake
+          pytest
+          build
+          twine
+          setuptools
+          wheel
+          pip
+        ];
+
         # Build the tamarin-wrapper package properly
-        tamarin-wrapper = python.pkgs.buildPythonPackage rec {
+        tamarin-wrapper = python.pkgs.buildPythonPackage {
           pname = "tamarin-wrapper";
-          version = "0.1.9";
+          version = packageVersion;
           format = "pyproject";
 
           src = ./.;
@@ -26,11 +49,7 @@
             build
           ];
 
-          propagatedBuildInputs = with python.pkgs; [
-            typer
-            pydantic
-            psutil
-          ];
+          propagatedBuildInputs = runtimeDeps;
 
           # Don't run tests during build (they require Tamarin binaries)
           doCheck = false;
@@ -42,19 +61,9 @@
           };
         };
 
-        # Development environment with the package and tools
-        devPythonEnv = python.withPackages (ps: with ps; [
-          # Include our package in development mode
-          tamarin-wrapper
-
-          # Development tools
-          black
-          isort
-          autoflake
-          build
-          twine
-          pip
-        ]);
+        # Development Python environment with dependencies but without the package itself
+        # This allows for editable installs during development
+        devPythonEnv = python.withPackages (ps: runtimeDeps ++ devDeps);
 
       in
       {
@@ -78,13 +87,35 @@
           ];
 
           shellHook = ''
+            # Create a local development directory
+            export DEV_ROOT="$PWD/.dev"
+            mkdir -p "$DEV_ROOT"
+
+            # Set up Python environment for editable installs
+            export PYTHONPATH="$PWD/src:$DEV_ROOT/lib/python${python.pythonVersion}/site-packages:$PYTHONPATH"
+            export PIP_PREFIX="$DEV_ROOT"
+            export PIP_USER=false
+            export PIP_NO_BUILD_ISOLATION=false
+
+            # Add local bin to PATH
+            export PATH="$DEV_ROOT/bin:$PATH"
+
             echo "🚀 Tamarin-wrapper development environment"
-            echo "📦 Package: tamarin-wrapper v${tamarin-wrapper.version}"
-            echo "🔧 Available commands:"
-            echo "  tamarin-wrapper --version    # Test CLI"
-            echo "  tamarin-wrapper --help       # Show help"
+            echo "📦 Python ${python.version} with dependencies available"
+            echo "📋 Package version: ${packageVersion}"
+            echo "📁 Development root: $DEV_ROOT"
+            echo ""
+            echo "🔧 Setup:"
+            echo "  pip install -e .             # Install package in editable mode"
+            echo ""
+            echo "🔧 Development commands:"
             echo "  python -m build              # Build package"
             echo "  python -m twine upload dist/* # Upload to PyPI"
+            echo "  black src/                   # Format code"
+            echo "  isort src/                   # Sort imports"
+            echo "  autoflake --recursive src/   # Remove unused imports"
+            echo "  pytest                       # Run tests"
+            echo "  tamarin-wrapper --help       # Test CLI (after editable install)"
           '';
         };
 

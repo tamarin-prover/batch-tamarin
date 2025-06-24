@@ -128,7 +128,10 @@ Read the configuration guide to understand how to write a JSON recipe : [`JSON G
 # Enter development environment with all dependencies
 nix develop
 
-# The tamarin-wrapper command is immediately available
+# Install the package in editable mode (required once per environment)
+pip install -e .
+
+# The tamarin-wrapper command is now available
 tamarin-wrapper --version
 ```
 
@@ -151,8 +154,7 @@ tamarin-wrapper --version
 Since the package uses proper Python packaging structure, you cannot run `python src/tamarin_wrapper/main.py` directly. Use one of these methods:
 
 ```bash
-# Method 1 (Recommended) : Use the CLI command
-pip install -e .  # Or reload your nix environment to do this
+# Method 1 (Recommended): Use the CLI command (after pip install -e .)
 tamarin-wrapper
 
 # Method 2: Run as Python module
