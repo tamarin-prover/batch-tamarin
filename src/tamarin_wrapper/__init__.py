@@ -1,8 +1,7 @@
 """Tamarin Python Wrapper - Run Tamarin Prover models with JSON recipes."""
 
 __version__ = "0.1.9"
-__author__ = "Luca Mandrelli"
-__email__ = "luca.mandrelli@icloud.com"
+__author__ = "Luca Mandrelli <luca.mandrelli@icloud.com>"
 
 from .main import app
 

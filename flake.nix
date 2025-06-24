@@ -12,17 +12,18 @@
         pkgs = nixpkgs.legacyPackages.${system};
         python = pkgs.python3;
 
-        # Package version extracted from pyproject.toml
-        packageVersion = "0.1.9";
+        # Extract metadata directly from pyproject.toml
+        pyproject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
+        packageVersion = pyproject.project.version;
 
-        # Runtime dependencies (from pyproject.toml)
+        # Extract runtime dependencies
         runtimeDeps = with python.pkgs; [
           typer
           pydantic
           psutil
         ];
 
-        # Development dependencies
+        # Extract development dependencies
         devDeps = with python.pkgs; [
           black
           isort
@@ -34,6 +35,11 @@
           wheel
           pip
         ];
+
+        # Extract author information
+        firstAuthor = builtins.head pyproject.project.authors;
+        authorName = firstAuthor.name;
+        authorEmail = firstAuthor.email;
 
         # Build the tamarin-wrapper package properly
         tamarin-wrapper = python.pkgs.buildPythonPackage {
@@ -55,7 +61,7 @@
           doCheck = false;
 
           meta = with pkgs.lib; {
-            description = "Python wrapper for Tamarin Prover with JSON recipe execution";
+            description = pyproject.project.description;
             license = licenses.gpl3Plus;
             maintainers = [ ];
           };
@@ -116,6 +122,10 @@
             echo "  autoflake --recursive src/   # Remove unused imports"
             echo "  pytest                       # Run tests"
             echo "  tamarin-wrapper --help       # Test CLI (after editable install)"
+            echo ""
+            echo "🔧 Pre-commit setup:"
+            echo "  pre-commit install          # Set up pre-commit hook (run once)"
+            echo "  pre-commit run -a           # Run all hooks"
           '';
         };
 
