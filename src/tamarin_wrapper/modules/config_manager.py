@@ -5,7 +5,13 @@ from typing import Dict, List, Tuple
 from pydantic import ValidationError
 
 from ..model.executable_task import ExecutableTask
-from ..model.tamarin_recipe import GlobalConfig, Lemma, TamarinRecipe, Task
+from ..model.tamarin_recipe import (
+    GlobalConfig,
+    Lemma,
+    TamarinRecipe,
+    TamarinVersion,
+    Task,
+)
 from ..utils.notifications import notification_manager
 from .output_manager import output_manager
 from .tamarin_test_cmd import check_tamarin_integrity
@@ -126,167 +132,26 @@ class ConfigManager:
 
         try:
             output_paths = output_manager.get_output_paths()
-
-            # Use models directory for .spthy output files
             models_dir = output_paths["models"]
 
             for task_name, task in recipe.tasks.items():
-                # Validate theory file exists
-                theory_file = Path(task.theory_file)
-                if not theory_file.exists():
-                    error_msg = f"[ConfigManager] Theory file {theory_file} not found for recipe's task '{task_name}'"
-                    raise ConfigError(error_msg)
-                if not theory_file.is_file():
-                    error_msg = f"[ConfigManager] Theory file path {theory_file} is not a file for recipe's task '{task_name}'"
-                    raise ConfigError(error_msg)
+                theory_file = ConfigManager._validate_theory_file(
+                    task.theory_file, task_name
+                )
 
-                # Handle lemmas - create separate task for each lemma or one task for all if no lemmas specified
                 if task.lemmas:
-                    # Create separate ExecutableTask for each lemma with inheritance
-                    for lemma in task.lemmas:
-                        # Get effective configuration for this lemma (with inheritance)
-                        effective_tamarin_versions = (
-                            lemma.tamarin_versions or task.tamarin_versions
-                        )
-                        effective_tamarin_options = (
-                            lemma.tamarin_options or task.tamarin_options
-                        )
-                        effective_preprocess_flags = (
-                            lemma.preprocess_flags or task.preprocess_flags
-                        )
-
-                        # Get effective resources with inheritance
-                        max_cores, max_memory, timeout = (
-                            ConfigManager._get_lemma_effective_resources(
-                                lemma, task, recipe.config
-                            )
-                        )
-
-                        # Validate lemma tamarin_versions reference valid global versions
-                        for version_name in effective_tamarin_versions:
-                            if version_name not in recipe.tamarin_versions:
-                                raise ConfigError(
-                                    f"[ConfigManager] Lemma '{lemma.name}' in task '{task_name}' references undefined tamarin alias: '{version_name}'"
-                                )
-
-                        # Validate resource constraints against global limits, fallback to max if overflow
-                        if max_cores > recipe.config.global_max_cores:
-                            notification_manager.warning(
-                                f"Lemma '{lemma.name}' in task '{task_name}' max_cores ({max_cores}) exceeds global_max_cores, falling back to this value : ({recipe.config.global_max_cores})"
-                            )
-                            max_cores = recipe.config.global_max_cores
-
-                        if max_memory > recipe.config.global_max_memory:
-                            notification_manager.warning(
-                                f"Lemma '{lemma.name}' in task '{task_name}' max_memory ({max_memory}) exceeds global_max_memory, falling back to this value : ({recipe.config.global_max_memory})"
-                            )
-                            max_memory = recipe.config.global_max_memory
-
-                        for version_name in effective_tamarin_versions:
-                            tamarin_version = recipe.tamarin_versions[version_name]
-                            tamarin_executable = Path(tamarin_version.path)
-
-                            # Validate tamarin executable exists
-                            if not tamarin_executable.exists():
-                                raise ConfigError(
-                                    f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
-                                )
-
-                            if not tamarin_executable.is_file():
-                                raise ConfigError(
-                                    f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
-                                )
-
-                            # Generate executable task name / ID, which will be given to
-                            task_id = f"{task_name}_{lemma.name}_{version_name}"
-                            safe_task_id = ConfigManager._get_unique_task_id(task_id)
-
-                            output_filename = Path(f"{safe_task_id}.spthy")
-                            output_file_path = models_dir / output_filename
-
-                            executable_task = ExecutableTask(
-                                task_name=safe_task_id,
-                                tamarin_version_name=version_name,
-                                tamarin_executable=tamarin_executable,
-                                theory_file=theory_file,
-                                output_file=output_file_path,
-                                lemma=lemma.name,
-                                tamarin_options=effective_tamarin_options,
-                                preprocess_flags=effective_preprocess_flags,
-                                max_cores=max_cores,
-                                max_memory=max_memory,
-                                task_timeout=timeout,
-                            )
-                            executable_tasks.append(executable_task)
-                            notification_manager.debug(
-                                f"[ConfigManager] Created ExecutableTask : {executable_task}"
-                            )
-                else:
-                    # No specific lemmas defined - create task for all lemmas using task-level configuration
-                    # Get effective resources for this task
-                    task_max_cores, task_max_memory, task_timeout = (
-                        ConfigManager._get_task_effective_resources(task, recipe.config)
+                    ConfigManager._create_executable_tasks_for_lemmas(
+                        task_name, task, recipe, models_dir, executable_tasks
                     )
-
-                    # Validate resource constraints against global limits, fallback to max if overflow
-                    if task_max_cores > recipe.config.global_max_cores:
-                        notification_manager.warning(
-                            f"Task '{task_name}' max_cores ({task_max_cores}) exceeds global_max_cores, falling back to this value : ({recipe.config.global_max_cores})"
-                        )
-                        task_max_cores = recipe.config.global_max_cores
-
-                    if task_max_memory > recipe.config.global_max_memory:
-                        notification_manager.warning(
-                            f"Task '{task_name}' max_memory ({task_max_memory}) exceeds global_max_memory, falling back to this value : ({recipe.config.global_max_memory})"
-                        )
-                        task_max_memory = recipe.config.global_max_memory
-
-                    # Expand task for each specified tamarin version
-                    for version_name in task.tamarin_versions:
-                        if version_name not in recipe.tamarin_versions:
-                            raise ConfigError(
-                                f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
-                            )
-
-                        tamarin_version = recipe.tamarin_versions[version_name]
-                        tamarin_executable = Path(tamarin_version.path)
-
-                        # Validate tamarin executable exists
-                        if not tamarin_executable.exists():
-                            raise ConfigError(
-                                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
-                            )
-
-                        if not tamarin_executable.is_file():
-                            raise ConfigError(
-                                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
-                            )
-
-                        # Generate task name / id
-                        task_id = f"{task_name}_{version_name}"
-                        safe_task_id = ConfigManager._get_unique_task_id(task_id)
-
-                        output_filename = f"{safe_task_id}.spthy"
-                        output_file_path = models_dir / output_filename
-
-                        # Create single ExecutableTask for all lemmas
-                        executable_task = ExecutableTask(
-                            task_name=safe_task_id,
-                            tamarin_version_name=version_name,
-                            tamarin_executable=tamarin_executable,
-                            theory_file=theory_file,
-                            output_file=output_file_path,
-                            lemma=None,  # None means prove all lemmas
-                            tamarin_options=task.tamarin_options,
-                            preprocess_flags=task.preprocess_flags,
-                            max_cores=task_max_cores,
-                            max_memory=task_max_memory,
-                            task_timeout=task_timeout,
-                        )
-                        executable_tasks.append(executable_task)
-                        notification_manager.debug(
-                            f"[ConfigManager] Created ExecutableTask : {executable_task}"
-                        )
+                else:
+                    ConfigManager._create_executable_tasks_for_task(
+                        task_name,
+                        task,
+                        recipe,
+                        models_dir,
+                        theory_file,
+                        executable_tasks,
+                    )
 
             notification_manager.success(
                 f"[ConfigManager] Generated {len(executable_tasks)} executable task{'s' if len(executable_tasks) > 1 else ''} from recipe"
@@ -299,6 +164,188 @@ class ConfigManager:
                 f"[ConfigManager] Failed to convert recipe to executable tasks: {e}"
             )
             raise ConfigError(error_msg) from e
+
+    @staticmethod
+    def _validate_theory_file(theory_file_path: str, task_name: str) -> Path:
+        """Validate that theory file exists and is a file."""
+        theory_file = Path(theory_file_path)
+        if not theory_file.exists():
+            error_msg = f"[ConfigManager] Theory file {theory_file} not found for recipe's task '{task_name}'"
+            raise ConfigError(error_msg)
+        if not theory_file.is_file():
+            error_msg = f"[ConfigManager] Theory file path {theory_file} is not a file for recipe's task '{task_name}'"
+            raise ConfigError(error_msg)
+        return theory_file
+
+    @staticmethod
+    def _validate_and_cap_resources(
+        max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
+    ) -> Tuple[int, int]:
+        """Validate and cap resources against global limits."""
+        if max_cores > global_config.global_max_cores:
+            notification_manager.warning(
+                f"{context_name} max_cores ({max_cores}) exceeds global_max_cores, falling back to this value : ({global_config.global_max_cores})"
+            )
+            max_cores = global_config.global_max_cores
+
+        if max_memory > global_config.global_max_memory:
+            notification_manager.warning(
+                f"{context_name} max_memory ({max_memory}) exceeds global_max_memory, falling back to this value : ({global_config.global_max_memory})"
+            )
+            max_memory = global_config.global_max_memory
+
+        return max_cores, max_memory
+
+    @staticmethod
+    def _validate_tamarin_executable(
+        version_name: str, tamarin_version: TamarinVersion, recipe: TamarinRecipe
+    ) -> Path:
+        """Validate that tamarin executable exists and is a file."""
+        tamarin_executable = Path(tamarin_version.path)
+        if not tamarin_executable.exists():
+            raise ConfigError(
+                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
+            )
+        if not tamarin_executable.is_file():
+            raise ConfigError(
+                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
+            )
+        return tamarin_executable
+
+    @staticmethod
+    def _create_executable_tasks_for_lemmas(
+        task_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        models_dir: Path,
+        executable_tasks: List[ExecutableTask],
+    ) -> None:
+        """Create executable tasks for each lemma with inheritance."""
+        theory_file = ConfigManager._validate_theory_file(task.theory_file, task_name)
+
+        # Assert that lemmas is not None since we check this before calling
+        assert (
+            task.lemmas is not None
+        ), "task.lemmas should not be None when this method is called"
+
+        for lemma in task.lemmas:
+            # Get effective configuration for this lemma (with inheritance)
+            effective_tamarin_versions = (
+                lemma.tamarin_versions
+                if lemma.tamarin_versions is not None
+                else task.tamarin_versions
+            )
+
+            effective_tamarin_options = lemma.tamarin_options or task.tamarin_options
+            effective_preprocess_flags = lemma.preprocess_flags or task.preprocess_flags
+
+            # Get effective resources with inheritance
+            max_cores, max_memory, timeout = (
+                ConfigManager._get_lemma_effective_resources(lemma, task, recipe.config)
+            )
+
+            # Validate lemma tamarin_versions reference valid global versions
+            for version_name in effective_tamarin_versions:
+                if version_name not in recipe.tamarin_versions:
+                    raise ConfigError(
+                        f"[ConfigManager] Lemma '{lemma.name}' in task '{task_name}' references undefined tamarin alias: '{version_name}'"
+                    )
+
+            # Validate and cap resources
+            context_name = f"Lemma '{lemma.name}' in task '{task_name}'"
+            max_cores, max_memory = ConfigManager._validate_and_cap_resources(
+                max_cores, max_memory, recipe.config, context_name
+            )
+
+            for version_name in effective_tamarin_versions:
+                tamarin_version = recipe.tamarin_versions[version_name]
+                tamarin_executable = ConfigManager._validate_tamarin_executable(
+                    version_name, tamarin_version, recipe
+                )
+
+                # Generate executable task name / ID
+                task_id = f"{task_name}_{lemma.name}_{version_name}"
+                safe_task_id = ConfigManager._get_unique_task_id(task_id)
+
+                output_filename = Path(f"{safe_task_id}.spthy")
+                output_file_path = models_dir / output_filename
+
+                executable_task = ExecutableTask(
+                    task_name=safe_task_id,
+                    tamarin_version_name=version_name,
+                    tamarin_executable=tamarin_executable,
+                    theory_file=theory_file,
+                    output_file=output_file_path,
+                    lemma=lemma.name,
+                    tamarin_options=effective_tamarin_options,
+                    preprocess_flags=effective_preprocess_flags,
+                    max_cores=max_cores,
+                    max_memory=max_memory,
+                    task_timeout=timeout,
+                )
+                executable_tasks.append(executable_task)
+                notification_manager.debug(
+                    f"[ConfigManager] Created ExecutableTask : {executable_task}"
+                )
+
+    @staticmethod
+    def _create_executable_tasks_for_task(
+        task_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        models_dir: Path,
+        theory_file: Path,
+        executable_tasks: List[ExecutableTask],
+    ) -> None:
+        """Create executable tasks for task without specific lemmas."""
+        # Get effective resources for this task
+        task_max_cores, task_max_memory, task_timeout = (
+            ConfigManager._get_task_effective_resources(task, recipe.config)
+        )
+
+        # Validate and cap resources
+        context_name = f"Task '{task_name}'"
+        task_max_cores, task_max_memory = ConfigManager._validate_and_cap_resources(
+            task_max_cores, task_max_memory, recipe.config, context_name
+        )
+
+        # Expand task for each specified tamarin version
+        for version_name in task.tamarin_versions:
+            if version_name not in recipe.tamarin_versions:
+                raise ConfigError(
+                    f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
+                )
+
+            tamarin_version = recipe.tamarin_versions[version_name]
+            tamarin_executable = ConfigManager._validate_tamarin_executable(
+                version_name, tamarin_version, recipe
+            )
+
+            # Generate task name / id
+            task_id = f"{task_name}_{version_name}"
+            safe_task_id = ConfigManager._get_unique_task_id(task_id)
+
+            output_filename = f"{safe_task_id}.spthy"
+            output_file_path = models_dir / output_filename
+
+            # Create single ExecutableTask for all lemmas
+            executable_task = ExecutableTask(
+                task_name=safe_task_id,
+                tamarin_version_name=version_name,
+                tamarin_executable=tamarin_executable,
+                theory_file=theory_file,
+                output_file=output_file_path,
+                lemma=None,  # None means prove all lemmas
+                tamarin_options=task.tamarin_options,
+                preprocess_flags=task.preprocess_flags,
+                max_cores=task_max_cores,
+                max_memory=task_max_memory,
+                task_timeout=task_timeout,
+            )
+            executable_tasks.append(executable_task)
+            notification_manager.debug(
+                f"[ConfigManager] Created ExecutableTask : {executable_task}"
+            )
 
     @staticmethod
     def _get_unique_task_id(base_task_id: str) -> str:

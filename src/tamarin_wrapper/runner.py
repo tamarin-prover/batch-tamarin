@@ -168,65 +168,17 @@ class TaskRunner:
         last_progress_update = 0
         progress_update_interval = 3.0  # Update progress every 3 seconds
 
-        while (
-            (self._pending_tasks or self._running_tasks)
-            and not self._shutdown_requested
-            and not self._force_shutdown_requested
-        ):
+        while self._should_continue_execution():
             # Get next schedulable tasks
             schedulable_tasks = self.resource_manager.get_next_schedulable_tasks(
                 self._pending_tasks
             )
 
             # Start new tasks as background coroutines (only if not shutting down)
-            if not self._shutdown_requested and not self._force_shutdown_requested:
-                for task in schedulable_tasks:
-                    if self.resource_manager.allocate_resources(task):
-                        task_id = task.task_name
-
-                        # Create and start background coroutine
-                        coroutine = self._execute_single_task(task)
-                        asyncio_task = asyncio.create_task(coroutine)
-                        self._running_tasks[task_id] = asyncio_task
-
-                        # Remove from pending tasks
-                        self._pending_tasks.remove(task)
-
-                        notification_manager.info(
-                            f"[TaskRunner] Started task: {task_id}"
-                        )
-
-            # Check for completed tasks
-            completed_task_ids: List[str] = []
-            for task_id, asyncio_task in self._running_tasks.items():
-                if asyncio_task.done():
-                    completed_task_ids.append(task_id)
+            self._start_schedulable_tasks(schedulable_tasks)
 
             # Handle completed tasks
-            for task_id in completed_task_ids:
-                asyncio_task = self._running_tasks.pop(task_id)
-                try:
-                    # Get the task and result
-                    task_result: TaskResult = await asyncio_task
-
-                    # Find the corresponding ExecutableTask
-                    corresponding_task: Optional[ExecutableTask] = None
-                    for task in all_tasks:
-                        if task.task_name == task_id:
-                            corresponding_task = task
-                            break
-
-                    if corresponding_task:
-                        self._handle_task_completion(corresponding_task, task_result)
-                    else:
-                        notification_manager.error(
-                            f"[TaskRunner] Could not find corresponding task for {task_id}"
-                        )
-
-                except Exception as e:
-                    notification_manager.error(
-                        f"[TaskRunner] Error retrieving result for task {task_id}: {e}"
-                    )
+            await self._handle_completed_tasks(all_tasks)
 
             # Display progress update periodically
             current_time = asyncio.get_event_loop().time()
@@ -242,6 +194,74 @@ class TaskRunner:
             await asyncio.sleep(1)
 
         # Handle shutdown scenarios
+        await self._handle_shutdown()
+
+        # Final progress update
+        self._display_progress_update()
+
+    def _should_continue_execution(self) -> bool:
+        """Check if the task pool execution should continue."""
+        return (
+            bool(self._pending_tasks or self._running_tasks)
+            and not self._shutdown_requested
+            and not self._force_shutdown_requested
+        )
+
+    def _start_schedulable_tasks(self, schedulable_tasks: List[ExecutableTask]) -> None:
+        """Start schedulable tasks as background coroutines."""
+        if self._shutdown_requested or self._force_shutdown_requested:
+            return
+
+        for task in schedulable_tasks:
+            if self.resource_manager.allocate_resources(task):
+                task_id = task.task_name
+
+                # Create and start background coroutine
+                coroutine = self._execute_single_task(task)
+                asyncio_task = asyncio.create_task(coroutine)
+                self._running_tasks[task_id] = asyncio_task
+
+                # Remove from pending tasks
+                self._pending_tasks.remove(task)
+
+                notification_manager.info(f"[TaskRunner] Started task: {task_id}")
+
+    async def _handle_completed_tasks(self, all_tasks: List[ExecutableTask]) -> None:
+        """Check for and handle completed tasks."""
+        # Check for completed tasks
+        completed_task_ids: List[str] = []
+        for task_id, asyncio_task in self._running_tasks.items():
+            if asyncio_task.done():
+                completed_task_ids.append(task_id)
+
+        # Handle completed tasks
+        for task_id in completed_task_ids:
+            asyncio_task = self._running_tasks.pop(task_id)
+            try:
+                # Get the task and result
+                task_result: TaskResult = await asyncio_task
+
+                # Find the corresponding ExecutableTask
+                corresponding_task: Optional[ExecutableTask] = None
+                for task in all_tasks:
+                    if task.task_name == task_id:
+                        corresponding_task = task
+                        break
+
+                if corresponding_task:
+                    self._handle_task_completion(corresponding_task, task_result)
+                else:
+                    notification_manager.error(
+                        f"[TaskRunner] Could not find corresponding task for {task_id}"
+                    )
+
+            except Exception as e:
+                notification_manager.error(
+                    f"[TaskRunner] Error retrieving result for task {task_id}: {e}"
+                )
+
+    async def _handle_shutdown(self) -> None:
+        """Handle shutdown scenarios."""
         if self._force_shutdown_requested:
             notification_manager.debug(
                 "[TaskRunner] Force shutdown requested. Killing all running tasks immediately..."
@@ -252,9 +272,6 @@ class TaskRunner:
                 "[TaskRunner] Graceful shutdown requested. Waiting for running tasks to complete..."
             )
             await self._cleanup_running_tasks()
-
-        # Final progress update
-        self._display_progress_update()
 
     async def _execute_single_task(self, task: ExecutableTask) -> TaskResult:
         """
