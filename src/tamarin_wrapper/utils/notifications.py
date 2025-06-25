@@ -20,11 +20,11 @@ class TamarinHighlighter(RegexHighlighter):
         # Section borders (═══════════...)
         r"(?P<border>═+)",
         # Component tags
-        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager|ResourceManager|TaskManager)\])",
+        r"(?P<component>\[(?:TamarinTest|ConfigManager|TaskRunner|ProcessManager|ResourceManager|TaskManager|OutputManager)\])",
         # File paths
         r"(?P<filepath>[a-zA-Z0-9_\-./]+\.(?:json|txt|spthy))\b",
         # Resource allocation info
-        r"(?P<allocated>Allocated:)",
+        r"(?P<allocated>Allocated:|Available resources:)",
         # Task completion messages
         r"(?P<task_success>Task completed successfully:)",
         r"(?P<task_failed>Task failed:)",

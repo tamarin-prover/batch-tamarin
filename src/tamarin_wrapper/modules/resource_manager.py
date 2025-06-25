@@ -12,6 +12,7 @@ from typing import Dict, List
 import psutil
 
 from ..model.executable_task import ExecutableTask
+from ..model.tamarin_recipe import TamarinRecipe
 from ..utils.notifications import notification_manager
 
 
@@ -24,16 +25,18 @@ class ResourceManager:
     respecting global limits.
     """
 
-    def __init__(self, global_max_cores: int, global_max_memory: int) -> None:
+    def __init__(self, recipe: TamarinRecipe) -> None:
         """
-        Initialize the ResourceManager with global resource limits.
+        Initialize the ResourceManager with a recipe containing resource limits.
 
         Args:
-            global_max_cores: Maximum number of cores available globally
-            global_max_memory: Maximum memory in GB available globally
+            recipe: TamarinRecipe object containing global configuration
         """
-        self.global_max_cores = global_max_cores
-        self.global_max_memory = global_max_memory
+        self.recipe = recipe
+
+        # Extract initial values from recipe config
+        global_max_cores = recipe.config.global_max_cores
+        global_max_memory = recipe.config.global_max_memory
 
         # Verify that global limits on cores are under system limits
         if cores := os.cpu_count():
@@ -46,6 +49,8 @@ class ResourceManager:
                 )
                 if fallback:
                     global_max_cores = cores
+                    # Update the recipe's config object
+                    self.recipe.config.global_max_cores = cores
                     notification_manager.info(
                         f"[ResourceManager] Falling back to {global_max_cores} cores."
                     )
@@ -66,6 +71,8 @@ class ResourceManager:
             )
             if fallback:
                 global_max_memory = system_memory_gb
+                # Update the recipe's config object
+                self.recipe.config.global_max_memory = system_memory_gb
                 notification_manager.info(
                     f"[ResourceManager] Falling back to {global_max_memory}GB memory."
                 )
@@ -73,6 +80,10 @@ class ResourceManager:
                 notification_manager.info(
                     f"[ResourceManager] Using configured global max memory: {global_max_memory}GB."
                 )
+
+        # Store the final validated values as instance variables
+        self.global_max_cores = global_max_cores
+        self.global_max_memory = global_max_memory
 
         # Track current allocations
         self.allocated_cores = 0

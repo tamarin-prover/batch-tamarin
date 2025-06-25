@@ -16,7 +16,7 @@ from .model.executable_task import (
     TaskResult,
     TaskStatus,
 )
-from .model.tamarin_recipe import GlobalConfig
+from .model.tamarin_recipe import TamarinRecipe
 from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
@@ -33,26 +33,23 @@ class TaskRunner:
     progress updates throughout the execution process.
     """
 
-    def __init__(self, global_config: GlobalConfig) -> None:
+    def __init__(self, recipe: TamarinRecipe) -> None:
         """
-        Initialize the TaskRunner with global configuration.
+        Initialize the TaskRunner with a recipe containing global configuration.
 
         Args:
-            global_config: Global configuration settings containing resource limits
+            recipe: TamarinRecipe object containing global configuration and tasks
         """
-        self.global_config = global_config
+        self.recipe = recipe
 
-        # Initialize ResourceManager with global limits
-        self.resource_manager = ResourceManager(
-            global_max_cores=global_config.global_max_cores,
-            global_max_memory=global_config.global_max_memory,
-        )
+        # Initialize ResourceManager with recipe (will validate and potentially correct resource limits)
+        self.resource_manager = ResourceManager(recipe)
 
         # Initialize TaskManager for execution
         self.task_manager = TaskManager()
 
         # Initialize OutputManager for reporting
-        output_directory = Path(global_config.output_directory)
+        output_directory = Path(recipe.config.output_directory)
         output_manager.initialize(output_directory)
 
         # Internal state for task management

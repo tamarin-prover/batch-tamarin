@@ -233,13 +233,13 @@ class ConfigManager:
                         notification_manager.warning(
                             f"Task '{task_name}' max_cores ({task_max_cores}) exceeds global_max_cores, falling back to this value : ({recipe.config.global_max_cores})"
                         )
-                        max_cores = recipe.config.global_max_cores
+                        task_max_cores = recipe.config.global_max_cores
 
                     if task_max_memory > recipe.config.global_max_memory:
                         notification_manager.warning(
                             f"Task '{task_name}' max_memory ({task_max_memory}) exceeds global_max_memory, falling back to this value : ({recipe.config.global_max_memory})"
                         )
-                        max_memory = recipe.config.global_max_memory
+                        task_max_memory = recipe.config.global_max_memory
 
                     # Expand task for each specified tamarin version
                     for version_name in task.tamarin_versions:

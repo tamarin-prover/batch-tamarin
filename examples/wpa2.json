@@ -1,7 +1,7 @@
 {
 	"config": {
-		"global_max_cores": 10,
-		"global_max_memory": 32,
+		"global_max_cores": 12,
+		"global_max_memory": 48,
 		"default_timeout": 7200,
 		"output_directory": "./results"
 	},

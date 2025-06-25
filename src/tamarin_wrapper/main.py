@@ -15,14 +15,18 @@ app = typer.Typer(help="Tamarin-wrapper")
 async def process_config_file(config_path: Path, revalidate: bool = False) -> None:
     """Process configuration file and execute tasks."""
     try:
-        # Load recipe and convert to executable tasks
+        # Load recipe from configuration file
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path, revalidate)
 
-        runner = TaskRunner(recipe.config)
+        # Initialize TaskRunner - this validates and potentially corrects resource limits
+        # The ResourceManager within TaskRunner may update recipe.config with corrected values
+        runner = TaskRunner(recipe)
+
+        # Convert recipe to executable tasks using the recipe
+        executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
 
         # Execute all tasks using runner
-        executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
         await runner.execute_all_tasks(executable_tasks)
 
     except Exception as e:
