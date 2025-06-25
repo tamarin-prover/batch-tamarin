@@ -197,25 +197,6 @@ class ConfigManager:
                                     f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
                                 )
 
-                            # Resolve symbolic links to their target
-                            if tamarin_executable.is_symlink():
-                                resolved_executable = tamarin_executable.resolve()
-                                notification_manager.debug(
-                                    f"[ConfigManager] Resolved symlink for alias '{version_name}': {tamarin_executable} -> {resolved_executable}"
-                                )
-                                tamarin_executable = resolved_executable
-
-                                # Validate the resolved target exists and is a file
-                                if not tamarin_executable.exists():
-                                    raise ConfigError(
-                                        f"[ConfigManager] Resolved tamarin executable target not found for alias '{version_name}': {tamarin_executable}"
-                                    )
-
-                                if not tamarin_executable.is_file():
-                                    raise ConfigError(
-                                        f"[ConfigManager] Resolved tamarin executable target is not a file for alias '{version_name}': {tamarin_executable}"
-                                    )
-
                             # Generate executable task name / ID, which will be given to
                             task_id = f"{task_name}_{lemma.name}_{version_name}"
                             safe_task_id = ConfigManager._get_unique_task_id(task_id)
@@ -280,25 +261,6 @@ class ConfigManager:
                             raise ConfigError(
                                 f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
                             )
-
-                        # Resolve symbolic links to their target
-                        if tamarin_executable.is_symlink():
-                            resolved_executable = tamarin_executable.resolve()
-                            notification_manager.debug(
-                                f"[ConfigManager] Resolved symlink for alias '{version_name}': {tamarin_executable} -> {resolved_executable}"
-                            )
-                            tamarin_executable = resolved_executable
-
-                            # Validate the resolved target exists and is a file
-                            if not tamarin_executable.exists():
-                                raise ConfigError(
-                                    f"[ConfigManager] Resolved tamarin executable target not found for alias '{version_name}': {tamarin_executable}"
-                                )
-
-                            if not tamarin_executable.is_file():
-                                raise ConfigError(
-                                    f"[ConfigManager] Resolved tamarin executable target is not a file for alias '{version_name}': {tamarin_executable}"
-                                )
 
                         # Generate task name / id
                         task_id = f"{task_name}_{version_name}"
