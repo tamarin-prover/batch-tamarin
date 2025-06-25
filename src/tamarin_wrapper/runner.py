@@ -8,6 +8,7 @@ for parallel Tamarin proof execution.
 
 import asyncio
 import signal
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from .model.executable_task import (
@@ -16,6 +17,7 @@ from .model.executable_task import (
     TaskStatus,
 )
 from .model.tamarin_recipe import GlobalConfig
+from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
@@ -48,6 +50,10 @@ class TaskRunner:
 
         # Initialize TaskManager for execution
         self.task_manager = TaskManager()
+
+        # Initialize OutputManager for reporting
+        output_directory = Path(global_config.output_directory)
+        output_manager.initialize(output_directory)
 
         # Internal state for task management
         self._pending_tasks: List[ExecutableTask] = []

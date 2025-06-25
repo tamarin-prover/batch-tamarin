@@ -125,8 +125,6 @@ class ConfigManager:
         executable_tasks: List[ExecutableTask] = []
 
         try:
-            # Initialize OutputManager (handles directory creation and user prompting)
-            output_manager.initialize(Path(recipe.config.output_directory))
             output_paths = output_manager.get_output_paths()
 
             # Use models directory for .spthy output files

@@ -8,6 +8,7 @@ Uses singleton pattern for global access.
 
 import re
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -38,12 +39,16 @@ class SuccessfulTaskResult(BaseModel):
     """Result structure for successful tasks."""
 
     task_id: str = Field(..., description="Unique task identifier")
+    warnings: List[str] = Field(
+        default_factory=list, description="Warning messages from Tamarin"
+    )
     tamarin_timing: float = Field(
         ..., description="Tamarin reported processing time in seconds"
     )
     wrapper_measures: WrapperMeasures = Field(
         ..., description="Wrapper performance measurements"
     )
+    output_spthy: str = Field(..., description="Path to the generated model file")
     verified_lemma: Dict[str, LemmaResult] = Field(
         default_factory=dict, description="Successfully verified lemmas"
     )
@@ -53,10 +58,6 @@ class SuccessfulTaskResult(BaseModel):
     unterminated_lemma: List[str] = Field(
         default_factory=list, description="Lemmas with incomplete analysis"
     )
-    warnings: List[str] = Field(
-        default_factory=list, description="Warning messages from Tamarin"
-    )
-    output_spthy: str = Field(..., description="Path to the generated model file")
 
     class Config:
         json_encoders = {Path: str}
@@ -66,6 +67,9 @@ class FailedTaskResult(BaseModel):
     """Result structure for failed tasks."""
 
     task_id: str = Field(..., description="Unique task identifier")
+    error_description: str = Field(
+        ..., description="Error description (maybe not accurate)"
+    )
     wrapper_measures: WrapperMeasures = Field(
         ..., description="Wrapper performance measurements"
     )
@@ -116,21 +120,21 @@ class OutputManager:
         Args:
             output_dir: Base output directory path
         """
-        if self._is_setup and self.output_dir == output_dir:
-            # Already initialized with the same directory
+        if self._is_setup:
+            # Already initialized
             return
 
         self.output_dir = Path(output_dir)
         self.success_dir = self.output_dir / "success"
         self.failed_dir = self.output_dir / "failed"
         self.models_dir = self.output_dir / "models"
+        self._is_setup = True
 
         # Handle existing directory
         self._handle_existing_directory()
 
         # Create directories
         self._create_directories()
-        self._is_setup = True
 
         notification_manager.debug(
             f"[OutputManager] Initialized with output directory: {self.output_dir}"
@@ -173,8 +177,20 @@ class OutputManager:
                         f"[OutputManager] Failed to wipe output directory {self.output_dir}: {e}"
                     ) from e
             else:
+                # Use a new directory name with a timestamp
+                parent = self.output_dir.parent
+                base_name = self.output_dir.name
+                timestamp = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
+                self.output_dir = parent / f"{base_name}_{timestamp}"
+                self.success_dir = self.output_dir / "success"
+                self.failed_dir = self.output_dir / "failed"
+                self.models_dir = self.output_dir / "models"
+
+                # Create the new base directory (empty)
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+
                 notification_manager.info(
-                    f"[OutputManager] Continuing with non-empty output directory: {self.output_dir}"
+                    f"[OutputManager] Output directory not wiped, using new directory: {self.output_dir}"
                 )
 
     def _create_directories(self) -> None:
@@ -258,6 +274,7 @@ class OutputManager:
                 task_result.duration,
                 task_result.memory_stats,
                 task_result.return_code,
+                task_result.status,
             )
 
             # Save JSON file
@@ -306,7 +323,7 @@ class OutputManager:
         warnings = self._extract_warnings(combined_output)
 
         # Get output spthy path from the actual output file name
-        output_spthy = output_file_name
+        output_spthy = self.models_dir / output_file_name
 
         return SuccessfulTaskResult(
             task_id=task_id,
@@ -316,7 +333,7 @@ class OutputManager:
             falsified_lemma=falsified_lemma,
             unterminated_lemma=unterminated_lemma,
             warnings=warnings,
-            output_spthy=output_spthy,
+            output_spthy=str(output_spthy),
         )
 
     def _parse_failed_output(
@@ -327,6 +344,7 @@ class OutputManager:
         duration: float,
         memory_stats: Optional[MemoryStats],
         return_code: int,
+        status: TaskStatus,
     ) -> FailedTaskResult:
         """Parse stdout/stderr from failed Tamarin execution."""
 
@@ -343,8 +361,13 @@ class OutputManager:
             stderr_lines[-10:] if len(stderr_lines) > 10 else stderr_lines
         )
 
+        error_description = self._handle_error_description(
+            stderr, stdout, return_code, status
+        )
+
         return FailedTaskResult(
             task_id=task_id,
+            error_description=error_description,
             wrapper_measures=wrapper_measures,
             return_code=return_code,
             last_stderr_lines=last_stderr_lines,
@@ -428,6 +451,25 @@ class OutputManager:
                 warnings.append(f"Unsupported {tool} version: {version}")
 
         return warnings
+
+    def _handle_error_description(
+        self, stderr: str, stdout: str, return_code: int, status: TaskStatus
+    ) -> str:
+        """Handle error description
+        Possible enhancement: search for patterns in stderr/stdout to report a known tamarin-prover error
+        """
+        if status == TaskStatus.FAILED:
+            if return_code == -2:
+                return "The task was likely killed by the wrapper, probably by a user action."
+            if return_code == -9:
+                return "The task was likely killed (SIGKILL) by the user"
+            if return_code == -15:
+                return "The task was likely terminated (SIGTERM) by the user"
+        elif status == TaskStatus.TIMEOUT:
+            return "The task timed out. Review the timeout setting for this task."
+        elif status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
+            return "The task exceeded its memory limit. Review the memory limit setting for this task."
+        return "An unexpected error occured, see stderr output below for details."
 
     def get_output_paths(self) -> Dict[str, Path]:
         """Get output directory paths."""

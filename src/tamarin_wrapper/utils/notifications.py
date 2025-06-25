@@ -394,7 +394,9 @@ class NotificationManager:
                 else:
                     last_stderr = ""
                 components.append(
-                    Markdown(f"  • **{result.task_id}** -- {error_type} :")
+                    Markdown(
+                        f"  • **{result.task_id}** -- {error_type} (code:{result.return_code}) :"
+                    )
                 )
                 components.append(Markdown(f"{last_stderr}"))
 
