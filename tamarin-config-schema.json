@@ -1,200 +1,212 @@
 {
-	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "https://github.com/lmandrelli/tamarin-wrapper/tamarin-config-schema.json",
-	"title": "Tamarin Wrapper Configuration",
-	"description": "JSON schema for Tamarin prover automation configuration",
-	"type": "object",
-	"required": ["config", "tamarin_versions", "tasks"],
-	"properties": {
-		"config": {
-			"type": "object",
-			"description": "Global configuration settings",
-			"required": [
-				"global_max_cores",
-				"global_max_memory",
-				"default_timeout",
-				"output_directory"
-			],
-			"properties": {
-				"global_max_cores": {
-					"type": "integer",
-					"minimum": 1,
-					"description": "Maximum number of CPU cores available system-wide for all tasks"
-				},
-				"global_max_memory": {
-					"type": "integer",
-					"minimum": 1,
-					"description": "Maximum memory in GB available system-wide for all tasks"
-				},
-				"default_timeout": {
-					"type": "integer",
-					"minimum": 1,
-					"description": "Default timeout in seconds for tasks (used when task doesn't specify resources)"
-				},
-				"output_directory": {
-					"type": "string",
-					"description": "Base directory path for all output files"
-				}
-			},
-			"additionalProperties": false
-		},
-		"tamarin_versions": {
-			"type": "object",
-			"description": "Named aliases for different Tamarin prover executables",
-			"patternProperties": {
-				"^[a-zA-Z][a-zA-Z0-9_-]*$": {
-					"type": "object",
-					"required": ["path"],
-					"properties": {
-						"path": {
-							"type": "string",
-							"description": "File path to the Tamarin prover executable"
-						},
-						"version": {
-							"type": "string",
-							"description": "Version identifier for this Tamarin prover"
-						},
-						"test_success": {
-							"type": "boolean",
-							"description": "Whether this Tamarin executable passed connectivity tests"
-						}
-					},
-					"additionalProperties": false
-				}
-			},
-			"additionalProperties": false
-		},
-		"tasks": {
-			"type": "object",
-			"description": "Named tasks, each defining a Tamarin execution configuration",
-			"patternProperties": {
-				"^[a-zA-Z][a-zA-Z0-9_-]*$": {
-					"type": "object",
-					"required": [
-						"theory_file",
-						"tamarin_versions",
-						"output_file_prefix"
-					],
-					"properties": {
-						"theory_file": {
-							"type": "string",
-							"description": "Path to the .spthy theory file to analyze"
-						},
-						"tamarin_versions": {
-							"type": "array",
-							"description": "List of Tamarin version aliases to run this task on",
-							"items": {
-								"type": "string"
-							},
-							"minItems": 1,
-							"uniqueItems": true
-						},
-						"output_file_prefix": {
-							"type": "string",
-							"description": "Prefix for the output file, filled with _{lemma}_{tamarin-version}"
-						},
-						"lemmas": {
-							"type": "array",
-							"description": "List of lemmas to prove. If empty or omitted, all lemmas will be proved using --prove",
-							"items": {
-								"type": "object",
-								"required": ["name"],
-								"properties": {
-									"name": {
-										"type": "string",
-										"description": "Name of the lemma to prove"
-									},
-									"tamarin_versions": {
-										"type": "array",
-										"description": "List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
-										"items": {
-											"type": "string"
-										},
-										"minItems": 1,
-										"uniqueItems": true
-									},
-									"tamarin_options": {
-										"type": "array",
-										"description": "Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
-										"items": {
-											"type": "string"
-										}
-									},
-									"preprocess_flags": {
-										"type": "array",
-										"description": "Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
-										"items": {
-											"type": "string"
-										}
-									},
-									"ressources": {
-										"type": "object",
-										"description": "Resource allocation for this lemma. If not specified, inherits from task",
-										"properties": {
-											"max_cores": {
-												"type": "integer",
-												"minimum": 1,
-												"description": "Maximum CPU cores for this lemma"
-											},
-											"max_memory": {
-												"type": "integer",
-												"minimum": 1,
-												"description": "Maximum memory in GB for this lemma"
-											},
-											"timeout": {
-												"type": "integer",
-												"minimum": 1,
-												"description": "Timeout in seconds for this lemma"
-											}
-										},
-										"additionalProperties": false
-									}
-								},
-								"additionalProperties": false
-							}
-						},
-						"tamarin_options": {
-							"type": "array",
-							"description": "Additional command-line options to pass to Tamarin",
-							"items": {
-								"type": "string"
-							}
-						},
-						"preprocess_flags": {
-							"type": "array",
-							"description": "Preprocessor flags to pass to Tamarin using -D=flag format",
-							"items": {
-								"type": "string"
-							}
-						},
-						"ressources": {
-							"type": "object",
-							"description": "Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
-							"properties": {
-								"max_cores": {
-									"type": "integer",
-									"minimum": 1,
-									"description": "Maximum CPU cores for this task (default: 4)"
-								},
-								"max_memory": {
-									"type": "integer",
-									"minimum": 1,
-									"description": "Maximum memory in GB for this task (default: 8)"
-								},
-								"timeout": {
-								  "type": "integer",
-								  "minimum": 1,
-								  "description": "Timeout in seconds for this task (default: default_timeout from config)"
-								}
-							},
-							"additionalProperties": false
-						}
-					},
-					"additionalProperties": false
-				}
-			},
-			"additionalProperties": false
-		}
-	},
-	"additionalProperties": false
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/lmandrelli/tamarin-wrapper/tamarin-config-schema.json",
+  "title": "Tamarin Wrapper Configuration",
+  "description": "JSON schema for Tamarin prover automation configuration",
+  "type": "object",
+  "required": ["config", "tamarin_versions", "tasks"],
+  "properties": {
+    "config": {
+      "type": "object",
+      "description": "Global configuration settings",
+      "required": [
+        "global_max_cores",
+        "global_max_memory",
+        "default_timeout",
+        "output_directory"
+      ],
+      "properties": {
+        "global_max_cores": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "enum": ["max"]
+            }
+          ],
+          "description": "Maximum number of CPU cores available system-wide for all tasks (integer or 'max' for system maximum)"
+        },
+        "global_max_memory": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "enum": ["max"]
+            }
+          ],
+          "description": "Maximum memory in GB available system-wide for all tasks (integer or 'max' for system maximum)"
+        },
+        "default_timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Default timeout in seconds for tasks (used when task doesn't specify resources)"
+        },
+        "output_directory": {
+          "type": "string",
+          "description": "Base directory path for all output files"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tamarin_versions": {
+      "type": "object",
+      "description": "Named aliases for different Tamarin prover executables",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File path to the Tamarin prover executable"
+            },
+            "version": {
+              "type": "string",
+              "description": "Version identifier for this Tamarin prover"
+            },
+            "test_success": {
+              "type": "boolean",
+              "description": "Whether this Tamarin executable passed connectivity tests"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tasks": {
+      "type": "object",
+      "description": "Named tasks, each defining a Tamarin execution configuration",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "required": ["theory_file", "tamarin_versions", "output_file_prefix"],
+          "properties": {
+            "theory_file": {
+              "type": "string",
+              "description": "Path to the .spthy theory file to analyze"
+            },
+            "tamarin_versions": {
+              "type": "array",
+              "description": "List of Tamarin version aliases to run this task on",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "output_file_prefix": {
+              "type": "string",
+              "description": "Prefix for the output file, filled with _{lemma}_{tamarin-version}"
+            },
+            "lemmas": {
+              "type": "array",
+              "description": "List of lemmas to prove. If empty or omitted, all lemmas will be proved using --prove",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the lemma to prove"
+                  },
+                  "tamarin_versions": {
+                    "type": "array",
+                    "description": "List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "tamarin_options": {
+                    "type": "array",
+                    "description": "Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "preprocess_flags": {
+                    "type": "array",
+                    "description": "Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ressources": {
+                    "type": "object",
+                    "description": "Resource allocation for this lemma. If not specified, inherits from task",
+                    "properties": {
+                      "max_cores": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Maximum CPU cores for this lemma"
+                      },
+                      "max_memory": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Maximum memory in GB for this lemma"
+                      },
+                      "timeout": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Timeout in seconds for this lemma"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tamarin_options": {
+              "type": "array",
+              "description": "Additional command-line options to pass to Tamarin",
+              "items": {
+                "type": "string"
+              }
+            },
+            "preprocess_flags": {
+              "type": "array",
+              "description": "Preprocessor flags to pass to Tamarin using -D=flag format",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ressources": {
+              "type": "object",
+              "description": "Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
+              "properties": {
+                "max_cores": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Maximum CPU cores for this task (default: 4)"
+                },
+                "max_memory": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Maximum memory in GB for this task (default: 8)"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Timeout in seconds for this task (default: default_timeout from config)"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
 }

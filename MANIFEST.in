@@ -5,6 +5,6 @@ include requirements.txt
 include RECIPE_GUIDE.md
 include PACKAGING.md
 recursive-include src/tamarin_wrapper *.json
-recursive-include examples *.json *.md
+recursive-include examples *.json
 prune examples/__pycache__
 prune src/tamarin_wrapper/__pycache__

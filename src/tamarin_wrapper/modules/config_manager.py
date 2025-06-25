@@ -382,8 +382,8 @@ class ConfigManager:
             Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
         """
         # Start with global defaults
-        max_cores = 4
-        max_memory = 8
+        max_cores = global_config.global_max_cores
+        max_memory = global_config.global_max_memory
         timeout = global_config.default_timeout
 
         # Apply task-level overrides if task has resources
@@ -421,8 +421,8 @@ class ConfigManager:
             Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
         """
         # Start with global defaults
-        max_cores = 4
-        max_memory = 8
+        max_cores = global_config.global_max_cores
+        max_memory = global_config.global_max_memory
         timeout = global_config.default_timeout
 
         # Apply task-level overrides if task has resources
