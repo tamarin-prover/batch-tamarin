@@ -78,7 +78,7 @@ Create a JSON configuration file based on the WPA2 example:
       "output_file": "wpa2.txt",
       "preprocess_flags": ["yes"],
       "tamarin_options": ["-v"],
-      "ressources": {
+      "resources": {
         "max_cores": 2,
         "max_memory": 8,
         "timeout": 3600
@@ -86,14 +86,14 @@ Create a JSON configuration file based on the WPA2 example:
       "lemmas": [
         {
           "name": "nonce_reuse_key_type",
-          "ressources": {
+          "resources": {
             "max_cores": 1
           }
         },
         {
           "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
           "tamarin_versions": ["stable"],
-          "ressources": {
+          "resources": {
             "max_cores": 4,
             "max_memory": 16,
             "timeout": 30

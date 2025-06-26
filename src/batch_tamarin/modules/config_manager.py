@@ -387,22 +387,22 @@ class ConfigManager:
         timeout = global_config.default_timeout
 
         # Apply task-level overrides if task has resources
-        if task.ressources:
-            if task.ressources.max_cores is not None:
-                max_cores = task.ressources.max_cores
-            if task.ressources.max_memory is not None:
-                max_memory = task.ressources.max_memory
-            if task.ressources.timeout is not None:
-                timeout = task.ressources.timeout
+        if task.resources:
+            if task.resources.max_cores is not None:
+                max_cores = task.resources.max_cores
+            if task.resources.max_memory is not None:
+                max_memory = task.resources.max_memory
+            if task.resources.timeout is not None:
+                timeout = task.resources.timeout
 
         # Apply lemma-level overrides if lemma has resources
-        if lemma.ressources:
-            if lemma.ressources.max_cores is not None:
-                max_cores = lemma.ressources.max_cores
-            if lemma.ressources.max_memory is not None:
-                max_memory = lemma.ressources.max_memory
-            if lemma.ressources.timeout is not None:
-                timeout = lemma.ressources.timeout
+        if lemma.resources:
+            if lemma.resources.max_cores is not None:
+                max_cores = lemma.resources.max_cores
+            if lemma.resources.max_memory is not None:
+                max_memory = lemma.resources.max_memory
+            if lemma.resources.timeout is not None:
+                timeout = lemma.resources.timeout
 
         return max_cores, max_memory, timeout
 
@@ -426,12 +426,12 @@ class ConfigManager:
         timeout = global_config.default_timeout
 
         # Apply task-level overrides if task has resources
-        if task.ressources:
-            if task.ressources.max_cores is not None:
-                max_cores = task.ressources.max_cores
-            if task.ressources.max_memory is not None:
-                max_memory = task.ressources.max_memory
-            if task.ressources.timeout is not None:
-                timeout = task.ressources.timeout
+        if task.resources:
+            if task.resources.max_cores is not None:
+                max_cores = task.resources.max_cores
+            if task.resources.max_memory is not None:
+                max_memory = task.resources.max_memory
+            if task.resources.timeout is not None:
+                timeout = task.resources.timeout
 
         return max_cores, max_memory, timeout

@@ -185,7 +185,7 @@ classDiagram
         +List~Lemma~ lemmas
         +List~str~ tamarin_options
         +List~str~ preprocess_flags
-        +Resources ressources
+        +Resources resources
     }
 
     class Lemma {
@@ -193,7 +193,7 @@ classDiagram
         +List~str~ tamarin_versions
         +List~str~ tamarin_options
         +List~str~ preprocess_flags
-        +Resources ressources
+        +Resources resources
     }
 
     class Resources {

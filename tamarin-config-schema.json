@@ -88,120 +88,120 @@
           "type": "object",
           "required": ["theory_file", "tamarin_versions", "output_file_prefix"],
           "properties": {
-            "theory_file": {
-              "type": "string",
-              "description": "Path to the .spthy theory file to analyze"
-            },
-            "tamarin_versions": {
-              "type": "array",
-              "description": "List of Tamarin version aliases to run this task on",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1,
-              "uniqueItems": true
-            },
-            "output_file_prefix": {
-              "type": "string",
-              "description": "Prefix for the output file, filled with _{lemma}_{tamarin-version}"
-            },
-            "lemmas": {
-              "type": "array",
-              "description": "List of lemmas to prove. If empty or omitted, all lemmas will be proved using --prove",
-              "items": {
-                "type": "object",
-                "required": ["name"],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the lemma to prove"
-                  },
-                  "tamarin_versions": {
-                    "type": "array",
-                    "description": "List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1,
-                    "uniqueItems": true
-                  },
-                  "tamarin_options": {
-                    "type": "array",
-                    "description": "Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "preprocess_flags": {
-                    "type": "array",
-                    "description": "Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "ressources": {
-                    "type": "object",
-                    "description": "Resource allocation for this lemma. If not specified, inherits from task",
-                    "properties": {
-                      "max_cores": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "description": "Maximum CPU cores for this lemma"
-                      },
-                      "max_memory": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "description": "Maximum memory in GB for this lemma"
-                      },
-                      "timeout": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "description": "Timeout in seconds for this lemma"
-                      }
-                    },
-                    "additionalProperties": false
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "tamarin_options": {
-              "type": "array",
-              "description": "Additional command-line options to pass to Tamarin",
-              "items": {
-                "type": "string"
-              }
-            },
-            "preprocess_flags": {
-              "type": "array",
-              "description": "Preprocessor flags to pass to Tamarin using -D=flag format",
-              "items": {
-                "type": "string"
-              }
-            },
-            "ressources": {
-              "type": "object",
-              "description": "Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
-              "properties": {
-                "max_cores": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "description": "Maximum CPU cores for this task (default: 4)"
-                },
-                "max_memory": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "description": "Maximum memory in GB for this task (default: 8)"
-                },
-                "timeout": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "description": "Timeout in seconds for this task (default: default_timeout from config)"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
+				"theory_file": {
+					"type": "string",
+					"description": "Path to the .spthy theory file to analyze"
+				},
+				"tamarin_versions": {
+					"type": "array",
+					"description": "List of Tamarin version aliases to run this task on",
+					"items": {
+						"type": "string"
+					},
+					"minItems": 1,
+					"uniqueItems": true
+				},
+				"output_file_prefix": {
+					"type": "string",
+					"description": "Prefix for the output file, filled with _{lemma}_{tamarin-version}"
+				},
+				"lemmas": {
+					"type": "array",
+					"description": "List of lemmas to prove. If empty or omitted, all lemmas will be proved using --prove",
+					"items": {
+						"type": "object",
+						"required": ["name"],
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "Name of the lemma to prove"
+							},
+							"tamarin_versions": {
+								"type": "array",
+								"description": "List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
+								"items": {
+									"type": "string"
+								},
+								"minItems": 1,
+								"uniqueItems": true
+							},
+							"tamarin_options": {
+								"type": "array",
+								"description": "Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
+								"items": {
+									"type": "string"
+								}
+							},
+							"preprocess_flags": {
+								"type": "array",
+								"description": "Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
+								"items": {
+									"type": "string"
+								}
+							},
+							"resources": {
+								"type": "object",
+								"description": "Resource allocation for this lemma. If not specified, inherits from task",
+								"properties": {
+									"max_cores": {
+										"type": "integer",
+										"minimum": 1,
+										"description": "Maximum CPU cores for this lemma"
+									},
+									"max_memory": {
+										"type": "integer",
+										"minimum": 1,
+										"description": "Maximum memory in GB for this lemma"
+									},
+									"timeout": {
+										"type": "integer",
+										"minimum": 1,
+										"description": "Timeout in seconds for this lemma"
+									}
+								},
+								"additionalProperties": false
+							}
+						},
+						"additionalProperties": false
+					}
+				},
+				"tamarin_options": {
+					"type": "array",
+					"description": "Additional command-line options to pass to Tamarin",
+					"items": {
+						"type": "string"
+					}
+				},
+				"preprocess_flags": {
+					"type": "array",
+					"description": "Preprocessor flags to pass to Tamarin using -D=flag format",
+					"items": {
+						"type": "string"
+					}
+				},
+				"resources": {
+					"type": "object",
+					"description": "Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
+					"properties": {
+						"max_cores": {
+							"type": "integer",
+							"minimum": 1,
+							"description": "Maximum CPU cores for this task (default: 4)"
+						},
+						"max_memory": {
+							"type": "integer",
+							"minimum": 1,
+							"description": "Maximum memory in GB for this task (default: 8)"
+						},
+						"timeout": {
+							"type": "integer",
+							"minimum": 1,
+							"description": "Timeout in seconds for this task (default: default_timeout from config)"
+						}
+					},
+					"additionalProperties": false
+				}
+			},
           "additionalProperties": false
         }
       },

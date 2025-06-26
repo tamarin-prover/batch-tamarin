@@ -29,7 +29,7 @@ class Lemma(BaseModel):
         None,
         description="Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
     )
-    ressources: Optional["Resources"] = Field(
+    resources: Optional["Resources"] = Field(
         None,
         description="Resource allocation for this lemma. If not specified, inherits from task",
     )
@@ -96,7 +96,7 @@ class Task(BaseModel):
     preprocess_flags: Optional[List[str]] = Field(
         None, description="Preprocessor flags to pass to Tamarin using -D=flag format"
     )
-    ressources: Optional[Resources] = Field(
+    resources: Optional[Resources] = Field(
         None,
         description="Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
     )
@@ -201,14 +201,14 @@ class TamarinRecipe(BaseModel):
             KeyError: If task_name doesn't exist
         """
         task = self.tasks[task_name]
-        if task.ressources is None:
+        if task.resources is None:
             # Apply defaults: 4 cores, 8GB memory, default_timeout from global config
             return Resources(
                 max_cores=4, max_memory=8, timeout=self.config.default_timeout
             )
 
         # Apply global default_timeout if timeout is not specified
-        resources = task.ressources.model_copy()
+        resources = task.resources.model_copy()
         if resources.timeout is None:
             resources.timeout = self.config.default_timeout
 
