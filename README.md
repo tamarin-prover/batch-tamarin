@@ -278,7 +278,7 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 ## Implementation Details
 
-For detailed architecture, module overview, and workflow documentation, see [`IMPLEMENTATION_GUIDE.md`](IMPLEMENTATION_GUIDE.md).
+For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
