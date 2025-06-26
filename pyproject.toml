@@ -47,10 +47,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tamarin-pover/batch-tamarin"
-Repository = "https://github.com/tamarin-pover/batch-tamarin"
-Documentation = "https://github.com/tamarin-pover/batch-tamarin#readme"
-"Bug Tracker" = "https://github.com/tamarin-pover/batch-tamarin/issues"
+Homepage = "https://github.com/tamarin-prover/batch-tamarin"
+Repository = "https://github.com/tamarin-prover/batch-tamarin"
+Documentation = "https://github.com/tamarin-prover/batch-tamarin#readme"
+"Bug Tracker" = "https://github.com/tamarin-prover/batch-tamarin/issues"
 
 [project.scripts]
 batch-tamarin = "batch_tamarin.main:cli"
