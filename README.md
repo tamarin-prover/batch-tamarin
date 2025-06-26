@@ -1,4 +1,4 @@
-# Tamarin Python Wrapper
+# Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
