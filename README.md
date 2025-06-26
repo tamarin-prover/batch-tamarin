@@ -1,93 +1,285 @@
-# Tamarin-wrapper
+# Tamarin Python Wrapper
 
+A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
+## Features
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://projects.cispa.saarland/cc/tamarin-wrapper.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://projects.cispa.saarland/cc/tamarin-wrapper/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- **Batch Execution**: Run multiple Tamarin models across different Tamarin binary versions
+- **JSON Configuration**: Define execution recipes using simple JSON configuration files
+- **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
+- **Progress Tracking**: Real-time progress updates with Rich-formatted output
+- **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
+- **CLI Interface**: Easy-to-use command-line interface with comprehensive options
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+### From PyPI
+
+```bash
+pip install tamarin-wrapper
+```
+
+### From TestPyPI
+
+```bash
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tamarin-wrapper
+```
+
+### Prerequisites
+
+- **Python 3.9+**
+- **Tamarin Prover binaries** (install separately)
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Basic Commands
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+# Show version
+tamarin-wrapper --version
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+# Show help
+tamarin-wrapper --help
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+# Run with configuration file
+tamarin-wrapper recipe.json
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# Run with debug output
+tamarin-wrapper recipe.json --debug
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# Run with Tamarin binary validation
+tamarin-wrapper recipe.json --revalidate
+```
+
+### Configuration Example
+
+Create a JSON configuration file based on the WPA2 example:
+
+```json
+{
+  "config": {
+    "global_max_cores": 10,
+    "global_max_memory": "max",
+    "default_timeout": 7200,
+    "output_directory": "./results"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+    },
+    "legacy": {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+    }
+  },
+  "tasks": {
+    "wpa2": {
+      "theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
+      "tamarin_versions": ["stable", "legacy"],
+      "output_file": "wpa2.txt",
+      "preprocess_flags": ["yes"],
+      "tamarin_options": ["-v"],
+      "ressources": {
+        "max_cores": 2,
+        "max_memory": 8,
+        "timeout": 3600
+      },
+      "lemmas": [
+        {
+          "name": "nonce_reuse_key_type",
+          "ressources": {
+            "max_cores": 1
+          }
+        },
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": ["stable"],
+          "ressources": {
+            "max_cores": 4,
+            "max_memory": 16,
+            "timeout": 30
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
+
+## Output
+The wrapper will output the results of all analysis in the `output_file` specified in the recipe.
+It will follow this pattern :
+```
+output_directory/
+├── failed/
+│   ├── output_prefix[\_lemma]\_tamarin_alias.json
+│   └── ...
+├── models/
+│   ├── output_prefix[\_lemma]\_tamarin_alias.spthy
+│   └── ...
+└── success/
+    ├── output_prefix[\_lemma]\_tamarin_alias.json
+    └── ...
+```
+As the name of each directory and file describe, you will find sucessful task in `sucess` and their linked models in `models`
+Failed tasks don't output models (that's a tamarin behavior), you will only find a json in `failed`
+
+Here is an example for each result json :
+`success/`
+```json
+{
+  "task_id": "wpa2_authenticator_installed_is_unique_for_anonce_dev",
+  "warnings": [
+    "1 wellformedness check failed!"
+  ],
+  "tamarin_timing": 12.27,
+  "wrapper_measures": {
+    "time": 12.385284208023222,
+    "avg_memory": 200.17067307692307,
+    "peak_memory": 358.34375
+  },
+  "output_spthy": "results/models/wpa2_authenticator_installed_is_unique_for_anonce_dev.spthy",
+  "verified_lemma": {
+    "authenticator_installed_is_unique_for_anonce": {
+      "steps": 102,
+      "analysis_type": "all-traces"
+    }
+  },
+  "falsified_lemma": {},
+  "unterminated_lemma": [
+    "nonce_reuse_key_type",
+    "...",
+    "krack_attack_ptk"
+  ]
+}
+```
+`failed/`
+```json
+{
+  "task_id": "wpa2_authenticator_rcv_m2_must_be_preceded_by_snd_m1_dev",
+  "error_description": "The task exceeded its memory limit. Review the memory limit setting for this task.",
+  "wrapper_measures": {
+    "time": 30.274985666008433,
+    "avg_memory": 566.9329637096774,
+    "peak_memory": 1059.609375
+  },
+  "return_code": -2,
+  "last_stderr_lines": [
+    "Process exceeded memory limit"
+  ]
+}
+```
+## Development
+
+### Contributing
+
+1. **Fork the repository** and create a feature branch:
+   ```bash
+   git checkout -b feature/my-awesome-feature
+   ```
+
+2. **Set up development environment** (see options below)
+
+3. **Install pre-commit hooks**:
+   ```bash
+   pre-commit install
+   ```
+
+4. **Make your changes** and commit them
+
+5. **Push to your branch** and open a pull request
+
+### Development Environment Options
+
+#### Using Nix
+
+```bash
+# Enter development environment with all dependencies
+nix develop
+
+# Install the package in editable mode (required once per environment)
+pip install -e .
+
+# The tamarin-wrapper command is now available
+tamarin-wrapper --version
+```
+
+#### Using Python Virtual Environment
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements.txt
+
+# The package is installed in editable mode automatically
+tamarin-wrapper --version
+```
+
+### Testing During Development
+
+Since the package uses proper Python packaging structure, you cannot run `python src/tamarin_wrapper/main.py` directly. Use one of these methods:
+
+```bash
+# Method 1 (Recommended): Use the CLI command (after pip install -e .)
+tamarin-wrapper
+
+# Method 2: Run as Python module
+python -m tamarin_wrapper.main
+
+# Method 3: Test built package (Useful before publishing)
+python -m build
+pip install dist/tamarin_wrapper-*.whl
+```
+
+## Packaging/Publishing
+
+### Building the Package
+
+```bash
+# Clean previous builds
+rm -rf dist/ build/ **/*.egg-info/ # Be careful, it's still a rm -rf command, might fail because of *.egg-info pattern, you might want to remove it
+
+# Build wheel and source distribution
+python -m build
+```
+
+### Publishing
+
+#### Test Upload (TestPyPI)
+```bash
+python -m twine upload --repository testpypi dist/*
+```
+
+#### Production Upload (PyPI)
+```bash
+python -m twine upload dist/*
+```
+
+For detailed packaging instructions, see [`PACKAGING.md`](PACKAGING.md).
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
+
+See the [LICENSE](LICENSE) file for the full license text.
+
+### License Summary
+
+- ✅ **Use**: Commercial and private use allowed
+- ✅ **Modify**: Modifications and derivatives allowed
+- ✅ **Distribute**: Distribution allowed
+- ❗ **Share Alike**: Derivatives must be licensed under GPL-3.0+
+- ❗ **Disclose Source**: Source code must be made available
+- ❗ **Include License**: License and copyright notice must be included
+
+## Implementation Details
+
+For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
+
+**Note**: This package requires Tamarin Prover to be installed separately. Visit the [Tamarin Prover website](https://tamarin-prover.com) for installation instructions.

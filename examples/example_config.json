@@ -1,0 +1,54 @@
+{
+  "config": {
+    "global_max_cores": 8,
+    "global_max_memory": 16,
+    "default_timeout": 7200,
+    "output_directory": "./results"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover",
+      "version": "1.10.0",
+      "test_success": true
+    },
+    "dev": {
+      "path": "tamarin-binaries/tamarin-prover-dev/.stack-work/dist/aarch64-osx/ghc-9.6.6/build/tamarin-prover/tamarin-prover",
+      "version": "1.11.0",
+      "test_success": true
+    }
+  },
+  "tasks": {
+    "example_protocol_basic": {
+      "theory_file": "protocols/example.spthy",
+      "tamarin_versions": ["stable", "dev"],
+      "output_file": "example.txt",
+      "ressources": {
+        "max_cores": 4,
+        "max_memory": 8,
+        "timeout": 3200
+      }
+    },
+    "complex_protocol_analysis": {
+      "theory_file": "protocols/auth-signing-simple.spthy",
+      "tamarin_versions": ["stable"],
+      "output_file": "auth_signing_simple.txt",
+      "lemmas": [
+        {
+          "name": "executable",
+          "tamarin_versions": ["stable"],
+          "tamarin_options": ["--heuristic=S"],
+          "ressources": {
+            "max_cores": 2,
+            "max_memory": 4,
+            "timeout": 1200
+          }
+        }
+      ]
+    },
+    "quick_test": {
+      "theory_file": "protocols/NSLPK3.spthy",
+      "tamarin_versions": ["stable", "dev"],
+      "output_file": "NSLPK3.txt"
+    }
+  }
+}

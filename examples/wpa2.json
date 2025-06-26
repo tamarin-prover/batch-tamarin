@@ -1,0 +1,73 @@
+{
+	"config": {
+		"global_max_cores": "max",
+		"global_max_memory": "max",
+		"default_timeout": 7200,
+		"output_directory": "./results"
+	},
+	"tamarin_versions": {
+		"stable": {
+			"path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+		},
+		"dev": {
+		  "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
+		},
+        "legacy": {
+            "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+        }
+	},
+	"tasks": {
+		"wpa2": {
+			"theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
+			"tamarin_versions": ["stable", "dev", "legacy"],
+			"output_file_prefix": "WPA2_Example",
+      "preprocess_flags": ["yes"],
+      "tamarin_options" : ["-v"],
+			"ressources": {
+				"max_cores": 2,
+				"max_memory": 8,
+                "timeout": 3600
+			},
+            "lemmas" : [
+				{
+					"name": "nonce_reuse_key_type",
+					"ressources": {
+						"max_cores": 1
+					}
+				},
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"tamarin_versions": ["stable"],
+					"ressources": {
+						"max_cores": 4,
+						"max_memory": 16,
+						"timeout": 30
+					}
+				},
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"tamarin_versions": ["dev"],
+					"ressources": {
+						"max_cores": 4,
+						"max_memory": 1,
+						"timeout": 600
+					}
+				},
+				{
+					"name": "supplicant_rcv_m1_must_be_preceded_by_associate",
+					"tamarin_versions": ["dev"],
+					"tamarin_options": ["--heuristic=S"],
+					"preprocess_flags": ["no"],
+                    "ressources": {
+                        "max_cores": 4,
+                        "max_memory": 1,
+                        "timeout": 100
+					}
+				},
+				{
+					"name": "authenticator_installed_is_unique_for_anonce"
+				}
+			]
+		}
+	}
+}
