@@ -124,7 +124,7 @@ output_directory/
     ├── output_prefix[\_lemma]\_tamarin_alias.json
     └── ...
 ```
-As the name of each directory and file describe, you will find sucessful task in `sucess` and their linked models in `models`
+As the name of each directory and file describe, you will find successful task in `success` and their linked models in `models`
 Failed tasks don't output models (that's a tamarin behavior), you will only find a json in `failed`
 
 Here is an example for each result json :

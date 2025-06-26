@@ -469,7 +469,7 @@ class OutputManager:
             return "The task timed out. Review the timeout setting for this task."
         elif status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
             return "The task exceeded its memory limit. Review the memory limit setting for this task."
-        return "An unexpected error occured, see stderr output below for details."
+        return "An unexpected error occurred, see stderr output below for details."
 
     def get_output_paths(self) -> Dict[str, Path]:
         """Get output directory paths."""
