@@ -31,7 +31,7 @@
   #metropolis.outline
 ]
 
-#new-section[Why? / Context]
+#new-section[Why?]
 
 #slide[
   = The problem
@@ -61,7 +61,7 @@
   - **Output Processing**: Structured JSON results with detailed summaries
 ]
 
-#new-section[How does the config Works ?]
+#new-section[How does the config works ?]
 
 #slide[
   = Configuration Structure
