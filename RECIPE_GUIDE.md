@@ -1,4 +1,4 @@
-# Tamarin Wrapper Configuration Documentation
+# Batch Tamarin Configuration Documentation
 
 ## Overview
 

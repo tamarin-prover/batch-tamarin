@@ -1,7 +1,7 @@
 """
 Pydantic models for Tamarin Recipe configuration.
 
-These models validate Tamarin wrapper configuration files according to
+These models validate batch Tamarin configuration files according to
 the tamarin-config-schema.json specification.
 """
 
@@ -154,7 +154,7 @@ class GlobalConfig(BaseModel):
 
 
 class TamarinRecipe(BaseModel):
-    """Root configuration model for Tamarin wrapper."""
+    """Root configuration model for batch Tamarin."""
 
     config: GlobalConfig = Field(..., description="Global configuration settings")
     tamarin_versions: Dict[str, TamarinVersion] = Field(

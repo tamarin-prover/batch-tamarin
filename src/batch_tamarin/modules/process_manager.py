@@ -1,5 +1,5 @@
 """
-Centralized process manager for the Tamarin Wrapper.
+Centralized process manager for the batch Tamarin.
 
 This module provides a unified interface for launching and managing processes
 in a non-blocking manner, with support for timeouts and proper termination.

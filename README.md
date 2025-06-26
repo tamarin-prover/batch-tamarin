@@ -16,13 +16,13 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 ### From PyPI
 
 ```bash
-pip install tamarin-wrapper
+pip install batch-tamarin
 ```
 
 ### From TestPyPI
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tamarin-wrapper
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ batch-tamarin
 ```
 
 ### Prerequisites
@@ -36,19 +36,19 @@ pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://
 
 ```bash
 # Show version
-tamarin-wrapper --version
+batch-tamarin --version
 
 # Show help
-tamarin-wrapper --help
+batch-tamarin --help
 
 # Run with configuration file
-tamarin-wrapper recipe.json
+batch-tamarin recipe.json
 
 # Run with debug output
-tamarin-wrapper recipe.json --debug
+batch-tamarin recipe.json --debug
 
 # Run with Tamarin binary validation
-tamarin-wrapper recipe.json --revalidate
+batch-tamarin recipe.json --revalidate
 ```
 
 ### Configuration Example
@@ -201,8 +201,8 @@ nix develop
 # Install the package in editable mode (required once per environment)
 pip install -e .
 
-# The tamarin-wrapper command is now available
-tamarin-wrapper --version
+# The batch-tamarin command is now available
+batch-tamarin --version
 ```
 
 #### Using Python Virtual Environment
@@ -216,23 +216,23 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # The package is installed in editable mode automatically
-tamarin-wrapper --version
+batch-tamarin --version
 ```
 
 ### Testing During Development
 
-Since the package uses proper Python packaging structure, you cannot run `python src/tamarin_wrapper/main.py` directly. Use one of these methods:
+Since the package uses proper Python packaging structure, you cannot run `python src/batch_tamarin/main.py` directly. Use one of these methods:
 
 ```bash
 # Method 1 (Recommended): Use the CLI command (after pip install -e .)
-tamarin-wrapper
+batch-tamarin
 
 # Method 2: Run as Python module
-python -m tamarin_wrapper.main
+python -m batch_tamarin.main
 
 # Method 3: Test built package (Useful before publishing)
 python -m build
-pip install dist/tamarin_wrapper-*.whl
+pip install dist/batch_tamarin-*.whl
 ```
 
 ## Packaging/Publishing

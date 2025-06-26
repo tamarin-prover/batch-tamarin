@@ -1,5 +1,5 @@
 """
-System resource detection utilities for Tamarin Wrapper.
+System resource detection utilities for batch Tamarin.
 
 This module provides functions to detect maximum system resources (CPU cores and memory)
 that can be used when "max" is specified in configuration files.
@@ -69,7 +69,7 @@ def resolve_max_value(value: str | int, resource_type: str) -> int:
     if isinstance(value, int):
         return value
 
-    if isinstance(value, str) and value.lower() == "max":
+    elif value.lower() == "max":
         if resource_type.lower() == "cores":
             return get_max_cpu_cores()
         elif resource_type.lower() == "memory":

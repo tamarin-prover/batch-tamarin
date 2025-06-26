@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tamarin-wrapper"
+name = "batch-tamarin"
 version = "0.1.12"
 description = "Python wrapper for Tamarin Prover with JSON configuration"
 readme = "README.md"
@@ -47,19 +47,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/tamarin-wrapper"
-Repository = "https://github.com/yourusername/tamarin-wrapper"
-Documentation = "https://github.com/yourusername/tamarin-wrapper#readme"
-"Bug Tracker" = "https://github.com/yourusername/tamarin-wrapper/issues"
+Homepage = "https://github.com/tamarin-pover/batch-tamarin"
+Repository = "https://github.com/tamarin-pover/batch-tamarin"
+Documentation = "https://github.com/tamarin-pover/batch-tamarin#readme"
+"Bug Tracker" = "https://github.com/tamarin-pover/batch-tamarin/issues"
 
 [project.scripts]
-tamarin-wrapper = "tamarin_wrapper.main:cli"
+batch-tamarin = "batch_tamarin.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-tamarin_wrapper = ["*.json"]
+batch_tamarin = ["*.json"]
 
 [tool.black]
 line-length = 88

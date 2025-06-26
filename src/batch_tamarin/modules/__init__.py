@@ -1,4 +1,4 @@
-"""Core modules for Tamarin wrapper functionality."""
+"""Core modules for batch Tamarin functionality."""
 
 from .output_manager import output_manager
 

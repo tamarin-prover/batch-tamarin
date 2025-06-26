@@ -1,16 +1,16 @@
-# Tamarin Wrapper Architecture
+# Batch Tamarin Architecture
 
 ## Project Overview
 
-The Tamarin Wrapper is a Python-based orchestration tool that enables batch execution of Tamarin Prover protocol verification tasks. It provides a structured approach to running multiple protocol analyses across different Tamarin versions with comprehensive resource management, progress tracking, and result processing.
+The batch Tamarin is a Python-based orchestration tool that enables batch execution of Tamarin Prover protocol verification tasks. It provides a structured approach to running multiple protocol analyses across different Tamarin versions with comprehensive resource management, progress tracking, and result processing.
 
 The system is designed around a modular architecture with clear separation of concerns, allowing for efficient parallel execution while maintaining resource constraints and providing detailed progress reporting.
 
 ## Project Structure
 
 ```
-tamarin-wrapper/
-├── src/tamarin_wrapper/                    # Main package source
+batch-tamarin/
+├── src/batch_tamarin/                    # Main package source
 │   ├── __init__.py                         # Package initialization
 │   ├── main.py                             # CLI entry point and application coordinator
 │   ├── runner.py                           # High-level task execution orchestration
@@ -120,7 +120,7 @@ sequenceDiagram
     participant PM as Process Manager
     participant OM as Output Manager
 
-    User->>CLI: tamarin-wrapper recipe.json
+    User->>CLI: batch-tamarin recipe.json
     CLI->>CM: load_json_recipe()
     CM->>CM: Validate with Pydantic
     CM->>TR: ExecutableTask list

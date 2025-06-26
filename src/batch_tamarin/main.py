@@ -9,7 +9,7 @@ from .modules.config_manager import ConfigManager
 from .runner import TaskRunner
 from .utils.notifications import notification_manager
 
-app = typer.Typer(help="Tamarin-wrapper")
+app = typer.Typer(help="batch-tamarin")
 
 
 async def process_config_file(config_path: Path, revalidate: bool = False) -> None:
@@ -39,7 +39,7 @@ def main(
         None, help="JSON recipe file to execute"
     ),
     version: bool = typer.Option(
-        False, "--version", "-v", help="Show Tamarin-wrapper version."
+        False, "--version", "-v", help="Show batch-tamarin version."
     ),
     revalidate: bool = typer.Option(
         False,
@@ -55,7 +55,7 @@ def main(
     ),
 ) -> None:
     """
-    Entry point for the Tamarin-wrapper application.
+    Entry point for the batch-tamarin application.
     """
     # Set debug mode if enabled
     if debug:
@@ -65,10 +65,12 @@ def main(
     if version:
         print(
             r"""
-▗▄▄▄▖▗▄▖ ▗▖  ▗▖ ▗▄▖ ▗▄▄▖ ▗▄▄▄▖▗▖  ▗▖    ▗▖ ▗▖▗▄▄▖  ▗▄▖ ▗▄▄▖ ▗▄▄▖ ▗▄▄▄▖▗▄▄▖
-  █ ▐▌ ▐▌▐▛▚▞▜▌▐▌ ▐▌▐▌ ▐▌  █  ▐▛▚▖▐▌    ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌ ▐▌
-  █ ▐▛▀▜▌▐▌  ▐▌▐▛▀▜▌▐▛▀▚▖  █  ▐▌ ▝▜▌    ▐▌█▐▌▐▛▀▚▖▐▛▀▜▌▐▛▀▘ ▐▛▀▘ ▐▛▀▀▘▐▛▀▚▖
-  █ ▐▌ ▐▌▐▌  ▐▌▐▌ ▐▌▐▌ ▐▌▗▄█▄▖▐▌  ▐▌    ▐▙█▟▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ▐▙▄▄▖▐▌ ▐▌
+██████╗  █████╗ ████████╗ ██████╗██╗  ██╗    ████████╗ █████╗ ███╗   ███╗ █████╗ ██████╗ ██╗███╗   ██╗
+██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║    ╚══██╔══╝██╔══██╗████╗ ████║██╔══██╗██╔══██╗██║████╗  ██║
+██████╔╝███████║   ██║   ██║     ███████║       ██║   ███████║██╔████╔██║███████║██████╔╝██║██╔██╗ ██║
+██╔══██╗██╔══██║   ██║   ██║     ██╔══██║       ██║   ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██║██║╚██╗██║
+██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║       ██║   ██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║██║ ╚████║
+╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝       ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
             """
         )
         print(f"Running v{__version__}")
@@ -81,8 +83,8 @@ def main(
     # Check if config file is provided when not showing version
     if not config_file:
         print("Error: Missing argument 'CONFIG_FILE'.")
-        print("Usage: tamarin-wrapper [OPTIONS] CONFIG_FILE")
-        print("Try 'tamarin-wrapper --help' for help.")
+        print("Usage: batch-tamarin [OPTIONS] CONFIG_FILE")
+        print("Try 'batch-tamarin --help' for help.")
         raise typer.Exit(1)
 
     # Execute config file tasks

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/lmandrelli/tamarin-wrapper/tamarin-config-schema.json",
-  "title": "Tamarin Wrapper Configuration",
+  "$id": "https://github.com/tamarin-prover/batch-tamarin/tamarin-config-schema.json",
+  "title": "Batch Tamarin Configuration",
   "description": "JSON schema for Tamarin prover automation configuration",
   "type": "object",
   "required": ["config", "tamarin_versions", "tasks"],

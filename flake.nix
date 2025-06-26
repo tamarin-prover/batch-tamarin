@@ -1,5 +1,5 @@
 {
-  description = "Tamarin-wrapper Python project";
+  description = "batch-tamarin Python project";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -36,9 +36,9 @@
           pip
         ];
 
-        # Build the tamarin-wrapper package properly
-        tamarin-wrapper = python.pkgs.buildPythonPackage {
-          pname = "tamarin-wrapper";
+        # Build the batch-tamarin package properly
+        batch-tamarin = python.pkgs.buildPythonPackage {
+          pname = "batch-tamarin";
           version = packageVersion;
           format = "pyproject";
 
@@ -69,8 +69,8 @@
       in
       {
         # Main package output
-        packages.default = tamarin-wrapper;
-        packages.tamarin-wrapper = tamarin-wrapper;
+        packages.default = batch-tamarin;
+        packages.batch-tamarin = batch-tamarin;
 
         # Development shell
         devShells.default = pkgs.mkShell {
@@ -101,7 +101,7 @@
             # Add local bin to PATH
             export PATH="$DEV_ROOT/bin:$PATH"
 
-            echo "🚀 Tamarin-wrapper development environment"
+            echo "🚀 Batch Tamarin development environment"
             echo "📦 Python ${python.version} with dependencies available"
             echo "📋 Package version: ${packageVersion}"
             echo "📁 Development root: $DEV_ROOT"
@@ -116,7 +116,7 @@
             echo "  isort src/                   # Sort imports"
             echo "  autoflake --recursive src/   # Remove unused imports"
             echo "  pytest                       # Run tests"
-            echo "  tamarin-wrapper --help       # Test CLI (after editable install)"
+            echo "  batch-tamarin --help       # Test CLI (after editable install)"
             echo ""
             echo "🔧 Pre-commit setup:"
             echo "  pre-commit install          # Set up pre-commit hook (run once)"

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Setup script for pre-commit hooks in tamarin-wrapper project
+# Setup script for pre-commit hooks in batch-tamarin project
 
 set -e
 
-echo "Setting up pre-commit hooks for tamarin-wrapper..."
+echo "Setting up pre-commit hooks for batch-tamarin..."
 
 # Check if we're in a git repository
 if [ ! -d ".git" ]; then

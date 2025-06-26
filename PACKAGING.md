@@ -1,6 +1,6 @@
-# Packaging Guide for tamarin-wrapper
+# Packaging Guide for batch-tamarin
 
-This document explains how to package and publish tamarin-wrapper to PyPI.
+This document explains how to package and publish batch-tamarin to PyPI.
 
 ## Building the Package
 
@@ -15,8 +15,8 @@ This document explains how to package and publish tamarin-wrapper to PyPI.
    ```
 
    This creates:
-   - `dist/tamarin_wrapper-0.1.0.tar.gz` (source distribution)
-   - `dist/tamarin_wrapper-0.1.0-py3-none-any.whl` (wheel distribution)
+   - `dist/batch_tamarin-0.1.0.tar.gz` (source distribution)
+   - `dist/batch_tamarin-0.1.0-py3-none-any.whl` (wheel distribution)
 
 ## Uploading the Package
 
@@ -29,12 +29,12 @@ This document explains how to package and publish tamarin-wrapper to PyPI.
 
 2. **Install from TestPyPI:**
    ```bash
-   pip install --index-url https://test.pypi.org/simple/ tamarin-wrapper
+   pip install --index-url https://test.pypi.org/simple/ batch-tamarin
    ```
 
 3. **Test the installation:**
    ```bash
-   tamarin-wrapper --version
+   batch-tamarin --version
    ```
 
 ## Publishing to PyPI
@@ -46,20 +46,20 @@ This document explains how to package and publish tamarin-wrapper to PyPI.
 
 2. **Verify installation:**
    ```bash
-   pip install tamarin-wrapper
-   tamarin-wrapper --version
+   pip install batch-tamarin
+   batch-tamarin --version
    ```
 
 ## Version Management
 
 Update the version in these files before building:
-- `src/tamarin_wrapper/__init__.py` (`__version__`)
+- `src/batch_tamarin/__init__.py` (`__version__`)
 - `pyproject.toml` (`version`)
 
 ## Package Structure
 
 ```
-tamarin-wrapper/
+batch-tamarin/
 ├── pyproject.toml          # Main configuration
 ├── README.md              # Package description
 ├── LICENSE                # GPL-3.0 license
@@ -67,7 +67,7 @@ tamarin-wrapper/
 ├── requirements.txt       # Production dependencies (keep for dev)
 ├── requirements-dev.txt   # Development dependencies
 └── src/
-    └── tamarin_wrapper/   # Main package
+    └── batch_tamarin/   # Main package
         ├── __init__.py    # Package initialization
         ├── main.py        # Entry point
         └── ...
@@ -77,7 +77,7 @@ tamarin-wrapper/
 
 - ✅ Modern `pyproject.toml` configuration
 - ✅ Proper package structure with relative imports
-- ✅ CLI entry point: `tamarin-wrapper`
+- ✅ CLI entry point: `batch-tamarin`
 - ✅ Separation of production and development dependencies
 - ✅ GPL-3.0 license
 - ✅ Compatible with Nix development environment

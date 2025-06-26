@@ -1,5 +1,5 @@
 """
-Task manager for the Tamarin Wrapper.
+Task manager for the batch Tamarin.
 
 This module provides task execution with progress reporting capabilities,
 built on top of the ProcessManager for actual process execution.
