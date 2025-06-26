@@ -2,6 +2,8 @@
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
+![WrapperLogo](assets/logo.png)
+
 ## Features
 
 - **Batch Execution**: Run multiple Tamarin models across different Tamarin binary versions
