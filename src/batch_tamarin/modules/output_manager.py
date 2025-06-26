@@ -1,5 +1,5 @@
 """
-Output manager for the Tamarin Wrapper.
+Output manager for the batch Tamarin.
 
 This module provides functionality to parse Tamarin execution output,
 create structured JSON results, and manage output directories.

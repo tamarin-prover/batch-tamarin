@@ -18,7 +18,7 @@ def update_version() -> None:
     authors_str: str = ", ".join([f"{a['name']} <{a['email']}>" for a in authors])  # type: ignore
 
     # Update __init__.py
-    init_path = Path(__file__).parent.parent / "src" / "tamarin_wrapper" / "__init__.py"
+    init_path = Path(__file__).parent.parent / "src" / "batch_tamarin" / "__init__.py"
     content: str = f'''"""Tamarin Python Wrapper - Run Tamarin Prover models with JSON recipes."""
 
 __version__ = "{version}"

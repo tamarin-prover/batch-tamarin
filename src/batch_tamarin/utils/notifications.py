@@ -1,5 +1,5 @@
 """
-Notification management system for the Tamarin wrapper.
+Notification management system for the batch Tamarin.
 
 This module provides a centralized way to send notifications via Rich formatting.
 """
@@ -13,7 +13,7 @@ from ..model.executable_task import ExecutionSummary
 
 
 class TamarinHighlighter(RegexHighlighter):
-    """Custom highlighter for Tamarin wrapper output with rich formatting"""
+    """Custom highlighter for batch Tamarin output with rich formatting"""
 
     base_style = "tamarin."
     highlights = [
@@ -35,7 +35,7 @@ class TamarinHighlighter(RegexHighlighter):
 
 class NotificationManager:
     """
-    Manages notifications for the Tamarin wrapper.
+    Manages notifications for the batch Tamarin.
     This class handles sending notifications via Rich formatting
     """
 

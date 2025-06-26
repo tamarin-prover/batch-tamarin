@@ -1,4 +1,4 @@
-# Tamarin Wrapper Configuration Documentation
+# Batch Tamarin Configuration Documentation
 
 ## Overview
 
@@ -67,7 +67,7 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
       "theory_file": "protocols/example.spthy",
       "tamarin_versions": ["stable", "dev"],
       "output_file_prefix": "example_basic",
-      "ressources": {
+      "resources": {
         "max_cores": 4,
         "max_memory": 8,
         "timeout": 3200
@@ -87,7 +87,7 @@ The `task_suffix` is formatted like following : {lemma}\_{tamarin_version} (with
 - **`lemmas`** (array, optional): Lemmas to prove. If empty or omitted, all lemmas are proved using `--prove`
 - **`tamarin_options`** (array of strings, optional): Additional command-line options for Tamarin
 - **`preprocess_flags`** (array of strings, optional): Preprocessor flags (passed as `-D=flag`)
-- **`ressources`** (object, optional): Resource allocation for this task
+- **`resources`** (object, optional): Resource allocation for this task
 
 ## Lemma Configuration
 
@@ -99,7 +99,7 @@ Lemmas support comprehensive per-lemma configuration with full inheritance from 
     {
       "name": "secrecy",
       "tamarin_versions": ["stable"],
-      "ressources": {
+      "resources": {
         "max_cores": 2,
         "max_memory": 4,
         "timeout": 1200
@@ -109,7 +109,7 @@ Lemmas support comprehensive per-lemma configuration with full inheritance from 
       "name": "authentication",
       "tamarin_options": ["--heuristic=S"],
       "preprocess_flags": ["AuthOptimization"],
-      "ressources": {
+      "resources": {
         "max_cores": 8,
         "max_memory": 16,
         "timeout": 3600
@@ -128,14 +128,14 @@ Lemmas support comprehensive per-lemma configuration with full inheritance from 
 - **`tamarin_versions`** (array of strings, optional): Override which tamarin versions to use for this lemma
 - **`tamarin_options`** (array of strings, optional): Override tamarin command-line options for this lemma
 - **`preprocess_flags`** (array of strings, optional): Override preprocessor flags for this lemma
-- **`ressources`** (object, optional): Override resource allocation for this lemma
+- **`resources`** (object, optional): Override resource allocation for this lemma
 
 **Override Behavior**: Lemma-level properties completely replace task-level properties (no merging).
 
 ## Resource Management
 ```json
 {
-  "ressources": {
+  "resources": {
     "max_cores": 4,
     "max_memory": 8,
     "timeout": 3200
@@ -144,7 +144,7 @@ Lemmas support comprehensive per-lemma configuration with full inheritance from 
 ```
 
 ### Default Resources
-When a task doesn't specify `ressources`, the following defaults are used:
+When a task doesn't specify `resources`, the following defaults are used:
 - **Cores**: `global_max_cores` from previously defined `global_config`
 - **Memory**: `global_max_memory`, same method
 - **Timeout**: `default_timeout`, same method
