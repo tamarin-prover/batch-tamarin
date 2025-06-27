@@ -317,7 +317,7 @@ For detailed architecture, module overview, and workflow documentation, see [`AR
 This project has been done during an internship at CISPA.
 It was made with the help of the Cas Cremers research group, a particular thanks should go to :
 - Cas Cremers, as the supervisor of this internship but also for all his support and guidance.
-- Maïwenn Racouchot and Aleksi Peltonen for their close collaboration and feedback.
+- Maïwenn Racouchot and Aleksi Peltonen for their close collaboration, feedback, and, most importantly, the logo.
 - Esra Günsay, Erik Pallas, Niklas Medinger, Aurora Naska ans Alexander Dax for their valuable support and development ideas.
 
 ## Final Note
