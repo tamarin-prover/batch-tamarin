@@ -1,0 +1,32 @@
+/*
+   Protocol:    Simplest example for injective fact usage
+   Modeler:     Cas Cremers
+   Date:        Jan 2025
+   Status:      working
+
+   A simple toy example that showcases an injective fact and its detection. The injective fact Inj is detected, and the proof proceeds in two steps.
+
+   To see how this example fails without injective facts, replace all three occurrences of
+     Inj(~i, $Z)
+   by
+     Inj('1', ~i, $Z)
+   preventing Tamarin from detecting it as an injective fact. In this case, the proof will loop over the backwards unfolding of ever longer chains, and not terminate.
+*/
+
+theory MinimalInjectiveFact begin
+
+rule Init:
+  [ Fr(~i) ]
+--[ Initiated(~i) ]->
+  [ Inj(~i, $Z ) ]
+
+rule Reader:
+  [ Inj(i, $Z) ]
+--[ Read(i, $Z) ]->
+  [ Inj(i, $Z ) ]
+
+lemma injectivity: all-traces
+  "All id #i #j Z1 Z2.
+        Read(id, Z1) @ i & Read(id, Z2) @ j ==> Z1 = Z2 "
+
+end

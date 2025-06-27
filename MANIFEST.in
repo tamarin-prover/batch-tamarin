@@ -6,6 +6,6 @@ include RECIPE_GUIDE.md
 include PACKAGING.md
 recursive-include assets *
 recursive-include src/batch_tamarin *.json
-recursive-include examples *.json
+recursive-include examples *
 prune examples/__pycache__
 prune src/batch_tamarin/__pycache__

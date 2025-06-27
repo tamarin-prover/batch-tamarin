@@ -1,0 +1,70 @@
+theory SimpleChallengeResponse
+begin
+
+/*
+
+In this protocol, a client C generates a fresh symmetric key 'k', encrypts it
+with the public key of a server 'S' and sends it to 'S'. The server confirms
+the receipt of the key by sending back its hash to the client. In
+Alice-and-Bob notation the protocol would read as follows.
+
+  C -> S: aenc{k}pk(S)
+  C <- S: h(k)
+
+This protocol is artificial and it satisfies only very weak security
+guarantees. We can prove that from the perspective of the client, the freshly
+generated key is secret provided that the server is uncompromised.
+
+*/
+
+functions: h/1, aenc/2, adec/2, pk/1
+equations: adec(aenc(m, pk(k)), k) = m
+
+rule Register_pk:
+  [ Fr(~ltk) ]
+  -->
+  [ !Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk)) ]
+
+rule Client_1:
+    [ Fr(~k), !Pk($S, pkS) ]
+  -->
+    [ Client_1( $S, ~k ), Out( aenc{'1', ~k}pkS ) ]
+
+rule Client_2:
+    [ Client_1(S, k), In( h(k) ) ]
+  --[ SessKeyC( S, k ) ]->
+    []
+
+rule Serv_1:
+    [ !Ltk($S, ~ltkS), In( aenc{'1', k}pk(~ltkS) ) ]
+  --[ AnswerRequest($S, k)
+    ]->
+    [ Out( h(k) ) ]
+
+lemma Client_auth_injective:
+  " /* for all session keys 'k' setup by clients with a server 'S' */
+    ( All S k #i.  SessKeyC(S, k) @ #i
+       ==>
+         /* there is a server that answered the request */
+       (Ex #a. AnswerRequest(S, k) @ a
+           /* and there is no other client that had the same request. */
+           & (All #j. SessKeyC(S, k) @ #j ==> #i = #j)
+       )
+    ) "
+
+#ifdef KEYWORD1
+lemma Client_session_key_setup:
+  exists-trace
+  " Ex S k #i.
+        SessKeyC(S, k) @ #i "
+
+#ifdef KEYWORD2
+lemma Client_session_key_setup_stronger:
+  exists-trace
+  " Ex S k #i #j.
+        SessKeyC(S, k) @ #i
+      & AnswerRequest(S,k) @ #j"
+#endif
+#endif
+
+end

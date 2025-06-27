@@ -1,0 +1,59 @@
+theory Minimal_HashChain begin
+
+functions: f/1
+
+// Chain setup phase
+////////////////////
+
+// Hash chain generation
+rule Gen_Start:
+  [ Fr(seed) ] -->
+  [ Gen(seed, seed)
+  , Out(seed) ]
+
+// The ChainKey-facts are used by the sender rules to store the
+// link between the keys in the chain.
+rule Gen_Step:
+    [ Gen(seed, chain) ]
+  --[ ChainKey(chain) ]->
+    [ Gen(seed, f(chain) ) ]
+
+// At some point the sender decides to stop the hash-chain
+// precomputation.
+rule Gen_Stop:
+    [ Gen(seed, kZero) ]
+  --[ ChainKey(kZero) ]->
+    [ !Final(kZero) ]
+
+// Key checking
+///////////////
+
+// Start checking an arbitrary key. Use a loop-id to allow
+// connecting different statements about the same loop.
+rule Check0:
+    [ In(kOrig)
+    , Fr(loopId) ]
+  --[ Start(loopId, kOrig) ]->
+    [ Loop(loopId, kOrig, kOrig) ]
+
+rule Check:
+    [ Loop(loopId, k,    kOrig) ]
+  --[ Loop(loopId, k,    kOrig) ]->
+    [ Loop(loopId, f(k), kOrig) ]
+
+rule Success:
+    [ Loop(loopId, kZero, kOrig), !Final(kZero) ]
+  --[ Success(loopId, kOrig)
+    ]-> []
+
+// Lemmas
+lemma Auxiliary_Success_chain [use_induction,reuse]:
+  "All lid kZero k #x #y.
+      Loop(lid, kZero, k) @ #x & ChainKey(kZero) @ #y
+    ==> Ex #z. ChainKey(k) @ #z"
+
+lemma Success_chain:
+  "All lid k #i. Success(lid, k) @ i ==>
+    Ex #j. ChainKey(k) @ j"
+
+end
