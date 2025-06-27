@@ -1,5 +1,7 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.1.2-forestgreen)
+
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
 ![WrapperLogo](assets/logo.png)
@@ -13,7 +15,38 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 - **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
 - **CLI Interface**: Easy-to-use command-line interface with comprehensive options
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [From PyPI](#from-pypi)
+  - [From local package](#from-local-package)
+- [Usage](#usage)
+  - [Basic Commands](#basic-commands)
+  - [Configuration Example](#configuration-example)
+  - [Output](#output)
+- [Development](#development)
+  - [Contributing](#contributing)
+  - [Dependencies, Configuration](#dependencies-configuration)
+    - [Using Nix (the easy way)](#using-nix-the-easy-way)
+    - [Using Python Virtual Environment (still pretty easy)](#using-python-virtual-environment-still-pretty-easy)
+  - [Testing During Development](#testing-during-development)
+- [Packaging/Publishing](#packagingpublishing)
+  - [Building the Package](#building-the-package)
+  - [Publishing](#publishing)
+- [License](#license)
+  - [License Summary](#license-summary)
+- [Implementation Details](#implementation-details)
+- [Acknowledgments](#acknowledgments)
+- [Final Note](#final-note)
+
 ## Installation
+
+### Prerequisites
+
+- **Python 3.9+**
+- **Tamarin Prover binaries** (installed separately)
 
 ### From PyPI
 
@@ -21,16 +54,12 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 pip install batch-tamarin
 ```
 
-### From TestPyPI
+### From local package
 
+Get the lastest release from this github repo.
 ```bash
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ batch-tamarin
+pip install pip install ./batch_tamarin-0.1.1-py3-none-any.whl
 ```
-
-### Prerequisites
-
-- **Python 3.9+**
-- **Tamarin Prover binaries** (install separately)
 
 ## Usage
 
@@ -109,7 +138,7 @@ Create a JSON configuration file based on the WPA2 example:
 
 Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
 
-## Output
+### Output
 The wrapper will output the results of all analysis in the `output_file` specified in the recipe.
 It will follow this pattern :
 ```
@@ -174,6 +203,8 @@ Here is an example for each result json :
 ```
 ## Development
 
+A macOS or Linux environment is highly recommended, as tamarin-prover is only running on these OS. You can use WSL2 on Windows hosts.
+
 ### Contributing
 
 1. **Fork the repository** and create a feature branch:
@@ -185,16 +216,16 @@ Here is an example for each result json :
 
 3. **Install pre-commit hooks**:
    ```bash
-   pre-commit install
+   ./setup-hooks.sh
    ```
 
 4. **Make your changes** and commit them
 
 5. **Push to your branch** and open a pull request
 
-### Development Environment Options
+### Dependencies, Configuration
 
-#### Using Nix
+#### Using Nix (the easy way)
 
 ```bash
 # Enter development environment with all dependencies
@@ -207,12 +238,12 @@ pip install -e .
 batch-tamarin --version
 ```
 
-#### Using Python Virtual Environment
+#### Using Python Virtual Environment (still pretty easy)
 
 ```bash
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # Install development dependencies
 pip install -r requirements.txt
@@ -229,10 +260,7 @@ Since the package uses proper Python packaging structure, you cannot run `python
 # Method 1 (Recommended): Use the CLI command (after pip install -e .)
 batch-tamarin
 
-# Method 2: Run as Python module
-python -m batch_tamarin.main
-
-# Method 3: Test built package (Useful before publishing)
+# Method 2: Test built package (Useful before publishing)
 python -m build
 pip install dist/batch_tamarin-*.whl
 ```
@@ -243,7 +271,8 @@ pip install dist/batch_tamarin-*.whl
 
 ```bash
 # Clean previous builds
-rm -rf dist/ build/ **/*.egg-info/ # Be careful, it's still a rm -rf command, might fail because of *.egg-info pattern, you might want to remove it
+rm -rf dist/ build/ **/*.egg-info/ # Be careful, it's still a rm -rf command
+# Might fail because of *.egg-info pattern, you might want to remove it
 
 # Build wheel and source distribution
 python -m build
@@ -283,5 +312,13 @@ See the [LICENSE](LICENSE) file for the full license text.
 For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
+## Acknowledgments
 
-**Note**: This package requires Tamarin Prover to be installed separately. Visit the [Tamarin Prover website](https://tamarin-prover.com) for installation instructions.
+This project has been done during an internship at CISPA.
+It was made with the help of the Cas Cremers research group, a particular thanks should go to :
+- Cas Cremers, as the supervisor of this internship but also for all his support and guidance.
+- Maïwenn Racouchot and Aleksi Peltonen for their close collaboration, feedback, and, most importantly, the logo.
+- Esra Günsay, Erik Pallas, Niklas Medinger, Aurora Naska ans Alexander Dax for their valuable support and development ideas.
+
+## Final Note
+As this package need to directly use `tamarin-prover` commands, you can visit the [Tamarin Prover website](https://tamarin-prover.com) for installation instructions.

@@ -226,8 +226,6 @@ pyrightconfig.json
 .ionide
 
 tamarin-binaries
-protocols
-results
 
 # Nix development environment
 .dev/
