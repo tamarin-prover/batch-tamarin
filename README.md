@@ -1,6 +1,6 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.1.2-green)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.1.2-forestgreen)
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
