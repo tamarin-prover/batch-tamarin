@@ -23,6 +23,7 @@ batch-tamarin/
 │   ├── modules/                            # Core functionality modules
 │   │   ├── __init__.py
 │   │   ├── config_manager.py              # JSON loading, validation, transformation
+│   │   ├── lemma_parser.py                # Tree-sitter based lemma extraction from theory files
 │   │   ├── resource_manager.py            # Global resource tracking and scheduling
 │   │   ├── task_manager.py                # Individual task execution with monitoring
 │   │   ├── process_manager.py             # Low-level process management and monitoring
@@ -61,6 +62,7 @@ graph TB
 
     subgraph "Configuration Layer"
         CM[Config Manager]
+        LP[Lemma Parser]
         JSON[JSON Recipe File]
         PM[Pydantic Models]
         ET[ExecutableTask Objects]
@@ -85,7 +87,9 @@ graph TB
 
     CLI --> CM
     JSON --> CM
+    CM --> LP
     CM --> PM
+    LP --> CM
     PM --> ET
     ET --> TR
     RM <--> TR
@@ -241,23 +245,64 @@ The main entry point provides a Typer-based CLI interface and orchestrates the e
 - `process_config_file()`: Async orchestrator for the entire workflow
 - `cli()`: Entry point for pip-installed command
 
-### 2. Configuration Manager (`modules/config_manager.py`)
+### 2. Lemma Parser (`modules/lemma_parser.py`)
+
+A tree-sitter based parser for extracting lemma declarations from Tamarin theory files with preprocessor support.
+
+**Key Responsibilities:**
+- Parse Tamarin Security Protocol Theory (.spthy) files using tree-sitter-spthy
+- Extract all lemma declarations (lemma, diff_lemma, accountability_lemma, equiv_lemma, diff_equiv_lemma)
+- Handle preprocessor directives (#ifdef, #define) with conditional compilation
+- Support external preprocessor flags from configuration
+- Provide robust error handling and reporting
+
+**Implementation Details:**
+- Uses `py-tree-sitter-spthy` package maintained by Luca Mandrelli <luca.mandrelli@icloud.com>
+- Pre-compiled grammar binaries for major platforms and architectures (no runtime compilation needed)
+- Issues and support: https://github.com/lmandrelli/py-tree-sitter-spthy/issues
+- Based on grammar from vscode-tamarin
+
+**Key Methods:**
+- `parse_lemmas_from_file()`: Main entry point for parsing lemmas from a theory file
+- `_extract_lemma_names()`: Recursively traverses syntax tree with preprocessor awareness
+- `_extract_lemma_name_from_node()`: Extracts lemma names from different lemma node types
+- `_evaluate_ifdef_condition()`: Evaluates preprocessor conditions against defined symbols
+- `_traverse_ifdef_node()`: Processes only active branches in conditional compilation
+
+**Preprocessor Features:**
+- Symbol tracking from #define directives and external flags
+- Conditional compilation with #ifdef evaluation
+- Support for boolean expressions (AND, OR, NOT operations)
+- Only processes lemmas in active preprocessor blocks
+
+### 3. Configuration Manager (`modules/config_manager.py`)
 
 Handles all aspects of configuration loading, validation, and transformation into executable objects.
 
 **Key Responsibilities:**
 - Load and parse JSON configuration files
 - Validate configuration against Pydantic models
-- Transform recipes into ExecutableTask objects
+- Parse lemmas from theory files using LemmaParser
+- Filter and configure lemmas based on task specifications
+- Transform recipes into ExecutableTask objects with lemma-level granularity
 - Handle Tamarin binary validation (with `modules/tamarin_test_cmd`)
 - Provide detailed error reporting for configuration issues
 
 **Key Methods:**
 - `load_json_recipe()`: Loads and validates JSON recipe files
 - `recipe_to_executable_tasks()`: Converts recipes to ExecutableTask objects
-- Task expansion logic for handling multiple versions and lemmas
+- `_handle_config()`: Orchestrates lemma parsing, filtering, and task creation
+- `_filter_and_configure_lemmas()`: Applies task-level lemma filtering with prefix matching
+- `_create_lemma_config()`: Creates LemmaConfig with proper inheritance hierarchy
+- `_resolve_resources()`: Implements resource inheritance (lemma → task → global)
 
-### 3. Task Runner (`runner.py`)
+**Task Expansion Process:**
+1. Parse all lemmas from theory file using LemmaParser
+2. Filter lemmas based on task configuration (prefix matching if specified)
+3. Apply inheritance for resources and options (lemma → task → global)
+4. Create ExecutableTask for each lemma × tamarin version combination
+
+### 4. Task Runner (`runner.py`)
 
 High-level orchestration component that manages the entire task execution lifecycle.
 
@@ -341,7 +386,7 @@ flowchart TD
     RELEASE --> SCHEDULE_LOOP
 ```
 
-### Resource Manager (`modules/resource_manager.py`)
+### 5. Resource Manager (`modules/resource_manager.py`)
 
 **Key Responsibilities:**
 - Track global CPU and memory usage across all running tasks
@@ -355,7 +400,7 @@ flowchart TD
 - Prevents resource over-allocation through predictive scheduling
 - Balances CPU and memory constraints for optimal throughput
 
-### 4. Task Manager (`modules/task_manager.py`)
+### 6. Task Manager (`modules/task_manager.py`)
 
 Manages individual task execution with comprehensive monitoring and progress tracking.
 
@@ -372,7 +417,7 @@ Manages individual task execution with comprehensive monitoring and progress tra
 - Error handling and result processing
 - Integration with output management
 
-### 5. Process Manager (`modules/process_manager.py`)
+### 7. Process Manager (`modules/process_manager.py`)
 
 Low-level process execution and monitoring component with advanced resource tracking.
 
@@ -467,7 +512,7 @@ flowchart TD
     TAMARIN_OUTPUT_MODEL --> SAVE_MODEL[Save to models/]
 ```
 
-### Output Manager (`modules/output_manager.py`)
+### 8. Output Manager (`modules/output_manager.py`)
 
 **Key Responsibilities:**
 - Parse Tamarin execution output using regex patterns
