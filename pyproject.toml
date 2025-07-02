@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "batch-tamarin"
-version = "0.1.2"
+version = "0.2.0"
 description = "Python wrapper for Tamarin Prover with JSON configuration"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
@@ -31,6 +31,8 @@ dependencies = [
     "typer>=0.15.0",
     "pydantic>=2.11.0",
     "psutil>=7.0.0",
+    "tree-sitter>=0.21.0",
+    "py-tree-sitter-spthy>=1.1.2",
 ]
 
 [project.optional-dependencies]

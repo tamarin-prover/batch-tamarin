@@ -36,14 +36,14 @@
       "theory_file": "examples/complete/protocols/Minimal_HashChain.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "minHashChainSuccessLemma",
-      "ressouces": {
+      "resources": {
         "max_cores": 2
       },
       "lemmas": [
         {
           "name": "Success_chain",
           "tamarin_versions": ["dev"],
-          "ressources": {
+          "resources": {
             "max_memory": 1,
             "timeout": 50
           }
@@ -54,7 +54,7 @@
       "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "basic_KEYWORD1",
-      "ressouces": {
+      "resources": {
         "max_cores": 2,
         "max_memory": 2
       },
@@ -64,7 +64,7 @@
       "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "basic_KEYWORD2",
-      "ressouces": {
+      "resources": {
         "max_cores": 2,
         "max_memory": 2
       },
@@ -74,7 +74,7 @@
       "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "shouldFail",
-      "ressouces": {
+      "resources": {
         "max_cores": 2,
         "max_memory": 2
       },
@@ -84,7 +84,7 @@
       "theory_file": "examples/complete/protocols/wpa2.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "shouldMemoryLimit",
-      "ressouces": {
+      "resources": {
         "max_cores": 4,
         "max_memory": 1
       },

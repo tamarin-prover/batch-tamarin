@@ -1,6 +1,7 @@
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from pydantic import ValidationError
 
@@ -13,8 +14,22 @@ from ..model.tamarin_recipe import (
     Task,
 )
 from ..utils.notifications import notification_manager
+from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
 from .tamarin_test_cmd import check_tamarin_integrity
+
+
+@dataclass
+class LemmaConfig:
+    """Configuration for a single lemma after filtering and parameter application."""
+
+    lemma_name: str
+    effective_tamarin_versions: List[str]
+    tamarin_options: Optional[List[str]]
+    preprocess_flags: Optional[List[str]]
+    max_cores: int
+    max_memory: int
+    timeout: int
 
 
 class ConfigError(Exception):
@@ -43,6 +58,7 @@ class ConfigManager:
         Raises:
             ConfigError: If loading or validation fails
         """
+        json_data = ""  # Initialize to avoid unbound variable warning
         try:
             if not config_path.exists():
                 notification_manager.critical(
@@ -73,6 +89,8 @@ class ConfigManager:
             return recipe
 
         except ValidationError as e:
+            # Check if this is an extra_forbidden error and show context
+            ConfigManager._handle_validation_error(e, config_path, json_data)
             error_msg = f"[ConfigManager] Invalid JSON structure in {config_path}: {e}"
             raise ConfigError(error_msg) from e
         except json.JSONDecodeError as e:
@@ -82,36 +100,6 @@ class ConfigManager:
             raise ConfigError(error_msg) from e
         except Exception as e:
             error_msg = f"[ConfigManager] Failed to load JSON configuration from {config_path}: {e}"
-            raise ConfigError(error_msg) from e
-
-    @staticmethod
-    def save_json_recipe(recipe: TamarinRecipe, config_path: Path) -> None:
-        """
-        Save TamarinRecipe configuration to a JSON file.
-
-        Args:
-            recipe: The TamarinRecipe to save
-            config_path: Path to the configuration file
-
-        Raises:
-            ConfigError: If saving fails
-        """
-        try:
-            with open(config_path, "w", encoding="utf-8") as f:
-                json_data = recipe.model_dump_json(
-                    indent=4,
-                    exclude_none=True,
-                    exclude_unset=True,
-                    exclude_defaults=True,
-                )
-                f.write(json_data)
-
-            notification_manager.info(
-                f"[ConfigManager] JSON recipe saved to {config_path}"
-            )
-
-        except Exception as e:
-            error_msg = f"[ConfigManager] Failed to save JSON configuration to {config_path}: {e}"
             raise ConfigError(error_msg) from e
 
     @staticmethod
@@ -139,19 +127,9 @@ class ConfigManager:
                     task.theory_file, task_name
                 )
 
-                if task.lemmas:
-                    ConfigManager._create_executable_tasks_for_lemmas(
-                        task_name, task, recipe, models_dir, executable_tasks
-                    )
-                else:
-                    ConfigManager._create_executable_tasks_for_task(
-                        task_name,
-                        task,
-                        recipe,
-                        models_dir,
-                        theory_file,
-                        executable_tasks,
-                    )
+                ConfigManager._handle_config(
+                    task_name, task, recipe, models_dir, theory_file, executable_tasks
+                )
 
             notification_manager.success(
                 f"[ConfigManager] Generated {len(executable_tasks)} executable task{'s' if len(executable_tasks) > 1 else ''} from recipe"
@@ -166,6 +144,74 @@ class ConfigManager:
             raise ConfigError(error_msg) from e
 
     @staticmethod
+    def _handle_config(
+        task_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        models_dir: Path,
+        theory_file: Path,
+        executable_tasks: List[ExecutableTask],
+    ) -> None:
+        """
+        Create executable tasks by parsing lemmas from theory file and applying filters.
+
+        This function:
+        1. Parses all lemmas from the theory file
+        2. Eventually, filters lemmas based on task configuration (if task.lemmas is set) and extracts config for each lemma with inheritance rule
+        3. Creates one ExecutableTask per kept lemma per tamarin version
+
+        Args:
+            task_name: Name of the original task
+            task: Task configuration
+            recipe: Full recipe configuration
+            models_dir: Directory for output models
+            theory_file: Path to the theory file
+            executable_tasks: List to append new ExecutableTask instances
+        """
+        try:
+            # Step 1: Parse all lemmas from the theory file with task-level preprocessor flags
+            parser = LemmaParser(task.preprocess_flags)
+            all_lemmas = parser.parse_lemmas_from_file(theory_file)
+
+            if not all_lemmas:
+                notification_manager.warning(
+                    f"[ConfigManager] No lemmas found in theory file {theory_file} for task '{task_name}'"
+                )
+                return
+
+            notification_manager.debug(
+                f"[ConfigManager] Found {len(all_lemmas)} lemmas in {theory_file} for task '{task_name}': {all_lemmas}"
+            )
+        except LemmaParsingError as e:
+            error_msg = f"[ConfigManager] Failed to parse lemmas from theory file {theory_file} for task '{task_name}':\n{e}"
+            raise ConfigError(error_msg) from e
+        except Exception as e:
+            error_msg = f"[ConfigManager] Unexpected error parsing lemmas from {theory_file} for task '{task_name}': \n{e}"
+            raise ConfigError(error_msg) from e
+
+        # Step 2: Filter lemmas based on task configuration and Extract effective configurations for each lemma
+        lemma_configs = ConfigManager._filter_and_configure_lemmas(
+            task_name, task, recipe, all_lemmas
+        )
+
+        if not lemma_configs:
+            notification_manager.warning(
+                f"[ConfigManager] No lemma configurations generated for task '{task_name}'"
+            )
+            return
+
+        # Step 3: Create ExecutableTask instances for each lemma
+        ConfigManager._create_executable_tasks(
+            task_name,
+            task,
+            recipe,
+            models_dir,
+            theory_file,
+            lemma_configs,
+            executable_tasks,
+        )
+
+    @staticmethod
     def _validate_theory_file(theory_file_path: str, task_name: str) -> Path:
         """Validate that theory file exists and is a file."""
         theory_file = Path(theory_file_path)
@@ -176,6 +222,257 @@ class ConfigManager:
             error_msg = f"[ConfigManager] Theory file path {theory_file} is not a file for recipe's task '{task_name}'"
             raise ConfigError(error_msg)
         return theory_file
+
+    @staticmethod
+    def _filter_and_configure_lemmas(
+        task_name: str, task: Task, recipe: TamarinRecipe, all_lemmas: List[str]
+    ) -> List[LemmaConfig]:
+        """
+        Filter lemmas based on task configuration and create lemma configurations.
+
+        Args:
+            task_name: Name of the original task
+            task: Task configuration
+            recipe: Full recipe configuration
+            all_lemmas: List of all lemmas parsed from theory file
+
+        Returns:
+            List of LemmaConfig objects with effective configurations
+        """
+        lemma_configs: List[LemmaConfig] = []
+
+        if not task.lemmas:
+            # Scenario A: No lemmas specified - use all lemmas with task config
+            notification_manager.debug(
+                f"[ConfigManager] No lemmas specified for task '{task_name}', using all {len(all_lemmas)} lemmas"
+            )
+
+            for lemma_name in all_lemmas:
+                lemma_config = ConfigManager._create_lemma_config(
+                    lemma_name, task, recipe, None, task_name
+                )
+                lemma_configs.append(lemma_config)
+        else:
+            # Scenario B: Lemmas specified - filter by prefix matching and apply per-lemma config
+            notification_manager.debug(
+                f"[ConfigManager] Filtering lemmas for task '{task_name}' using {len(task.lemmas)} lemma specifications"
+            )
+
+            for lemma_spec in task.lemmas:
+                # Find matching lemmas using prefix matching
+                matching_lemmas = [
+                    parsed_lemma
+                    for parsed_lemma in all_lemmas
+                    if lemma_spec.name in parsed_lemma
+                ]
+
+                if not matching_lemmas:
+                    notification_manager.warning(
+                        f"[ConfigManager] No lemmas found matching prefix '{lemma_spec.name}' in task '{task_name}'"
+                    )
+                    continue
+
+                notification_manager.debug(
+                    f"[ConfigManager] Lemma spec '{lemma_spec.name}' matched {len(matching_lemmas)} lemmas: {matching_lemmas}"
+                )
+
+                # Create LemmaConfig for each matching lemma
+                for matched_lemma_name in matching_lemmas:
+                    lemma_config = ConfigManager._create_lemma_config(
+                        matched_lemma_name, task, recipe, lemma_spec, task_name
+                    )
+                    lemma_configs.append(lemma_config)
+
+        return lemma_configs
+
+    @staticmethod
+    def _create_lemma_config(
+        lemma_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        lemma_spec: Optional[Lemma],
+        task_name: str,
+    ) -> LemmaConfig:
+        """
+        Create a LemmaConfig with proper inheritance from task and global settings.
+
+        Args:
+            lemma_name: Name of the lemma
+            task: Task configuration
+            recipe: Full recipe configuration
+            lemma_spec: Optional lemma specification (None means inherit from task)
+            task_name: Name of the task (for error reporting)
+
+        Returns:
+            LemmaConfig with resolved settings
+        """
+        # Resolve resources following: lemma → task → global defaults
+        cores, memory, timeout = ConfigManager._resolve_resources(
+            lemma_spec, task, recipe, task_name
+        )
+
+        # Resolve other settings with complete override (no merging)
+        if lemma_spec is not None:
+            effective_tamarin_versions: List[str] = (
+                lemma_spec.tamarin_versions
+                if lemma_spec.tamarin_versions is not None
+                else task.tamarin_versions
+            )
+            tamarin_options: Optional[List[str]] = (
+                lemma_spec.tamarin_options
+                if lemma_spec.tamarin_options is not None
+                else task.tamarin_options
+            )
+            preprocess_flags: Optional[List[str]] = (
+                lemma_spec.preprocess_flags
+                if lemma_spec.preprocess_flags is not None
+                else task.preprocess_flags
+            )
+        else:
+            effective_tamarin_versions = task.tamarin_versions
+            tamarin_options = task.tamarin_options
+            preprocess_flags = task.preprocess_flags
+
+        return LemmaConfig(
+            lemma_name=lemma_name,
+            effective_tamarin_versions=effective_tamarin_versions,
+            tamarin_options=tamarin_options,
+            preprocess_flags=preprocess_flags,
+            max_cores=cores,
+            max_memory=memory,
+            timeout=timeout,
+        )
+
+    @staticmethod
+    def _resolve_resources(
+        lemma_spec: Optional[Lemma], task: Task, recipe: TamarinRecipe, task_name: str
+    ) -> Tuple[int, int, int]:
+        """
+        Resolve resources following inheritance chain: lemma → task → global defaults.
+
+        Args:
+            lemma_spec: Optional lemma specification
+            task: Task configuration
+            recipe: Full recipe configuration
+            task_name: Name of the task (for error reporting)
+
+        Returns:
+            Tuple of (cores, memory, timeout)
+        """
+        global_config = recipe.config
+
+        # Start with global defaults
+        default_cores = global_config.global_max_cores
+        default_memory = global_config.global_max_memory
+        default_timeout = global_config.default_timeout
+
+        # Apply task-level overrides
+        if task.resources is not None:
+            cores: int = (
+                task.resources.max_cores
+                if task.resources.max_cores is not None
+                else default_cores
+            )
+            memory: int = (
+                task.resources.max_memory
+                if task.resources.max_memory is not None
+                else default_memory
+            )
+            timeout: int = (
+                task.resources.timeout
+                if task.resources.timeout is not None
+                else default_timeout
+            )
+        else:
+            cores, memory, timeout = default_cores, default_memory, default_timeout
+
+        # Apply lemma-level overrides (if lemma specified)
+        if lemma_spec is not None and lemma_spec.resources is not None:
+            cores = (
+                lemma_spec.resources.max_cores
+                if lemma_spec.resources.max_cores is not None
+                else cores
+            )
+            memory = (
+                lemma_spec.resources.max_memory
+                if lemma_spec.resources.max_memory is not None
+                else memory
+            )
+            timeout = (
+                lemma_spec.resources.timeout
+                if lemma_spec.resources.timeout is not None
+                else timeout
+            )
+
+        # Validate against global limits
+        cores, memory = ConfigManager._validate_and_cap_resources(
+            cores, memory, global_config, f"Task '{task_name}'"
+        )
+
+        return cores, memory, timeout
+
+    @staticmethod
+    def _create_executable_tasks(
+        task_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        models_dir: Path,
+        theory_file: Path,
+        lemma_configs: List[LemmaConfig],
+        executable_tasks: List[ExecutableTask],
+    ) -> None:
+        """
+        Create ExecutableTask instances for each lemma configuration × tamarin version.
+
+        Args:
+            task_name: Name of the original task
+            task: Task configuration
+            recipe: Full recipe configuration
+            models_dir: Directory for output models
+            theory_file: Path to the theory file
+            lemma_configs: List of lemma configurations
+            executable_tasks: List to append new ExecutableTask instances
+        """
+        notification_manager.debug(
+            f"[ConfigManager] Creating ExecutableTasks for task '{task_name}':\n{lemma_configs}"
+        )
+        for lemma_config in lemma_configs:
+            for tamarin_version in lemma_config.effective_tamarin_versions:
+                # Validate tamarin executable exists
+                if tamarin_version not in recipe.tamarin_versions:
+                    raise ConfigError(
+                        f"[ConfigManager] Tamarin version '{tamarin_version}' not found in recipe for task '{task_name}'"
+                    )
+
+                tamarin_executable = ConfigManager._validate_tamarin_executable(
+                    tamarin_version, recipe.tamarin_versions[tamarin_version], recipe
+                )
+
+                # Generate unique task ID
+                task_suffix = f"{lemma_config.lemma_name}--{tamarin_version}"
+                base_task_id = f"{task.output_file_prefix}--{task_suffix}"
+                unique_task_id = ConfigManager._get_unique_task_id(base_task_id)
+
+                # Create ExecutableTask
+                executable_task = ExecutableTask(
+                    task_name=unique_task_id,
+                    tamarin_version_name=tamarin_version,
+                    tamarin_executable=tamarin_executable,
+                    theory_file=theory_file,
+                    output_file=models_dir / f"{unique_task_id}.json",
+                    lemma=lemma_config.lemma_name,
+                    tamarin_options=lemma_config.tamarin_options,
+                    preprocess_flags=lemma_config.preprocess_flags,
+                    max_cores=lemma_config.max_cores,
+                    max_memory=lemma_config.max_memory,
+                    task_timeout=lemma_config.timeout,
+                )
+
+                executable_tasks.append(executable_task)
+
+                notification_manager.debug(
+                    f"[ConfigManager] Created ExecutableTask '{unique_task_id}' for lemma '{lemma_config.lemma_name}' with Tamarin '{tamarin_version}'"
+                )
 
     @staticmethod
     def _validate_and_cap_resources(
@@ -213,139 +510,82 @@ class ConfigManager:
         return tamarin_executable
 
     @staticmethod
-    def _create_executable_tasks_for_lemmas(
-        task_name: str,
-        task: Task,
-        recipe: TamarinRecipe,
-        models_dir: Path,
-        executable_tasks: List[ExecutableTask],
+    def _handle_validation_error(
+        error: ValidationError, config_path: Path, json_data: str
     ) -> None:
-        """Create executable tasks for each lemma with inheritance."""
-        theory_file = ConfigManager._validate_theory_file(task.theory_file, task_name)
+        """
+        Handle ValidationError and show JSON context for better user understanding.
 
-        # Assert that lemmas is not None since we check this before calling
-        assert (
-            task.lemmas is not None
-        ), "task.lemmas should not be None when this method is called"
+        Args:
+            error: The ValidationError that occurred
+            config_path: Path to the configuration file
+            json_data: The raw JSON data that was being validated
+        """
+        for err in error.errors():
+            location = err.get("loc", ())
+            error_type = err.get("type", "unknown")
 
-        for lemma in task.lemmas:
-            # Get effective configuration for this lemma (with inheritance)
-            effective_tamarin_versions = (
-                lemma.tamarin_versions
-                if lemma.tamarin_versions is not None
-                else task.tamarin_versions
-            )
-
-            effective_tamarin_options = lemma.tamarin_options or task.tamarin_options
-            effective_preprocess_flags = lemma.preprocess_flags or task.preprocess_flags
-
-            # Get effective resources with inheritance
-            max_cores, max_memory, timeout = (
-                ConfigManager._get_lemma_effective_resources(lemma, task, recipe.config)
-            )
-
-            # Validate lemma tamarin_versions reference valid global versions
-            for version_name in effective_tamarin_versions:
-                if version_name not in recipe.tamarin_versions:
-                    raise ConfigError(
-                        f"[ConfigManager] Lemma '{lemma.name}' in task '{task_name}' references undefined tamarin alias: '{version_name}'"
-                    )
-
-            # Validate and cap resources
-            context_name = f"Lemma '{lemma.name}' in task '{task_name}'"
-            max_cores, max_memory = ConfigManager._validate_and_cap_resources(
-                max_cores, max_memory, recipe.config, context_name
-            )
-
-            for version_name in effective_tamarin_versions:
-                tamarin_version = recipe.tamarin_versions[version_name]
-                tamarin_executable = ConfigManager._validate_tamarin_executable(
-                    version_name, tamarin_version, recipe
+            if error_type == "extra_forbidden" and location:
+                # Show context for unrecognized parameters
+                extra_field_name = str(location[-1])
+                ConfigManager._show_json_context_with_highlighting(
+                    json_data,
+                    extra_field_name,
+                    f"Unrecognized parameter '{extra_field_name}'",
+                    config_path,
                 )
-
-                # Generate executable task name / ID
-                task_id = f"{task_name}_{lemma.name}_{version_name}"
-                safe_task_id = ConfigManager._get_unique_task_id(task_id)
-
-                output_filename = Path(f"{safe_task_id}.spthy")
-                output_file_path = models_dir / output_filename
-
-                executable_task = ExecutableTask(
-                    task_name=safe_task_id,
-                    tamarin_version_name=version_name,
-                    tamarin_executable=tamarin_executable,
-                    theory_file=theory_file,
-                    output_file=output_file_path,
-                    lemma=lemma.name,
-                    tamarin_options=effective_tamarin_options,
-                    preprocess_flags=effective_preprocess_flags,
-                    max_cores=max_cores,
-                    max_memory=max_memory,
-                    task_timeout=timeout,
-                )
-                executable_tasks.append(executable_task)
-                notification_manager.debug(
-                    f"[ConfigManager] Created ExecutableTask : {executable_task}"
-                )
+                break  # Show only the first extra field error
 
     @staticmethod
-    def _create_executable_tasks_for_task(
-        task_name: str,
-        task: Task,
-        recipe: TamarinRecipe,
-        models_dir: Path,
-        theory_file: Path,
-        executable_tasks: List[ExecutableTask],
+    def _show_json_context_with_highlighting(
+        json_data: str, search_term: str, error_msg: str, config_path: Path
     ) -> None:
-        """Create executable tasks for task without specific lemmas."""
-        # Get effective resources for this task
-        task_max_cores, task_max_memory, task_timeout = (
-            ConfigManager._get_task_effective_resources(task, recipe.config)
-        )
+        """
+        Show JSON context around a problematic field with Rich syntax highlighting.
 
-        # Validate and cap resources
-        context_name = f"Task '{task_name}'"
-        task_max_cores, task_max_memory = ConfigManager._validate_and_cap_resources(
-            task_max_cores, task_max_memory, recipe.config, context_name
-        )
+        Args:
+            json_data: The raw JSON data
+            search_term: Term to search for in the JSON (field name)
+            error_msg: Error message to display
+            config_path: Path to the configuration file
+        """
+        json_lines = json_data.split("\n")
 
-        # Expand task for each specified tamarin version
-        for version_name in task.tamarin_versions:
-            if version_name not in recipe.tamarin_versions:
-                raise ConfigError(
-                    f"[ConfigManager] Task '{task_name}' references undefined tamarin alias: '{version_name}'"
+        # Find the line containing the search term
+        target_line_idx = None
+        for i, line in enumerate(json_lines):
+            if search_term and f'"{search_term}"' in line:
+                target_line_idx = i
+                break
+
+        if target_line_idx is None:
+            notification_manager.critical(
+                f"[ConfigManager] {error_msg} in {config_path}"
+            )
+            return
+
+        # Show 7 context lines (3 before, line itself, 3 after)
+        context_start = max(0, target_line_idx - 3)
+        context_end = min(len(json_lines), target_line_idx + 4)
+
+        # Build the formatted message with line numbers and highlighting
+        lines = [f"[ConfigManager] {error_msg} in {config_path}:"]
+
+        for i in range(context_start, context_end):
+            line_number = i + 1
+            line_content = json_lines[i]
+
+            if i == target_line_idx:
+                # Highlight the problematic line
+                lines.append(
+                    f"  [bold red]>>>[/bold red] [dim]{line_number:3d}:[/dim] {line_content}"
                 )
+            else:
+                lines.append(f"      [dim]{line_number:3d}:[/dim] {line_content}")
 
-            tamarin_version = recipe.tamarin_versions[version_name]
-            tamarin_executable = ConfigManager._validate_tamarin_executable(
-                version_name, tamarin_version, recipe
-            )
-
-            # Generate task name / id
-            task_id = f"{task_name}_{version_name}"
-            safe_task_id = ConfigManager._get_unique_task_id(task_id)
-
-            output_filename = f"{safe_task_id}.spthy"
-            output_file_path = models_dir / output_filename
-
-            # Create single ExecutableTask for all lemmas
-            executable_task = ExecutableTask(
-                task_name=safe_task_id,
-                tamarin_version_name=version_name,
-                tamarin_executable=tamarin_executable,
-                theory_file=theory_file,
-                output_file=output_file_path,
-                lemma=None,  # None means prove all lemmas
-                tamarin_options=task.tamarin_options,
-                preprocess_flags=task.preprocess_flags,
-                max_cores=task_max_cores,
-                max_memory=task_max_memory,
-                task_timeout=task_timeout,
-            )
-            executable_tasks.append(executable_task)
-            notification_manager.debug(
-                f"[ConfigManager] Created ExecutableTask : {executable_task}"
-            )
+        # Send the formatted message through the notification system
+        formatted_message = "\n".join(lines)
+        notification_manager.critical(formatted_message)
 
     @staticmethod
     def _get_unique_task_id(base_task_id: str) -> str:
@@ -365,73 +605,3 @@ class ConfigManager:
         else:
             ConfigManager.task_id_counter[base_task_id] += 1
             return f"{base_task_id}_{ConfigManager.task_id_counter[base_task_id]}"
-
-    @staticmethod
-    def _get_lemma_effective_resources(
-        lemma: Lemma, task: Task, global_config: GlobalConfig
-    ) -> Tuple[int, int, int]:
-        """
-        Get effective resources for a lemma with proper inheritance.
-
-        Args:
-            lemma: The lemma object
-            task: The parent task object
-            global_config: Global configuration
-
-        Returns:
-            Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
-        """
-        # Start with global defaults
-        max_cores = global_config.global_max_cores
-        max_memory = global_config.global_max_memory
-        timeout = global_config.default_timeout
-
-        # Apply task-level overrides if task has resources
-        if task.resources:
-            if task.resources.max_cores is not None:
-                max_cores = task.resources.max_cores
-            if task.resources.max_memory is not None:
-                max_memory = task.resources.max_memory
-            if task.resources.timeout is not None:
-                timeout = task.resources.timeout
-
-        # Apply lemma-level overrides if lemma has resources
-        if lemma.resources:
-            if lemma.resources.max_cores is not None:
-                max_cores = lemma.resources.max_cores
-            if lemma.resources.max_memory is not None:
-                max_memory = lemma.resources.max_memory
-            if lemma.resources.timeout is not None:
-                timeout = lemma.resources.timeout
-
-        return max_cores, max_memory, timeout
-
-    @staticmethod
-    def _get_task_effective_resources(
-        task: Task, global_config: GlobalConfig
-    ) -> Tuple[int, int, int]:
-        """
-        Get effective resources for a task with defaults applied.
-
-        Args:
-            task: The task object
-            global_config: Global configuration
-
-        Returns:
-            Tuple of (max_cores, max_memory, timeout) with all values resolved (no None values)
-        """
-        # Start with global defaults
-        max_cores = global_config.global_max_cores
-        max_memory = global_config.global_max_memory
-        timeout = global_config.default_timeout
-
-        # Apply task-level overrides if task has resources
-        if task.resources:
-            if task.resources.max_cores is not None:
-                max_cores = task.resources.max_cores
-            if task.resources.max_memory is not None:
-                max_memory = task.resources.max_memory
-            if task.resources.timeout is not None:
-                timeout = task.resources.timeout
-
-        return max_cores, max_memory, timeout

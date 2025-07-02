@@ -1,6 +1,6 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.1.2-forestgreen)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.2.0-forestgreen) [![PyPI version](https://badge.fury.io/py/batch-tamarin.svg)](https://badge.fury.io/py/batch-tamarin)
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
 
@@ -8,45 +8,45 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 
 ## Features
 
-- **Batch Execution**: Run multiple Tamarin models across different Tamarin binary versions
-- **JSON Configuration**: Define execution recipes using simple JSON configuration files
-- **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
-- **Progress Tracking**: Real-time progress updates with Rich-formatted output
-- **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
-- **CLI Interface**: Easy-to-use command-line interface with comprehensive options
+-   **Batch Execution**: Run multiple Tamarin models across different Tamarin binary versions
+-   **JSON Configuration**: Define execution recipes using simple JSON configuration files
+-   **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
+-   **Progress Tracking**: Real-time progress updates with Rich-formatted output
+-   **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
+-   **CLI Interface**: Easy-to-use command-line interface with comprehensive options
 
 ## Table of Contents
 
-- [Features](#features)
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [From PyPI](#from-pypi)
-  - [From local package](#from-local-package)
-- [Usage](#usage)
-  - [Basic Commands](#basic-commands)
-  - [Configuration Example](#configuration-example)
-  - [Output](#output)
-- [Development](#development)
-  - [Contributing](#contributing)
-  - [Dependencies, Configuration](#dependencies-configuration)
-    - [Using Nix (the easy way)](#using-nix-the-easy-way)
-    - [Using Python Virtual Environment (still pretty easy)](#using-python-virtual-environment-still-pretty-easy)
-  - [Testing During Development](#testing-during-development)
-- [Packaging/Publishing](#packagingpublishing)
-  - [Building the Package](#building-the-package)
-  - [Publishing](#publishing)
-- [License](#license)
-  - [License Summary](#license-summary)
-- [Implementation Details](#implementation-details)
-- [Acknowledgments](#acknowledgments)
-- [Final Note](#final-note)
+-   [Features](#features)
+-   [Installation](#installation)
+    -   [Prerequisites](#prerequisites)
+    -   [From PyPI](#from-pypi)
+    -   [From local package](#from-local-package)
+-   [Usage](#usage)
+    -   [Basic Commands](#basic-commands)
+    -   [Configuration Example](#configuration-example)
+    -   [Output](#output)
+-   [Development](#development)
+    -   [Contributing](#contributing)
+    -   [Dependencies, Configuration](#dependencies-configuration)
+        -   [Using Nix (the easy way)](#using-nix-the-easy-way)
+        -   [Using Python Virtual Environment (still pretty easy)](#using-python-virtual-environment-still-pretty-easy)
+    -   [Testing During Development](#testing-during-development)
+-   [Packaging/Publishing](#packagingpublishing)
+    -   [Building the Package](#building-the-package)
+    -   [Publishing](#publishing)
+-   [License](#license)
+    -   [License Summary](#license-summary)
+-   [Implementation Details](#implementation-details)
+-   [Acknowledgments](#acknowledgments)
+-   [Final Note](#final-note)
 
 ## Installation
 
 ### Prerequisites
 
-- **Python 3.9+**
-- **Tamarin Prover binaries** (installed separately)
+-   **Python 3.9+**
+-   **Tamarin Prover binaries** (installed separately)
 
 ### From PyPI
 
@@ -56,7 +56,8 @@ pip install batch-tamarin
 
 ### From local package
 
-Get the lastest release from this github repo.
+Get the latest release from this github repo.
+
 ```bash
 pip install pip install ./batch_tamarin-0.1.1-py3-none-any.whl
 ```
@@ -88,119 +89,118 @@ Create a JSON configuration file based on the WPA2 example:
 
 ```json
 {
-  "config": {
-    "global_max_cores": 10,
-    "global_max_memory": "max",
-    "default_timeout": 7200,
-    "output_directory": "./results"
-  },
-  "tamarin_versions": {
-    "stable": {
-      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
-    },
-    "legacy": {
-      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
-    }
-  },
-  "tasks": {
-    "wpa2": {
-      "theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
-      "tamarin_versions": ["stable", "legacy"],
-      "output_file": "wpa2.txt",
-      "preprocess_flags": ["yes"],
-      "tamarin_options": ["-v"],
-      "resources": {
-        "max_cores": 2,
-        "max_memory": 8,
-        "timeout": 3600
-      },
-      "lemmas": [
-        {
-          "name": "nonce_reuse_key_type",
-          "resources": {
-            "max_cores": 1
-          }
-        },
-        {
-          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
-          "tamarin_versions": ["stable"],
-          "resources": {
-            "max_cores": 4,
-            "max_memory": 16,
-            "timeout": 30
-          }
-        }
-      ]
-    }
-  }
+	"config": {
+		"global_max_cores": 10,
+		"global_max_memory": "max",
+		"default_timeout": 7200,
+		"output_directory": "./results"
+	},
+	"tamarin_versions": {
+		"stable": {
+			"path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+		},
+		"legacy": {
+			"path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+		}
+	},
+	"tasks": {
+		"wpa2": {
+			"theory_file": "protocols/wpa2_four_way_handshake_unpatched.spthy",
+			"tamarin_versions": ["stable", "legacy"],
+			"output_file": "wpa2.txt",
+			"preprocess_flags": ["yes"],
+			"tamarin_options": ["-v"],
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 8,
+				"timeout": 3600
+			},
+			"lemmas": [
+				{
+					"name": "nonce_reuse_key_type",
+					"resources": {
+						"max_cores": 1
+					}
+				},
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"tamarin_versions": ["stable"],
+					"resources": {
+						"max_cores": 4,
+						"max_memory": 16,
+						"timeout": 30
+					}
+				}
+			]
+		}
+	}
 }
 ```
 
 Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
 
 ### Output
+
 The wrapper will output the results of all analysis in the `output_file` specified in the recipe.
 It will follow this pattern :
+
 ```
 output_directory/
 ├── failed/
 │   ├── output_prefix[\_lemma]\_tamarin_alias.json
 │   └── ...
-├── models/
+├── proofs/
 │   ├── output_prefix[\_lemma]\_tamarin_alias.spthy
 │   └── ...
 └── success/
     ├── output_prefix[\_lemma]\_tamarin_alias.json
     └── ...
 ```
-As the name of each directory and file describe, you will find successful task in `success` and their linked models in `models`
-Failed tasks don't output models (that's a tamarin behavior), you will only find a json in `failed`
+
+As the name of each directory and file describe, you will find successful task in `success` and their linked models proofs in `proofs`
+Failed tasks don't output proofs (that's a tamarin behavior), you will only find a json in `failed`
 
 Here is an example for each result json :
 `success/`
+
 ```json
 {
-  "task_id": "wpa2_authenticator_installed_is_unique_for_anonce_dev",
-  "warnings": [
-    "1 wellformedness check failed!"
-  ],
-  "tamarin_timing": 12.27,
-  "wrapper_measures": {
-    "time": 12.385284208023222,
-    "avg_memory": 200.17067307692307,
-    "peak_memory": 358.34375
-  },
-  "output_spthy": "results/models/wpa2_authenticator_installed_is_unique_for_anonce_dev.spthy",
-  "verified_lemma": {
-    "authenticator_installed_is_unique_for_anonce": {
-      "steps": 102,
-      "analysis_type": "all-traces"
-    }
-  },
-  "falsified_lemma": {},
-  "unterminated_lemma": [
-    "nonce_reuse_key_type",
-    "...",
-    "krack_attack_ptk"
-  ]
+	"task_id": "wpa2_authenticator_installed_is_unique_for_anonce_dev",
+	"warnings": ["1 wellformedness check failed!"],
+	"tamarin_timing": 12.27,
+	"wrapper_measures": {
+		"time": 12.385284208023222,
+		"avg_memory": 200.17067307692307,
+		"peak_memory": 358.34375
+	},
+	"output_spthy": "results/models/wpa2_authenticator_installed_is_unique_for_anonce_dev.spthy",
+	"verified_lemma": {
+		"authenticator_installed_is_unique_for_anonce": {
+			"steps": 102,
+			"analysis_type": "all-traces"
+		}
+	},
+	"falsified_lemma": {},
+	"unterminated_lemma": ["nonce_reuse_key_type", "...", "krack_attack_ptk"]
 }
 ```
+
 `failed/`
+
 ```json
 {
-  "task_id": "wpa2_authenticator_rcv_m2_must_be_preceded_by_snd_m1_dev",
-  "error_description": "The task exceeded its memory limit. Review the memory limit setting for this task.",
-  "wrapper_measures": {
-    "time": 30.274985666008433,
-    "avg_memory": 566.9329637096774,
-    "peak_memory": 1059.609375
-  },
-  "return_code": -2,
-  "last_stderr_lines": [
-    "Process exceeded memory limit"
-  ]
+	"task_id": "wpa2_authenticator_rcv_m2_must_be_preceded_by_snd_m1_dev",
+	"error_description": "The task exceeded its memory limit. Review the memory limit setting for this task.",
+	"wrapper_measures": {
+		"time": 30.274985666008433,
+		"avg_memory": 566.9329637096774,
+		"peak_memory": 1059.609375
+	},
+	"return_code": -2,
+	"last_stderr_lines": ["Process exceeded memory limit"]
 }
 ```
+
 ## Development
 
 A macOS or Linux environment is highly recommended, as tamarin-prover is only running on these OS. You can use WSL2 on Windows hosts.
@@ -208,16 +208,18 @@ A macOS or Linux environment is highly recommended, as tamarin-prover is only ru
 ### Contributing
 
 1. **Fork the repository** and create a feature branch:
-   ```bash
-   git checkout -b feature/my-awesome-feature
-   ```
+
+    ```bash
+    git checkout -b feature/my-awesome-feature
+    ```
 
 2. **Set up development environment** (see options below)
 
 3. **Install pre-commit hooks**:
-   ```bash
-   ./setup-hooks.sh
-   ```
+
+    ```bash
+    ./setup-hooks.sh
+    ```
 
 4. **Make your changes** and commit them
 
@@ -281,11 +283,13 @@ python -m build
 ### Publishing
 
 #### Test Upload (TestPyPI)
+
 ```bash
 python -m twine upload --repository testpypi dist/*
 ```
 
 #### Production Upload (PyPI)
+
 ```bash
 python -m twine upload dist/*
 ```
@@ -300,25 +304,28 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 ### License Summary
 
-- ✅ **Use**: Commercial and private use allowed
-- ✅ **Modify**: Modifications and derivatives allowed
-- ✅ **Distribute**: Distribution allowed
-- ❗ **Share Alike**: Derivatives must be licensed under GPL-3.0+
-- ❗ **Disclose Source**: Source code must be made available
-- ❗ **Include License**: License and copyright notice must be included
+-   ✅ **Use**: Commercial and private use allowed
+-   ✅ **Modify**: Modifications and derivatives allowed
+-   ✅ **Distribute**: Distribution allowed
+-   ❗ **Share Alike**: Derivatives must be licensed under GPL-3.0+
+-   ❗ **Disclose Source**: Source code must be made available
+-   ❗ **Include License**: License and copyright notice must be included
 
 ## Implementation Details
 
 For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
+
 ## Acknowledgments
 
 This project has been done during an internship at CISPA.
 It was made with the help of the Cas Cremers research group, a particular thanks should go to :
-- Cas Cremers, as the supervisor of this internship but also for all his support and guidance.
-- Maïwenn Racouchot and Aleksi Peltonen for their close collaboration, feedback, and, most importantly, the logo.
-- Esra Günsay, Erik Pallas, Niklas Medinger, Aurora Naska ans Alexander Dax for their valuable support and development ideas.
+
+-   Cas Cremers, as the supervisor of this internship but also for all his support and guidance.
+-   Maïwenn Racouchot and Aleksi Peltonen for their close collaboration, feedback, and, most importantly, the logo.
+-   Esra Günsay, Erik Pallas, Niklas Medinger, Aurora Naska and Alexander Dax for their valuable support and development ideas.
 
 ## Final Note
+
 As this package need to directly use `tamarin-prover` commands, you can visit the [Tamarin Prover website](https://tamarin-prover.com) for installation instructions.

@@ -127,7 +127,7 @@ class OutputManager:
         self.output_dir = Path(output_dir)
         self.success_dir = self.output_dir / "success"
         self.failed_dir = self.output_dir / "failed"
-        self.models_dir = self.output_dir / "models"
+        self.models_dir = self.output_dir / "proofs"
         self._is_setup = True
 
         # Handle existing directory
