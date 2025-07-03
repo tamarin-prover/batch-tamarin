@@ -7,13 +7,15 @@ the tamarin-config-schema.json specification.
 
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..utils.system_resources import resolve_max_value
 
 
 class Lemma(BaseModel):
     """Individual lemma specification for proving."""
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., description="Name of the lemma to prove")
     tamarin_versions: Optional[List[str]] = Field(
@@ -46,6 +48,8 @@ class Lemma(BaseModel):
 class Resources(BaseModel):
     """Resource allocation for tasks."""
 
+    model_config = ConfigDict(extra="forbid")
+
     max_cores: Optional[int] = Field(
         default=4, ge=1, description="Maximum CPU cores for this task (default: 4)"
     )
@@ -62,6 +66,8 @@ class Resources(BaseModel):
 class TamarinVersion(BaseModel):
     """Individual tamarin version definition."""
 
+    model_config = ConfigDict(extra="forbid")
+
     path: str = Field(..., description="File path to the Tamarin prover executable")
     version: Optional[str] = Field(
         None, description="Version identifier for this Tamarin prover"
@@ -73,6 +79,8 @@ class TamarinVersion(BaseModel):
 
 class Task(BaseModel):
     """Task configuration for Tamarin execution."""
+
+    model_config = ConfigDict(extra="forbid")
 
     theory_file: str = Field(
         ..., description="Path to the .spthy theory file to analyze"
@@ -112,6 +120,8 @@ class Task(BaseModel):
 
 class GlobalConfig(BaseModel):
     """Global configuration settings."""
+
+    model_config = ConfigDict(extra="forbid")
 
     global_max_cores: int = Field(
         ...,
@@ -155,6 +165,8 @@ class GlobalConfig(BaseModel):
 
 class TamarinRecipe(BaseModel):
     """Root configuration model for batch Tamarin."""
+
+    model_config = ConfigDict(extra="forbid")
 
     config: GlobalConfig = Field(..., description="Global configuration settings")
     tamarin_versions: Dict[str, TamarinVersion] = Field(

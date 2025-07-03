@@ -21,6 +21,8 @@
           typer
           pydantic
           psutil
+          tree-sitter
+          # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
         ];
 
         # Extract development dependencies
@@ -100,6 +102,10 @@
 
             # Add local bin to PATH
             export PATH="$DEV_ROOT/bin:$PATH"
+
+            # Install py-tree-sitter-spthy via pip if not already installed
+            echo "📦 Installing py-tree-sitter-spthy via pip..."
+            pip install "py-tree-sitter-spthy>=1.1.2"
 
             echo "🚀 Batch Tamarin development environment"
             echo "📦 Python ${python.version} with dependencies available"

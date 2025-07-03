@@ -40,7 +40,7 @@ class ExecutableTask:
     """Path where results should be written"""
 
     lemma: Optional[str]
-    """Name of the specific lemma to prove, or None to prove all lemmas"""
+    """Name of the specific lemma to prove, if None, it will just run without --prove option"""
 
     tamarin_options: Optional[List[str]]
     """Additional command-line options"""
@@ -68,7 +68,6 @@ class ExecutableTask:
             List[str]: Command components ready for ProcessManager execution
 
         Examples:
-            All lemmas: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/example.spthy", "--prove", "--output=results_stable.txt"]
             Specific lemma: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/complex.spthy", "--prove=secrecy",
                            "--diff", "-D=GoodKeysOnly", "--output=results_stable.txt"]
         """
@@ -82,13 +81,9 @@ class ExecutableTask:
         # Add theory file
         command.append(str(self.theory_file))
 
-        # Handle lemma - if None, prove all lemmas
         if self.lemma:
             # Prove specific lemma
             command.append(f"--prove={self.lemma}")
-        else:
-            # Prove all lemmas
-            command.append("--prove")
 
         # Add tamarin options if provided
         if self.tamarin_options:
