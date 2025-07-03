@@ -106,7 +106,7 @@
 
             # Install py-tree-sitter-spthy via pip if not already installed
             echo "📦 Installing py-tree-sitter-spthy via pip..."
-            pip install "py-tree-sitter-spthy>=1.1.2"
+            pip install "py-tree-sitter-spthy>=1.2.0"
 
             echo "🚀 Batch Tamarin development environment"
             echo "📦 Python ${python.version} with dependencies available"
