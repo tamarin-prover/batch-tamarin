@@ -58,6 +58,10 @@ class LemmaParser:
             LemmaParsingError: If parsing fails or file cannot be read
         """
         try:
+            # Check if file exists
+            if not theory_file.exists():
+                raise LemmaParsingError(f"Theory file not found: {theory_file}")
+
             # Read the file content
             with open(theory_file, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -70,6 +74,9 @@ class LemmaParser:
 
             return lemma_names
 
+        except LemmaParsingError:
+            # Re-raise our custom exceptions
+            raise
         except Exception as e:
             raise LemmaParsingError(
                 f"Failed to parse lemmas from {theory_file}: {e}"

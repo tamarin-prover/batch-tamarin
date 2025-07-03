@@ -31,6 +31,7 @@
           isort
           autoflake
           pytest
+          pytest-asyncio
           build
           twine
           setuptools

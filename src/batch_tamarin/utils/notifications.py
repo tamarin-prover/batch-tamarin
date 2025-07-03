@@ -388,7 +388,7 @@ class NotificationManager:
                 if result.stderr:
                     stderr_lines = result.stderr.strip().splitlines()
                     if len(stderr_lines) > 1:
-                        last_stderr = f"**sterr** : (...) {stderr_lines[-1]}"
+                        last_stderr = f"**stderr** : (...) {stderr_lines[-1]}"
                     else:
                         last_stderr = f"**stderr** : {stderr_lines[-1]}"
                 else:

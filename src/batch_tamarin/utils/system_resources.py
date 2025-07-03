@@ -42,8 +42,8 @@ def get_max_memory_gb() -> int:
         Falls back to 1GB if detection fails to ensure safe operation.
     """
     try:
-        memory_bytes = psutil.virtual_memory().total
-        memory_gb = int(memory_bytes / (1024**3))
+        memory_bytes = psutil.virtual_memory().total  # type: ignore
+        memory_gb = int(memory_bytes / (1024**3))  # type: ignore
         if memory_gb <= 0:
             return 1
         return memory_gb

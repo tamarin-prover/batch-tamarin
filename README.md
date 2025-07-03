@@ -256,6 +256,26 @@ batch-tamarin --version
 
 ### Testing During Development
 
+#### Running Tests
+
+The project uses pytest for testing. To run the test suite:
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_config_manager.py
+
+# Run with coverage report
+pytest --cov=src/batch_tamarin
+```
+
+#### Testing the Package Installation
+
 Since the package uses proper Python packaging structure, you cannot run `python src/batch_tamarin/main.py` directly. Use one of these methods:
 
 ```bash

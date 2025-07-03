@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 What was difficult to understand ?
-A clear and concise description of what the problem is. 
+A clear and concise description of what the problem is.
 
 Describe the solution you'd like
 A clear and concise description of what you want to have as documentation.
