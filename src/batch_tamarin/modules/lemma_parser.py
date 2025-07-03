@@ -11,7 +11,7 @@ from typing import List, Optional, Set
 
 try:
     import tree_sitter_spthy as ts_spthy
-    from tree_sitter import Language, Node, Parser
+    from tree_sitter import Node, Parser
 except ImportError as e:
     raise ImportError(
         "tree-sitter is required for lemma discovery."
@@ -38,8 +38,8 @@ class LemmaParser:
             external_flags: External preprocessor flags (e.g., from CLI -D arguments)
         """
         try:
-            self.language = Language(ts_spthy.language())  # type: ignore
-            self.parser = Parser(self.language)
+            self.language = ts_spthy.language()
+            self.parser = Parser(self.language)  # type: ignore
             self.external_flags = set(external_flags or [])
         except Exception as e:
             raise LemmaParsingError(f"Failed to initialize Tamarin parser: {e}") from e
@@ -58,6 +58,10 @@ class LemmaParser:
             LemmaParsingError: If parsing fails or file cannot be read
         """
         try:
+            # Check if file exists
+            if not theory_file.exists():
+                raise LemmaParsingError(f"Theory file not found: {theory_file}")
+
             # Read the file content
             with open(theory_file, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -70,6 +74,9 @@ class LemmaParser:
 
             return lemma_names
 
+        except LemmaParsingError:
+            # Re-raise our custom exceptions
+            raise
         except Exception as e:
             raise LemmaParsingError(
                 f"Failed to parse lemmas from {theory_file}: {e}"

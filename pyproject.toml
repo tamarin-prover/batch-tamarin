@@ -31,8 +31,8 @@ dependencies = [
     "typer>=0.15.0",
     "pydantic>=2.11.0",
     "psutil>=7.0.0",
-    "tree-sitter>=0.21.0",
-    "py-tree-sitter-spthy>=1.1.2",
+    "tree-sitter>=0.22.0",
+    "py-tree-sitter-spthy>=1.2.0",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +42,7 @@ dev = [
     "autoflake>=2.3.1",
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
+    "pytest-asyncio>=0.21.0",
     "build>=1.0.0",
     "twine>=4.0.0",
     "setuptools>=61.0",
@@ -95,3 +96,8 @@ remove-all-unused-imports = true
 remove-unused-variables = true
 remove-duplicate-keys = true
 expand-star-imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short"

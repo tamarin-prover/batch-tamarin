@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..model.executable_task import MemoryStats, TaskResult, TaskStatus
 from ..utils.notifications import notification_manager
@@ -59,8 +59,7 @@ class SuccessfulTaskResult(BaseModel):
         default_factory=list, description="Lemmas with incomplete analysis"
     )
 
-    class Config:
-        json_encoders = {Path: str}
+    model_config = ConfigDict(json_encoders={Path: str})
 
 
 class FailedTaskResult(BaseModel):
@@ -78,8 +77,7 @@ class FailedTaskResult(BaseModel):
         default_factory=list, description="Last lines of stderr output"
     )
 
-    class Config:
-        json_encoders = {Path: str}
+    model_config = ConfigDict(json_encoders={Path: str})
 
 
 class OutputManager:

@@ -123,7 +123,7 @@ class ConfigManager:
             models_dir = output_paths["models"]
 
             for task_name, task in recipe.tasks.items():
-                theory_file = ConfigManager._validate_theory_file(
+                theory_file = ConfigManager.validate_theory_file(
                     task.theory_file, task_name
                 )
 
@@ -212,7 +212,7 @@ class ConfigManager:
         )
 
     @staticmethod
-    def _validate_theory_file(theory_file_path: str, task_name: str) -> Path:
+    def validate_theory_file(theory_file_path: str, task_name: str) -> Path:
         """Validate that theory file exists and is a file."""
         theory_file = Path(theory_file_path)
         if not theory_file.exists():
@@ -362,8 +362,8 @@ class ConfigManager:
         global_config = recipe.config
 
         # Start with global defaults
-        default_cores = global_config.global_max_cores
-        default_memory = global_config.global_max_memory
+        default_cores = 4
+        default_memory = 16  # in GB
         default_timeout = global_config.default_timeout
 
         # Apply task-level overrides
@@ -405,7 +405,7 @@ class ConfigManager:
             )
 
         # Validate against global limits
-        cores, memory = ConfigManager._validate_and_cap_resources(
+        cores, memory = ConfigManager.validate_and_cap_resources(
             cores, memory, global_config, f"Task '{task_name}'"
         )
 
@@ -444,14 +444,14 @@ class ConfigManager:
                         f"[ConfigManager] Tamarin version '{tamarin_version}' not found in recipe for task '{task_name}'"
                     )
 
-                tamarin_executable = ConfigManager._validate_tamarin_executable(
+                tamarin_executable = ConfigManager.validate_tamarin_executable(
                     tamarin_version, recipe.tamarin_versions[tamarin_version], recipe
                 )
 
                 # Generate unique task ID
                 task_suffix = f"{lemma_config.lemma_name}--{tamarin_version}"
                 base_task_id = f"{task.output_file_prefix}--{task_suffix}"
-                unique_task_id = ConfigManager._get_unique_task_id(base_task_id)
+                unique_task_id = ConfigManager.get_unique_task_id(base_task_id)
 
                 # Create ExecutableTask
                 executable_task = ExecutableTask(
@@ -475,7 +475,7 @@ class ConfigManager:
                 )
 
     @staticmethod
-    def _validate_and_cap_resources(
+    def validate_and_cap_resources(
         max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
     ) -> Tuple[int, int]:
         """Validate and cap resources against global limits."""
@@ -494,7 +494,7 @@ class ConfigManager:
         return max_cores, max_memory
 
     @staticmethod
-    def _validate_tamarin_executable(
+    def validate_tamarin_executable(
         version_name: str, tamarin_version: TamarinVersion, recipe: TamarinRecipe
     ) -> Path:
         """Validate that tamarin executable exists and is a file."""
@@ -588,7 +588,7 @@ class ConfigManager:
         notification_manager.critical(formatted_message)
 
     @staticmethod
-    def _get_unique_task_id(base_task_id: str) -> str:
+    def get_unique_task_id(base_task_id: str) -> str:
         """
         Generate a unique task ID, adding a counter if duplicates exist.
 
