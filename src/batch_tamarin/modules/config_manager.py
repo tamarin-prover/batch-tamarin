@@ -16,7 +16,6 @@ from ..model.tamarin_recipe import (
 from ..utils.notifications import notification_manager
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
-from .tamarin_test_cmd import check_tamarin_integrity
 
 
 @dataclass
@@ -42,15 +41,12 @@ class ConfigManager:
     task_id_counter: Dict[str, int] = {}
 
     @staticmethod
-    async def load_json_recipe(
-        config_path: Path, revalidate: bool = False
-    ) -> TamarinRecipe:
+    async def load_json_recipe(config_path: Path) -> TamarinRecipe:
         """
         Load TamarinRecipe configuration from a JSON file.
 
         Args:
             config_path: Path to the configuration file
-            revalidate: If True, re-validate all tamarin versions after loading
 
         Returns:
             Configured TamarinRecipe instance
@@ -74,11 +70,6 @@ class ConfigManager:
                 json_data = f.read()
 
             recipe = TamarinRecipe.model_validate_json(json_data)
-
-            # Handle revalidation if requested
-            if revalidate:
-                notification_manager.phase_separator("Tamarin Integrity Testing")
-                await check_tamarin_integrity(recipe.tamarin_versions)
 
             notification_manager.phase_separator("Configuration")
             notification_manager.success(

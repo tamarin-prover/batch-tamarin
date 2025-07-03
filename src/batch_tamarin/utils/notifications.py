@@ -4,12 +4,18 @@ Notification management system for the batch Tamarin.
 This module provides a centralized way to send notifications via Rich formatting.
 """
 
+from typing import TYPE_CHECKING, Dict, List, Optional
+
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
 
 from ..model.executable_task import ExecutionSummary
+from ..model.tamarin_recipe import TamarinRecipe
+
+if TYPE_CHECKING:
+    from ..model.executable_task import ExecutableTask
 
 
 class TamarinHighlighter(RegexHighlighter):
@@ -441,6 +447,143 @@ class NotificationManager:
         else:
             memory_gb = memory_mb / 1024
             return f"{memory_gb:.1f} GB"
+
+    def check_report(
+        self,
+        recipe: TamarinRecipe,
+        executable_tasks: List["ExecutableTask"],
+        tamarin_errors: Optional[Dict[str, List[str]]] = None,
+    ):
+        """
+        Display a comprehensive check report for executable tasks.
+
+        Args:
+            executable_tasks: List of ExecutableTask objects
+            tamarin_errors: Optional dict of tamarin validation errors/warnings
+        """
+        from typing import Any
+
+        from rich.columns import Columns
+        from rich.console import Group
+        from rich.markdown import Markdown
+        from rich.panel import Panel
+        from rich.table import Table
+
+        # Summary table
+        summary_table = Table(show_header=True, header_style="bold magenta")
+        summary_table.add_column("Metric", style="cyan")
+        summary_table.add_column("Value", justify="right")
+
+        # Count tasks by version and type
+        task_count = len(executable_tasks)
+        version_counts: dict[str, int] = {}
+        lemma_counts: dict[str, int] = {}
+
+        for task in executable_tasks:
+            version_counts[task.tamarin_version_name] = (
+                version_counts.get(task.tamarin_version_name, 0) + 1
+            )
+            if task.lemma:
+                lemma_counts[task.lemma] = lemma_counts.get(task.lemma, 0) + 1
+
+        summary_table.add_row("Total Tasks", f"[bold]{task_count}[/bold]")
+        summary_table.add_row(
+            "Tamarin Versions", f"[bold blue]{len(version_counts)}[/bold blue]"
+        )
+
+        # Task details table
+        details_table = Table(show_header=True, header_style="bold blue")
+        details_table.add_column("Task ID", style="cyan")
+        details_table.add_column("Theory File", style="blue")
+        details_table.add_column("Cores", justify="right")
+        details_table.add_column("Memory", justify="right")
+        details_table.add_column("Timeout", justify="right")
+
+        for task in executable_tasks:
+            theory_file_display = task.theory_file.name
+            cores_display = f"{task.max_cores}c"
+            memory_display = f"{task.max_memory}GB"
+            timeout_display = f"{task.task_timeout}s"
+
+            details_table.add_row(
+                task.task_name,
+                theory_file_display,
+                cores_display,
+                memory_display,
+                timeout_display,
+            )
+
+        # Version breakdown table
+        version_table = Table(show_header=True, header_style="bold yellow")
+        version_table.add_column("Alias", style="yellow")
+        version_table.add_column("Tasks", justify="right", style="bold")
+        version_table.add_column("Reported version", justify="right")
+        version_table.add_column("Integrity test", justify="right")
+
+        seen_versions: set[str] = set()
+        for task in executable_tasks:
+            if task.tamarin_version_name not in seen_versions:
+                seen_versions.add(task.tamarin_version_name)
+                tamarin_version_obj = recipe.tamarin_versions.get(
+                    task.tamarin_version_name
+                )
+                version_display = (
+                    tamarin_version_obj.version if tamarin_version_obj else "N/A"
+                )
+                test_success = (
+                    tamarin_version_obj.test_success if tamarin_version_obj else False
+                )
+
+                version_table.add_row(
+                    task.tamarin_version_name,
+                    str(version_counts[task.tamarin_version_name]),
+                    version_display,
+                    "✅" if test_success else "❌",
+                )
+
+        # Create components list
+        # Combine summary and version tables side by side
+        overview_panel = Panel(
+            Columns([summary_table, version_table], equal=True, expand=True),
+            title="Overview",
+            border_style="blue",
+        )
+
+        task_panel = Panel(details_table, title="Task Details", border_style="blue")
+
+        components: List[Any] = [
+            overview_panel,
+            task_panel,
+        ]
+
+        # Add tamarin validation errors if present
+        if tamarin_errors:
+            error_components: list[Markdown] = []
+            for version, errors in tamarin_errors.items():
+                if errors:
+                    error_components.append(Markdown(f"**⚠️ {version}:**"))
+                    for error in errors:
+                        error_components.append(Markdown(f"  • {error}"))
+
+            if error_components:
+                components.append(
+                    Panel(
+                        Group(*error_components),
+                        title="🧪 Tamarin Validation Issues",
+                        border_style="red",
+                    )
+                )
+
+        # Final panel
+        final_panel = Panel(
+            Group(*components),
+            title="🔍 Configuration Check Report",
+            border_style="blue",
+            padding=(1, 2),
+        )
+
+        self._console.print("")  # spacing
+        self._console.print(final_panel)
 
 
 # Create a singleton instance that can be imported and used throughout the app

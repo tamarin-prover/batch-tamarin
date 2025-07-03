@@ -82,8 +82,8 @@ async def launch_tamarin_test(path: Path) -> bool:
                 f"[TamarinTest] Test command failed, tamarin {path} might not work as intended."
             )
             if stdout:
-                notification_manager.debug(
-                    f"[#ff0000][ERROR][/#ff0000][TamarinTest] Error output:\n {chr(10).join(stdout.strip().splitlines()[-4:])}"
+                notification_manager.error(
+                    f"[TamarinTest] Error output:\n {chr(10).join(stdout.strip().splitlines()[-4:])}"
                 )
             return False
 
@@ -164,14 +164,6 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
                 notification_manager.warning(
                     f"Tamarin integrity test failed for alias '{version_name}'"
                 )
-                should_continue = notification_manager.prompt_user(
-                    "Would you like to continue anyway ?", default=True
-                )
-
-                if not should_continue:
-                    notification_manager.critical(
-                        f"[TamarinTest] User chose to stop execution due to integrity test failure for '{version_name}'"
-                    )
 
         except Exception as e:
             notification_manager.error(
