@@ -19,7 +19,6 @@ async def test_minimal_recipe_end_to_end(
     minimal_recipe_data: Dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
-    mock_tamarin_integrity_check: Any,
     setup_output_manager: Any,
 ) -> None:
     """Test complete workflow with minimal recipe configuration."""
@@ -73,7 +72,6 @@ async def test_complex_recipe_end_to_end(
     complex_recipe_data: Dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
-    mock_tamarin_integrity_check: Any,
     setup_output_manager: Any,
 ) -> None:
     """Test complete workflow with complex recipe configuration."""
@@ -138,7 +136,6 @@ async def test_resource_inheritance_and_capping(
     complex_recipe_data: Dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
-    mock_tamarin_integrity_check: Any,
     setup_output_manager: Any,
 ) -> None:
     """Test that resource inheritance and global capping work correctly."""
@@ -189,7 +186,6 @@ async def test_unique_task_id_generation(
     minimal_recipe_data: Dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
-    mock_tamarin_integrity_check: Any,
     setup_output_manager: Any,
 ) -> None:
     """Test that task IDs are unique when there are duplicates."""
@@ -222,7 +218,6 @@ async def test_lemma_prefix_matching(
     complex_recipe_data: Dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
-    mock_tamarin_integrity_check: Any,
     setup_output_manager: Any,
 ) -> None:
     """Test that lemma prefix matching works correctly."""
