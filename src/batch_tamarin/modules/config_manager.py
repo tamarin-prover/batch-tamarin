@@ -451,7 +451,7 @@ class ConfigManager:
                     tamarin_version_name=tamarin_version,
                     tamarin_executable=tamarin_executable,
                     theory_file=theory_file,
-                    output_file=models_dir / f"{unique_task_id}.json",
+                    output_file=models_dir / f"{unique_task_id}.spthy",
                     lemma=lemma_config.lemma_name,
                     tamarin_options=lemma_config.tamarin_options,
                     preprocess_flags=lemma_config.preprocess_flags,

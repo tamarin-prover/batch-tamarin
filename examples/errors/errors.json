@@ -3,7 +3,7 @@
 		"global_max_cores": "max",
 		"global_max_memory": "max",
 		"default_timeout": 80,
-		"output_directory": "./errors-results"
+		"output_directory": "errors-results"
 	},
 	"tamarin_versions": {
 		"default": {

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 async def validate_with_tamarin(
-    executable_tasks: List["ExecutableTask"],
+    executable_tasks: List["ExecutableTask"], report: bool = False
 ) -> Dict[str, List[str]]:
     """
     Validate theory files with tamarin executables.
@@ -27,6 +27,7 @@ async def validate_with_tamarin(
 
     Args:
         executable_tasks: List of ExecutableTask objects to validate
+        report: If True, include detailed output in the report
 
     Returns:
         Dict mapping tamarin version names to lists of error/warning messages
@@ -56,7 +57,7 @@ async def validate_with_tamarin(
             )
 
             # Parse output for warnings and errors
-            errors = parse_tamarin_output(result.stdout + result.stderr)
+            errors = parse_tamarin_output(result.stdout, report, task)
 
             if errors or result.returncode != 0:
                 validation_errors[task.tamarin_version_name] = errors
@@ -77,29 +78,61 @@ async def validate_with_tamarin(
     return validation_errors
 
 
-def parse_tamarin_output(output: str) -> List[str]:
+def parse_tamarin_output(
+    output: str, report: bool, task: "ExecutableTask"
+) -> List[str]:
     """
     Parse tamarin output to extract warnings and errors.
 
     Args:
-        output: Combined stdout and stderr from tamarin execution
+        output: Stdout from tamarin execution
+        report: If True, include detailed output in the report and write wellformedness report to file
+        task: ExecutableTask containing output file path for determining report directory
 
     Returns:
         List of error/warning messages found in the output
     """
-    errors: list[str] = []
+    errors: List[str] = []
 
-    for line in output.split("\n"):
-        line = line.strip()
-        if line and any(
-            keyword in line.lower()
-            for keyword in ["warning", "error", "fail", "abort", "exception"]
-        ):
-            # Filter out some common non-error messages
-            if not any(
-                ignore in line.lower()
-                for ignore in ["no warning", "warning: none", "successfully"]
-            ):
-                errors.append(line)
+    # Check for WARNING in summary of summaries
+    lines = output.split("\n")
+    for line in lines:
+        if "WARNING:" in line and "wellformedness check failed" in line:
+            errors.append(line.strip())
+
+    # Extract detailed wellformedness report if present and report is True
+    if report:
+        start_marker = "/*\nWARNING: the following wellformedness checks failed!"
+        end_marker = "*/"
+
+        start_idx = output.find(start_marker)
+        if start_idx != -1:
+            # Find the end marker after the start
+            end_idx = output.find(end_marker, start_idx + len(start_marker))
+            if end_idx != -1:
+                wellformedness_report = output[start_idx : end_idx + len(end_marker)]
+
+                # Create the wellformedness-check-report directory if it doesn't exist
+                report_dir = (
+                    task.output_file.parent.parent / "wellformedness-check-report"
+                )
+                report_dir.mkdir(parents=True, exist_ok=True)
+
+                # Write to wellformedness-check-report file
+                report_file = (
+                    task.output_file.parent.parent
+                    / "wellformedness-check-report"
+                    / f"{task.task_name}.txt"
+                )
+                try:
+                    with open(report_file, "w") as f:
+                        f.write(wellformedness_report)
+                    notification_manager.debug(
+                        f"Wrote wellformedness report to {report_file}"
+                    )
+                except Exception as e:
+                    notification_manager.debug(
+                        f"Failed to write wellformedness report: {e}"
+                    )
 
     return errors
