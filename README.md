@@ -1,10 +1,10 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.2.1-forestgreen) [![PyPI version](https://badge.fury.io/py/batch-tamarin.svg)](https://badge.fury.io/py/batch-tamarin)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) [![Release](https://img.shields.io/badge/release-0.2.1-forestgreen)](https://github.com/tamarin-prover/batch-tamarin/releases) [![PyPI version](https://img.shields.io/pypi/v/batch-tamarin.svg?color=blue)](https://pypi.org/project/batch-tamarin/)
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files, comprehensive reporting, and validation tools.
 
-![WrapperLogo](assets/logo.png)
+![WrapperLogo](https://raw.githubusercontent.com/tamarin-prover/batch-tamarin/main/assets/logo.png)
 
 ## Features
 
@@ -145,7 +145,7 @@ Create a JSON configuration file based on the WPA2 example:
 }
 ```
 
-Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
+Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](https://github.com/tamarin-prover/batch-tamarin/blob/main/RECIPE_GUIDE.md)
 
 ### Check Command
 
@@ -350,7 +350,7 @@ python -m twine upload --repository testpypi dist/*
 python -m twine upload dist/*
 ```
 
-For detailed packaging instructions, see [`PACKAGING.md`](PACKAGING.md).
+For detailed packaging instructions, see [`PACKAGING.md`](https://github.com/tamarin-prover/batch-tamarin/blob/main/PACKAGING.md).
 
 ## License
 
@@ -369,7 +369,7 @@ See the [LICENSE](LICENSE) file for the full license text.
 
 ## Implementation Details
 
-For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+For detailed architecture, module overview, and workflow documentation, see [`ARCHITECTURE.md`](https://github.com/tamarin-prover/batch-tamarin/blob/main/ARCHITECTURE.md).
 
 ---
 
