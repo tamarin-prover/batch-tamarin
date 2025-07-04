@@ -24,7 +24,6 @@ class TestJSONLoading:
         minimal_recipe_data: Dict[str, Any],
         create_json_file: Callable[[Dict[str, Any]], Path],
         mock_notifications: Any,
-        mock_tamarin_integrity_check: Any,
     ):
         """Test loading a valid JSON recipe."""
         config_file = create_json_file(minimal_recipe_data)
@@ -42,29 +41,6 @@ class TestJSONLoading:
             msg for level, msg in mock_notifications.messages if level == "success"
         ]
         assert any("JSON recipe loaded" in msg for msg in success_messages)
-
-    @pytest.mark.asyncio
-    async def test_load_json_with_revalidation(
-        self,
-        minimal_recipe_data: Dict[str, Any],
-        create_json_file: Callable[[Dict[str, Any]], Path],
-        mock_notifications: Any,
-        mock_tamarin_integrity_check: Any,
-    ):
-        """Test loading JSON with revalidation enabled."""
-        config_file = create_json_file(minimal_recipe_data)
-
-        recipe = await ConfigManager.load_json_recipe(config_file, revalidate=True)
-
-        assert isinstance(recipe, TamarinRecipe)
-
-        # Verify phase separator was called for integrity testing
-        phase_messages = [
-            msg
-            for level, msg in mock_notifications.messages
-            if level == "phase_separator"
-        ]
-        assert any("Tamarin Integrity Testing" in msg for msg in phase_messages)
 
     @pytest.mark.asyncio
     async def test_load_nonexistent_file(self, tmp_dir: Path, mock_notifications: Any):

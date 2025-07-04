@@ -6,6 +6,8 @@ that can be used when "max" is specified in configuration files.
 """
 
 import os
+import shutil
+from pathlib import Path
 
 import psutil
 
@@ -94,3 +96,34 @@ def get_system_info() -> dict[str, int]:
         - 'max_memory_gb': Maximum memory in GB available
     """
     return {"max_cores": get_max_cpu_cores(), "max_memory_gb": get_max_memory_gb()}
+
+
+def resolve_executable_path(path_or_command: str) -> Path:
+    """
+    Resolve an executable path, handling both file paths and bare commands.
+
+    Args:
+        path_or_command: Either a file path (absolute/relative) or a command name
+
+    Returns:
+        Resolved Path object to the executable
+
+    Raises:
+        FileNotFoundError: If the path/command cannot be resolved
+        ValueError: If the resolved path is not a file
+    """
+    # If it looks like a path (contains / or \), treat it as a file path
+    if "/" in path_or_command or "\\" in path_or_command:
+        resolved_path = Path(path_or_command)
+        if not resolved_path.exists():
+            raise FileNotFoundError(f"Executable file not found: {resolved_path}")
+        if not resolved_path.is_file():
+            raise ValueError(f"Path is not a file: {resolved_path}")
+        return resolved_path
+
+    # Otherwise, try to resolve as a command in PATH
+    resolved_command = shutil.which(path_or_command)
+    if resolved_command is None:
+        raise FileNotFoundError(f"Command '{path_or_command}' not found in PATH")
+
+    return Path(resolved_command)

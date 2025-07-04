@@ -14,9 +14,9 @@ from ..model.tamarin_recipe import (
     Task,
 )
 from ..utils.notifications import notification_manager
+from ..utils.system_resources import resolve_executable_path
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
-from .tamarin_test_cmd import check_tamarin_integrity
 
 
 @dataclass
@@ -42,15 +42,12 @@ class ConfigManager:
     task_id_counter: Dict[str, int] = {}
 
     @staticmethod
-    async def load_json_recipe(
-        config_path: Path, revalidate: bool = False
-    ) -> TamarinRecipe:
+    async def load_json_recipe(config_path: Path) -> TamarinRecipe:
         """
         Load TamarinRecipe configuration from a JSON file.
 
         Args:
             config_path: Path to the configuration file
-            revalidate: If True, re-validate all tamarin versions after loading
 
         Returns:
             Configured TamarinRecipe instance
@@ -74,11 +71,6 @@ class ConfigManager:
                 json_data = f.read()
 
             recipe = TamarinRecipe.model_validate_json(json_data)
-
-            # Handle revalidation if requested
-            if revalidate:
-                notification_manager.phase_separator("Tamarin Integrity Testing")
-                await check_tamarin_integrity(recipe.tamarin_versions)
 
             notification_manager.phase_separator("Configuration")
             notification_manager.success(
@@ -459,7 +451,7 @@ class ConfigManager:
                     tamarin_version_name=tamarin_version,
                     tamarin_executable=tamarin_executable,
                     theory_file=theory_file,
-                    output_file=models_dir / f"{unique_task_id}.json",
+                    output_file=models_dir / f"{unique_task_id}.spthy",
                     lemma=lemma_config.lemma_name,
                     tamarin_options=lemma_config.tamarin_options,
                     preprocess_flags=lemma_config.preprocess_flags,
@@ -498,16 +490,17 @@ class ConfigManager:
         version_name: str, tamarin_version: TamarinVersion, recipe: TamarinRecipe
     ) -> Path:
         """Validate that tamarin executable exists and is a file."""
-        tamarin_executable = Path(tamarin_version.path)
-        if not tamarin_executable.exists():
+        try:
+            tamarin_executable = resolve_executable_path(tamarin_version.path)
+            return tamarin_executable
+        except FileNotFoundError as e:
             raise ConfigError(
-                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
-            )
-        if not tamarin_executable.is_file():
+                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {e}"
+            ) from e
+        except ValueError as e:
             raise ConfigError(
-                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
-            )
-        return tamarin_executable
+                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {e}"
+            ) from e
 
     @staticmethod
     def _handle_validation_error(

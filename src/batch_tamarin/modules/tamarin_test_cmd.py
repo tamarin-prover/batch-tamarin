@@ -4,6 +4,7 @@ from typing import Dict
 
 from ..model.tamarin_recipe import TamarinVersion
 from ..utils.notifications import notification_manager
+from ..utils.system_resources import resolve_executable_path
 from .process_manager import process_manager
 
 
@@ -82,8 +83,8 @@ async def launch_tamarin_test(path: Path) -> bool:
                 f"[TamarinTest] Test command failed, tamarin {path} might not work as intended."
             )
             if stdout:
-                notification_manager.debug(
-                    f"[#ff0000][ERROR][/#ff0000][TamarinTest] Error output:\n {chr(10).join(stdout.strip().splitlines()[-4:])}"
+                notification_manager.error(
+                    f"[TamarinTest] Error output:\n {chr(10).join(stdout.strip().splitlines()[-4:])}"
                 )
             return False
 
@@ -122,20 +123,12 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
     """
     for version_name, tamarin_version in tamarin_versions.items():
         try:
-            tamarin_path = Path(tamarin_version.path)
-
-            # Check if executable exists
-            if not tamarin_path.exists():
+            # Resolve executable path (handles both file paths and bare commands)
+            try:
+                tamarin_path = resolve_executable_path(tamarin_version.path)
+            except (FileNotFoundError, ValueError) as e:
                 notification_manager.critical(
-                    f"[TamarinTest] Tamarin executable not found: {tamarin_path}"
-                )
-                tamarin_version.version = ""
-                tamarin_version.test_success = False
-                continue
-
-            if not tamarin_path.is_file():
-                notification_manager.critical(
-                    f"[TamarinTest] Tamarin path is not a file: {tamarin_path}"
+                    f"[TamarinTest] Tamarin executable resolution failed for '{version_name}': {e}"
                 )
                 tamarin_version.version = ""
                 tamarin_version.test_success = False
@@ -164,14 +157,6 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
                 notification_manager.warning(
                     f"Tamarin integrity test failed for alias '{version_name}'"
                 )
-                should_continue = notification_manager.prompt_user(
-                    "Would you like to continue anyway ?", default=True
-                )
-
-                if not should_continue:
-                    notification_manager.critical(
-                        f"[TamarinTest] User chose to stop execution due to integrity test failure for '{version_name}'"
-                    )
 
         except Exception as e:
             notification_manager.error(

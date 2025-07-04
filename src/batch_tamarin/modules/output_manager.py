@@ -109,7 +109,7 @@ class OutputManager:
         self.models_dir: Path = Path(".")  # Will be set during initialize()
         self._is_setup = False
 
-    def initialize(self, output_dir: Path) -> None:
+    def initialize(self, output_dir: Path, bypass: bool = False) -> None:
         """
         Initialize the output manager with output directory.
 
@@ -117,6 +117,7 @@ class OutputManager:
 
         Args:
             output_dir: Base output directory path
+            bypass: If True, bypass directory creation (optional, for check command)
         """
         if self._is_setup:
             # Already initialized
@@ -127,6 +128,9 @@ class OutputManager:
         self.failed_dir = self.output_dir / "failed"
         self.models_dir = self.output_dir / "proofs"
         self._is_setup = True
+
+        if bypass:
+            return
 
         # Handle existing directory
         self._handle_existing_directory()

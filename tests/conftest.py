@@ -8,7 +8,7 @@ the batch-tamarin package, including mock data and helper utilities.
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Generator, List, Tuple
+from typing import Any, Callable, Dict, Generator, List, Tuple
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -193,23 +193,6 @@ def mock_notifications(monkeypatch: MonkeyPatch):
         "batch_tamarin.modules.config_manager.notification_manager", mock_manager
     )
     return mock_manager
-
-
-@pytest.fixture
-def mock_tamarin_integrity_check(
-    monkeypatch: MonkeyPatch,
-) -> Callable[[Dict[str, Any]], Awaitable[None]]:
-    """Mock the tamarin integrity check to avoid actual tamarin execution."""
-
-    async def mock_check(tamarin_versions: Dict[str, Any]) -> None:
-        """Mock integrity check that always passes."""
-        # Mock check function - tamarin_versions parameter is required by interface
-        _ = tamarin_versions  # Mark as used to avoid lint warning
-
-    monkeypatch.setattr(
-        "batch_tamarin.modules.config_manager.check_tamarin_integrity", mock_check
-    )
-    return mock_check
 
 
 @pytest.fixture

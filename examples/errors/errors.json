@@ -1,0 +1,20 @@
+{
+	"config": {
+		"global_max_cores": "max",
+		"global_max_memory": "max",
+		"default_timeout": 80,
+		"output_directory": "errors-results"
+	},
+	"tamarin_versions": {
+		"default": {
+			"path": "tamarin-prover"
+		}
+	},
+	"tasks": {
+        "FullErrors": {
+            "theory_file": "examples/errors/protocols/errors.spthy",
+            "tamarin_versions": ["default"],
+            "output_file_prefix": "FullErrors"
+        }
+    }
+}
