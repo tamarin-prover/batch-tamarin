@@ -17,6 +17,12 @@ jobs:
       fail-fast: true
 
     steps:
+      - name: Skip duplicate actions
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: 'same_content_newer'
+          skip_after_successful_duplicate: 'true'
+
       - name: Checkout code
         uses: actions/checkout@v4
 
