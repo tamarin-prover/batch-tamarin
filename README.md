@@ -356,7 +356,7 @@ For detailed packaging instructions, see [`PACKAGING.md`](https://github.com/tam
 
 This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
 
-See the [LICENSE](LICENSE) file for the full license text.
+See the [LICENSE](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) file for the full license text.
 
 ### License Summary
 
