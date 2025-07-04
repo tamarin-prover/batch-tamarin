@@ -12,7 +12,7 @@ The system is designed around a modular architecture with clear separation of co
 batch-tamarin/
 ├── src/batch_tamarin/                    # Main package source
 │   ├── __init__.py                         # Package initialization
-│   ├── main.py                             # CLI entry point and application coordinator
+│   ├── main.py                             # CLI entry point with run/check commands
 │   ├── runner.py                           # High-level task execution orchestration
 │   │
 │   ├── model/                              # Data models and type definitions
@@ -33,7 +33,8 @@ batch-tamarin/
 │   └── utils/                              # Utility functions and helpers
 │       ├── __init__.py
 │       ├── notifications.py               # User communication and logging system
-│       └── system_resources.py            # System resource detection and validation
+│       ├── system_resources.py            # System resource detection and validation
+│       └── model_checking.py              # Theory file validation and wellformedness checking
 │
 ├── examples/                               # Example configuration files
 │   ├── example_config.json                # Basic configuration example
@@ -58,6 +59,8 @@ The system follows a layered architecture with clear data flow and responsibilit
 graph TB
     subgraph "Entry Layer"
         CLI[CLI Entry Point<br/>main.py]
+        RUN_CMD[Run Command]
+        CHECK_CMD[Check Command]
     end
 
     subgraph "Configuration Layer"
@@ -74,6 +77,12 @@ graph TB
         TM[Task Manager]
     end
 
+    subgraph "Validation Layer"
+        TV[Tamarin Validation]
+        MC[Model Checking]
+        WF[Wellformedness Reports]
+    end
+
     subgraph "Process Layer"
         PROC[Process Manager]
         TP[Tamarin Processes]
@@ -85,12 +94,17 @@ graph TB
         MODELS[SPTHY Models]
     end
 
-    CLI --> CM
+    CLI --> RUN_CMD
+    CLI --> CHECK_CMD
+    RUN_CMD --> CM
+    CHECK_CMD --> CM
     JSON --> CM
     CM --> LP
     CM --> PM
     LP --> CM
     PM --> ET
+
+    %% Run Command Flow
     ET --> TR
     RM <--> TR
     TR --> TM
@@ -99,15 +113,21 @@ graph TB
     TP --> OM
     OM --> RESULTS
     TP --> MODELS
+
+    %% Check Command Flow
+    ET --> TV
+    TV --> MC
+    MC --> WF
 ```
 
 ### Architecture Layers Explained
 
-1. **Entry Layer**: Handles CLI argument parsing and initiates the execution pipeline
+1. **Entry Layer**: Handles CLI argument parsing with `run` and `check` commands
 2. **Configuration Layer**: Validates JSON recipes and transforms them into executable objects
-3. **Execution Layer**: Orchestrates parallel task execution with resource management
-4. **Process Layer**: Manages individual Tamarin processes and system monitoring
-5. **Output Layer**: Processes results and generates structured output files
+3. **Execution Layer**: Orchestrates parallel task execution with resource management (run command)
+4. **Validation Layer**: Performs configuration validation and wellformedness checking (check command)
+5. **Process Layer**: Manages individual Tamarin processes and system monitoring
+6. **Output Layer**: Processes results and generates structured output files
 
 ## Component Integration Flow
 
@@ -124,7 +144,7 @@ sequenceDiagram
     participant PM as Process Manager
     participant OM as Output Manager
 
-    User->>CLI: batch-tamarin recipe.json
+    User->>CLI: batch-tamarin run recipe.json
     CLI->>CM: load_json_recipe()
     CM->>CM: Validate with Pydantic
     CM->>TR: ExecutableTask list
@@ -234,15 +254,20 @@ classDiagram
 
 ### 1. CLI Entry Point (`main.py`)
 
-The main entry point provides a Typer-based CLI interface and orchestrates the entire execution pipeline.
+The main entry point provides a Typer-based CLI interface with two main commands: `run` and `check`.
 
 **Key Responsibilities:**
-- Parse command-line arguments (config file, debug mode, revalidation flags)
+- Parse command-line arguments and route to appropriate command handlers
 - Initialize the notification system and debug settings
 - Handle version display and help information
+- Orchestrate both execution and validation workflows
+
 **Key Functions:**
-- `main()`: Primary CLI entry point with argument parsing
-- `process_config_file()`: Async orchestrator for the entire workflow
+- `main_callback()`: Primary CLI entry point with version handling
+- `run()`: Execute tasks from configuration file
+- `check()`: Validate configuration and preview tasks
+- `process_config_file()`: Async orchestrator for task execution workflow
+- `check_command()`: Async orchestrator for validation workflow
 - `cli()`: Entry point for pip-installed command
 
 ### 2. Lemma Parser (`modules/lemma_parser.py`)
@@ -567,6 +592,52 @@ graph TD
 - **failed/**: JSON files with error information and diagnostics for failed tasks
 - **models/**: Generated .spthy model files from successful Tamarin runs
 
+## Check Command Architecture
+
+The check command provides configuration validation and task preview capabilities:
+
+```mermaid
+flowchart TD
+    CHECK_START[Check Command] --> LOAD_CONFIG[Load JSON Recipe]
+    LOAD_CONFIG --> VALIDATE_CONFIG[Validate Configuration]
+    VALIDATE_CONFIG --> TEST_BINARIES[Test Tamarin Binaries Integrity]
+    TEST_BINARIES --> CREATE_TASKS[Create ExecutableTask Objects]
+    CREATE_TASKS --> RUN_VALIDATION[Run Wellformedness Validation]
+
+    VALIDATE_THEORIES -->|No| DISPLAY_REPORT
+    VALIDATE_THEORIES{--report flag?} -->|Yes| PARSE_OUTPUT[Parse Tamarin Output]
+
+    RUN_VALIDATION --> VALIDATE_THEORIES
+    PARSE_OUTPUT --> GENERATE_REPORTS[Generate Wellformedness Reports]
+    GENERATE_REPORTS --> DISPLAY_REPORT[Display Check Report]
+
+
+    DISPLAY_REPORT --> CHECK_END[Check Complete]
+```
+
+### Check Command Features
+
+1. **Configuration Validation**
+   - JSON structure and syntax validation
+   - File path accessibility checks
+   - Pydantic model validation
+
+2. **Tamarin Binary Testing**
+   - Version extraction and compatibility checks
+   - Binary integrity validation
+   - Executable accessibility verification
+
+3. **Task Preview**
+   - Shows all tasks that would be executed
+   - Displays resource allocation breakdown
+   - Groups tasks by Tamarin version
+
+4. **Wellformedness Validation** (with `--report` flag)
+   - Runs Tamarin without `--prove` flags
+   - Extracts warnings and errors from output
+   - Generates detailed reports in `wellformedness-check-report/` directory
+   - Groups validation by unique (executable, theory_file) combinations
+
 ## Command Generation Process
 
 ExecutableTask objects are converted to Tamarin command-line invocations:
@@ -655,6 +726,33 @@ graph TD
 4. **User Communication**: Rich error messages with context and suggestions
 5. **Partial Success**: Report successful tasks even when some fail
 
+## Validation Layer Components
+
+### Model Checking (`utils/model_checking.py`)
+
+Provides theory file validation and wellformedness checking capabilities:
+
+**Key Responsibilities:**
+- Validate theory files with Tamarin executables without running full proofs
+- Extract warnings and errors from Tamarin output
+- Generate detailed wellformedness reports
+- Group validation by unique (executable, theory_file) combinations to avoid duplicates
+
+**Key Methods:**
+- `validate_with_tamarin()`: Main validation orchestrator
+- `parse_tamarin_output()`: Extract warnings/errors from Tamarin output
+- Generates reports in `wellformedness-check-report/` directory when `--report` flag is used
+
+### Tamarin Binary Testing (`modules/tamarin_test_cmd.py`)
+
+Validates Tamarin executable integrity and extracts version information:
+
+**Key Responsibilities:**
+- Test Tamarin binaries with `--version` and `test` commands
+- Extract version information and update TamarinVersion objects
+- Verify binary accessibility and functionality
+- Report testing results in check command output
+
 ## Utility Components
 
 ### System Resources (`utils/system_resources.py`)
@@ -673,6 +771,7 @@ Centralized user communication and logging system:
 - **Debug Support**: Detailed debug information when enabled
 - **Progress Tracking**: Real-time progress updates during execution
 - **Error Reporting**: Structured error messages with context
+- **Check Reports**: Formatted reports for configuration validation results
 
 ## Design Patterns and Principles
 

@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](LICENSE) ![Release](https://img.shields.io/badge/release-0.2.1-forestgreen) [![PyPI version](https://badge.fury.io/py/batch-tamarin.svg)](https://badge.fury.io/py/batch-tamarin)
 
-A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files and comprehensive reporting.
+A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files, comprehensive reporting, and validation tools.
 
 ![WrapperLogo](assets/logo.png)
 
@@ -13,7 +13,9 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 -   **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
 -   **Progress Tracking**: Real-time progress updates with Rich-formatted output
 -   **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
--   **CLI Interface**: Easy-to-use command-line interface with comprehensive options
+-   **CLI Interface**: Easy-to-use command-line interface with `run` and `check` commands
+-   **Configuration Validation**: Validate JSON recipes and preview tasks before execution
+-   **Wellformedness Checking**: Check theory files for syntax errors and warnings
 
 ## Table of Contents
 
@@ -73,14 +75,20 @@ batch-tamarin --version
 # Show help
 batch-tamarin --help
 
-# Run with configuration file
-batch-tamarin recipe.json
+# Run tasks with configuration file
+batch-tamarin run recipe.json
 
 # Run with debug output
-batch-tamarin recipe.json --debug
+batch-tamarin run recipe.json --debug
 
-# Run with Tamarin binary validation
-batch-tamarin recipe.json --revalidate
+# Check configuration and preview tasks
+batch-tamarin check recipe.json
+
+# Check with detailed wellformedness report
+batch-tamarin check recipe.json --report
+
+# Check with debug output
+batch-tamarin check recipe.json --debug
 ```
 
 ### Configuration Example
@@ -138,6 +146,34 @@ Create a JSON configuration file based on the WPA2 example:
 ```
 
 Read the configuration guide to understand how to write a JSON recipe : [`JSON Guide`](RECIPE_GUIDE.md)
+
+### Check Command
+
+The `check` command allows you to validate your configuration and preview the tasks that would be executed without actually running them:
+
+```bash
+# Basic configuration check
+batch-tamarin check recipe.json
+
+# Check with detailed wellformedness report
+batch-tamarin check recipe.json --report
+```
+
+**What the check command does:**
+- Validates JSON recipe structure and syntax
+- Checks file paths and accessibility
+- Tests Tamarin binary integrity
+- Previews executable tasks that would be run
+- Validates theory files for wellformedness issues
+- Generates detailed reports when using `--report` flag
+
+**Output includes:**
+- Total tasks that would be executed
+- Task breakdown by Tamarin version
+- Resource allocation summary
+- Tamarin version integrity test results
+- Any validation errors or warnings found
+- Wellformedness check reports (with `--report` flag)
 
 ### Output
 
@@ -280,7 +316,7 @@ Since the package uses proper Python packaging structure, you cannot run `python
 
 ```bash
 # Method 1 (Recommended): Use the CLI command (after pip install -e .)
-batch-tamarin
+batch-tamarin --help
 
 # Method 2: Test built package (Useful before publishing)
 python -m build
