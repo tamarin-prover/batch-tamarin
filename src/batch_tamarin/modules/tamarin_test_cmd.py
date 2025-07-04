@@ -4,6 +4,7 @@ from typing import Dict
 
 from ..model.tamarin_recipe import TamarinVersion
 from ..utils.notifications import notification_manager
+from ..utils.system_resources import resolve_executable_path
 from .process_manager import process_manager
 
 
@@ -122,20 +123,12 @@ async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -
     """
     for version_name, tamarin_version in tamarin_versions.items():
         try:
-            tamarin_path = Path(tamarin_version.path)
-
-            # Check if executable exists
-            if not tamarin_path.exists():
+            # Resolve executable path (handles both file paths and bare commands)
+            try:
+                tamarin_path = resolve_executable_path(tamarin_version.path)
+            except (FileNotFoundError, ValueError) as e:
                 notification_manager.critical(
-                    f"[TamarinTest] Tamarin executable not found: {tamarin_path}"
-                )
-                tamarin_version.version = ""
-                tamarin_version.test_success = False
-                continue
-
-            if not tamarin_path.is_file():
-                notification_manager.critical(
-                    f"[TamarinTest] Tamarin path is not a file: {tamarin_path}"
+                    f"[TamarinTest] Tamarin executable resolution failed for '{version_name}': {e}"
                 )
                 tamarin_version.version = ""
                 tamarin_version.test_success = False

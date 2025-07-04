@@ -14,6 +14,7 @@ from ..model.tamarin_recipe import (
     Task,
 )
 from ..utils.notifications import notification_manager
+from ..utils.system_resources import resolve_executable_path
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
 
@@ -489,16 +490,17 @@ class ConfigManager:
         version_name: str, tamarin_version: TamarinVersion, recipe: TamarinRecipe
     ) -> Path:
         """Validate that tamarin executable exists and is a file."""
-        tamarin_executable = Path(tamarin_version.path)
-        if not tamarin_executable.exists():
+        try:
+            tamarin_executable = resolve_executable_path(tamarin_version.path)
+            return tamarin_executable
+        except FileNotFoundError as e:
             raise ConfigError(
-                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {tamarin_executable}"
-            )
-        if not tamarin_executable.is_file():
+                f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {e}"
+            ) from e
+        except ValueError as e:
             raise ConfigError(
-                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {tamarin_executable}"
-            )
-        return tamarin_executable
+                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {e}"
+            ) from e
 
     @staticmethod
     def _handle_validation_error(
