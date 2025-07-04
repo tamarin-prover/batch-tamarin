@@ -1,0 +1,63 @@
+/* This file is made to trigger almost all error cases in Tamarin */
+
+theory Error
+begin
+
+builtins: symmetric-encryption, diffie-hellman
+
+/* No Out or K facts should appear in the premises of protocol rules and
+   no Fr, In, or K facts should appear in the conclusions. */
+rule error_1:
+    [ Fr(~i), Out(~i), K(~i) ]
+  --[ Test_1(~i) ]->
+    [ Fr(~j), In(a), Test(~i) ]
+
+/* Facts must have the same arity everywhere, i.e., in all rules, lemmas, and
+   restrictions. */
+rule error_2:
+    [ Test(i, j) ]
+  --[ Test_2(i, j)  ]->
+    [  ]
+
+/* Fr facts must be used with a variable of type message or type fresh. */
+rule error_4:
+    [ Fr(a) ]
+  --[  ]->
+    [  ]
+
+/* All variables in the conclusions of a rule must appear in the premises, or
+   be public variables. */
+rule error_5:
+    [  ]
+  --[  ]->
+    [ Out(a) ]
+
+/* The premises of a rule must not contain reducible function symbols such as
+   decryption, XOR, etc. */
+rule error_6:
+    [ Test(sdec(m,k)), In(m) ]
+  --[  ]->
+    [  ]
+
+/* The conclusions of a rule must not contain multiplication. */
+rule error_7:
+    [ In(<a, b>) ]
+  --[  ]->
+    [ Out(a * bs) ]
+
+/* Variable with mismatching sorts or capitalization + unbound variables. */
+rule error_8:
+    [ TesT(a) ]
+  --[  ]->
+    [ TesT(b) ]
+
+/* All action facts used in lemmas or restrictions should appear somewhere in
+   the rules. */
+lemma error_lemma_1: exists-trace
+    " Ex #i. Error()@i "
+
+/* All lemmas must be guarded formulas. */
+lemma error_lemma_2: exists-trace
+    " Ex a #i. Test_1(a)@i ==> Ex #j. Test_2(a, b)@j "
+
+end
