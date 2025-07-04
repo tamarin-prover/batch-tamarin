@@ -561,9 +561,9 @@ class NotificationManager:
             error_components: list[Markdown] = []
             for version, errors in tamarin_errors.items():
                 if errors:
-                    error_components.append(Markdown(f"**⚠️ {version}:**"))
+                    error_components.append(Markdown(f"**- ⚠️ Task :** *{version}*"))
                     for error in errors:
-                        error_components.append(Markdown(f"  • {error}"))
+                        error_components.append(Markdown(f"{error}"))
 
             if error_components:
                 components.append(

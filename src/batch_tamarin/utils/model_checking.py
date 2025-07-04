@@ -60,20 +60,18 @@ async def validate_with_tamarin(
             errors = parse_tamarin_output(result.stdout, report, task)
 
             if errors or result.returncode != 0:
-                validation_errors[task.tamarin_version_name] = errors
+                validation_errors[task.task_name] = errors
                 if result.returncode != 0 and not errors:
-                    validation_errors[task.tamarin_version_name] = [
+                    validation_errors[task.task_name] = [
                         f"Non-zero exit code: {result.returncode}"
                     ]
 
         except subprocess.TimeoutExpired:
-            validation_errors[task.tamarin_version_name] = [
+            validation_errors[task.task_name] = [
                 "Validation timed out after 60 seconds"
             ]
         except Exception as e:
-            validation_errors[task.tamarin_version_name] = [
-                f"Validation failed: {str(e)}"
-            ]
+            validation_errors[task.task_name] = [f"Validation failed: {str(e)}"]
 
     return validation_errors
 
