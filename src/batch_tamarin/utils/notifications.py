@@ -513,6 +513,18 @@ class NotificationManager:
                 timeout_display,
             )
 
+        # Tamarin path panel
+        tamarin_path: list[Markdown] = []
+        binary_count = len(recipe.tamarin_versions)
+        header_text = (
+            "**📂 Tamarin binary path :**"
+            if binary_count == 1
+            else "**📂 Tamarin binaries paths :**"
+        )
+        tamarin_path.append(Markdown(header_text))
+        for alias, version in recipe.tamarin_versions.items():
+            tamarin_path.append(Markdown(f"**- Alias : '{alias}'** → {version.path}"))
+
         # Version breakdown table
         version_table = Table(show_header=True, header_style="bold yellow")
         version_table.add_column("Alias", style="yellow")
@@ -552,6 +564,7 @@ class NotificationManager:
         task_panel = Panel(details_table, title="Task Details", border_style="blue")
 
         components: List[Any] = [
+            Group(*tamarin_path),
             overview_panel,
             task_panel,
         ]
