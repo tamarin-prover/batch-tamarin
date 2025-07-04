@@ -43,9 +43,13 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
-        name: Release ${{ github.ref_name }}
+        name: ${{ github.ref_name }}
         draft: true
         prerelease: false
         files: |
           dist/batch_tamarin-${{ steps.extract_version.outputs.VERSION }}-py3-none-any.whl
         generate_release_notes: true
+        body: |
+          # batch-tamarin ${{ github.ref_name }}
+
+          ${{ steps.generate_release_notes.outputs.body }}
