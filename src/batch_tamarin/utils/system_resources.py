@@ -53,7 +53,7 @@ def get_max_memory_gb() -> int:
         return 1
 
 
-def resolve_max_value(value: str | int, resource_type: str) -> int:
+def resolve_resource_value(value: str | int, resource_type: str) -> int:
     """
     Resolve a "max" string or integer value to actual system maximum.
 
@@ -80,6 +80,17 @@ def resolve_max_value(value: str | int, resource_type: str) -> int:
             raise ValueError(
                 f"Unknown resource type: {resource_type}. Must be 'cores' or 'memory'"
             )
+
+    elif value.endswith("%"):
+        percentage = int(value[:-1])
+        if resource_type.lower() == "cores":
+            raise ValueError(
+                "Percentage values are not supported for CPU cores. Use 'max' or an integer."
+            )
+        elif resource_type.lower() == "memory":
+            max_memory = get_max_memory_gb()
+            memory = max(1, min(max_memory, int(max_memory * percentage / 100)))
+            return memory
 
     raise TypeError(
         f"Value must be an integer or 'max', got {type(value).__name__}: {value}"

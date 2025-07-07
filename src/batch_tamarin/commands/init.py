@@ -93,7 +93,7 @@ class InitCommand:
 
         # Max cores
         max_cores_input = Prompt.ask(
-            f"Maximum CPU cores limit for all (concurrent) tasks [violet bold]{escape("[int, %, max]")}[/violet bold]",
+            f"Maximum CPU cores limit for all (concurrent) tasks [violet bold]{escape("[int, max]")}[/violet bold]",
             default="max",
             show_default=True,
         )
@@ -101,7 +101,7 @@ class InitCommand:
 
         # Max memory
         max_memory_input = Prompt.ask(
-            f"Maximum memory (GB) limit for all (concurrent) tasks [violet bold]{escape("[int, %, max]")}[/violet bold]",
+            f"Maximum memory (GB) limit for all (concurrent) tasks [violet bold]{escape("[int, int%, max]")}[/violet bold]",
             default="max",
             show_default=True,
         )
@@ -135,8 +135,8 @@ class InitCommand:
 
         if value.endswith("%"):
             try:
-                percentage = float(value[:-1])
-                return max(1, int(system_max * percentage / 100))
+                percentage = int(value[:-1])
+                return f"{max(1, min(percentage, 100))}%"
             except ValueError:
                 self.console.print(f"[red]Invalid percentage: {value}[/red]")
                 return system_max

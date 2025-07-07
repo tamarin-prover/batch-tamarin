@@ -14,7 +14,7 @@ from ..model.tamarin_recipe import (
     Task,
 )
 from ..utils.notifications import notification_manager
-from ..utils.system_resources import resolve_executable_path, resolve_max_value
+from ..utils.system_resources import resolve_executable_path, resolve_resource_value
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
 
@@ -471,18 +471,20 @@ class ConfigManager:
         max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
     ) -> Tuple[int, int]:
         """Validate and cap resources against global limits."""
-        glob_max_cores = resolve_max_value(global_config.global_max_cores, "cores")
-        glob_max_memory = resolve_max_value(global_config.global_max_memory, "memory")
+        glob_max_cores = resolve_resource_value(global_config.global_max_cores, "cores")
+        glob_max_memory = resolve_resource_value(
+            global_config.global_max_memory, "memory"
+        )
 
         if max_cores > glob_max_cores:
             notification_manager.warning(
-                f"{context_name} max_cores ({max_cores}) exceeds global_max_cores, falling back to this value : ({global_config.global_max_cores})"
+                f"{context_name} max_cores ({max_cores}c) exceeds global_max_cores, falling back to this value : {glob_max_cores}c"
             )
             max_cores = glob_max_cores
 
         if max_memory > glob_max_memory:
             notification_manager.warning(
-                f"{context_name} max_memory ({max_memory}) exceeds global_max_memory, falling back to this value : ({global_config.global_max_memory})"
+                f"{context_name} max_memory ({max_memory}GB) exceeds global_max_memory, falling back to this value : {glob_max_memory}GB"
             )
             max_memory = glob_max_memory
 

@@ -13,6 +13,7 @@ from rich.theme import Theme
 
 from ..model.executable_task import ExecutionSummary
 from ..model.tamarin_recipe import TamarinRecipe
+from ..utils.system_resources import resolve_resource_value
 
 if TYPE_CHECKING:
     from ..model.executable_task import ExecutableTask
@@ -490,13 +491,21 @@ class NotificationManager:
         summary_table.add_row(
             "Tamarin Versions", f"[bold blue]{len(version_counts)}[/bold blue]"
         )
+        summary_table.add_row(
+            "Global Max Cores",
+            f"[bold #db9200]{resolve_resource_value(recipe.config.global_max_cores, 'cores')}[/bold #db9200]",
+        )
+        summary_table.add_row(
+            "Global Max Memory",
+            f"[bold violet]{resolve_resource_value(recipe.config.global_max_memory, 'memory')}GB[/bold violet]",
+        )
 
         # Task details table
         details_table = Table(show_header=True, header_style="bold blue")
         details_table.add_column("Task ID", style="cyan")
         details_table.add_column("Theory File", style="blue")
-        details_table.add_column("Cores", justify="right")
-        details_table.add_column("Memory", justify="right")
+        details_table.add_column("Cores", justify="right", style="#db9200")
+        details_table.add_column("Memory", justify="right", style="violet")
         details_table.add_column("Timeout", justify="right")
 
         for task in executable_tasks:

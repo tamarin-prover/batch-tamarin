@@ -152,9 +152,21 @@ class GlobalConfig(BaseModel):
     @classmethod
     def validate_global_max_memory(cls, v: Union[int, str]) -> int | str:
         """Validate and resolve global_max_memory, converting 'max' to system maximum."""
-        if isinstance(v, str) and v.lower() != "max":
-            raise ValueError("String value must be 'max'")
-        if isinstance(v, int) and v < 1:
+        if isinstance(v, str):
+            if v.lower() == "max":
+                return v
+            elif v.endswith("%"):
+                # Handle percentage case
+                try:
+                    percentage = int(v[:-1])
+                    if not (1 <= percentage <= 100):
+                        raise ValueError("Percentage must be between 1 and 100")
+                    return v
+                except ValueError:
+                    raise ValueError(f"Invalid percentage format: {v}")
+            else:
+                raise ValueError("String value must be 'max' or a percentage")
+        elif v < 1:
             raise ValueError("global_max_memory must be at least 1")
         return v
 

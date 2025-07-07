@@ -14,7 +14,7 @@ import psutil
 from ..model.executable_task import ExecutableTask
 from ..model.tamarin_recipe import TamarinRecipe
 from ..utils.notifications import notification_manager
-from ..utils.system_resources import resolve_max_value
+from ..utils.system_resources import resolve_resource_value
 
 
 class ResourceManager:
@@ -36,8 +36,12 @@ class ResourceManager:
         self.recipe = recipe
 
         # Extract initial values from recipe config
-        global_max_cores = resolve_max_value(recipe.config.global_max_cores, "cores")
-        global_max_memory = resolve_max_value(recipe.config.global_max_memory, "memory")
+        global_max_cores = resolve_resource_value(
+            recipe.config.global_max_cores, "cores"
+        )
+        global_max_memory = resolve_resource_value(
+            recipe.config.global_max_memory, "memory"
+        )
 
         # Verify that global limits on cores are under system limits
         if cores := os.cpu_count():
