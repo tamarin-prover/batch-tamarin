@@ -49,10 +49,14 @@ class Resources(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     max_cores: Optional[int] = Field(
-        default=4, ge=1, description="Maximum CPU cores for this task (default: 4)"
+        default=None,
+        ge=1,
+        description="Maximum CPU cores for this task (inherited if not set)",
     )
     max_memory: Optional[int] = Field(
-        default=8, ge=1, description="Maximum memory in GB for this task (default: 8)"
+        default=None,
+        ge=1,
+        description="Maximum memory in GB for this task (inherited if not set)",
     )
     timeout: Optional[int] = Field(
         default=None,
@@ -104,7 +108,7 @@ class Task(BaseModel):
     )
     resources: Optional[Resources] = Field(
         None,
-        description="Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
+        description="Resource allocation for this task. If not specified, defaults to 4 cores, 16GB RAM, 3600s timeout",
     )
 
     @field_validator("tamarin_versions")
@@ -206,30 +210,3 @@ class TamarinRecipe(BaseModel):
                 )
 
         return self
-
-    def get_task_resources(self, task_name: str) -> Resources:
-        """
-        Get the effective resources for a task, applying defaults from global config.
-
-        Args:
-            task_name: Name of the task to get resources for
-
-        Returns:
-            Resources object with defaults applied
-
-        Raises:
-            KeyError: If task_name doesn't exist
-        """
-        task = self.tasks[task_name]
-        if task.resources is None:
-            # Apply defaults: 4 cores, 8GB memory, default_timeout from global config
-            return Resources(
-                max_cores=4, max_memory=8, timeout=self.config.default_timeout
-            )
-
-        # Apply global default_timeout if timeout is not specified
-        resources = task.resources.model_copy()
-        if resources.timeout is None:
-            resources.timeout = self.config.default_timeout
-
-        return resources

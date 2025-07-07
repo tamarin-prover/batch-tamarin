@@ -378,7 +378,12 @@ class ConfigManager:
         else:
             cores, memory, timeout = default_cores, default_memory, default_timeout
 
-        # Apply lemma-level overrides (if lemma specified)
+        # Validate against global limits after task-level overrides
+        cores, memory = ConfigManager.validate_and_cap_resources(
+            cores, memory, global_config, f"Task '{task_name}'"
+        )
+
+        # Apply lemma-level overrides (if lemma specified), bypassing global caps
         if lemma_spec is not None and lemma_spec.resources is not None:
             cores = (
                 lemma_spec.resources.max_cores
@@ -395,12 +400,6 @@ class ConfigManager:
                 if lemma_spec.resources.timeout is not None
                 else timeout
             )
-
-        # Validate against global limits
-        cores, memory = ConfigManager.validate_and_cap_resources(
-            cores, memory, global_config, f"Task '{task_name}'"
-        )
-
         return cores, memory, timeout
 
     @staticmethod

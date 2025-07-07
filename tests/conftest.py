@@ -127,6 +127,37 @@ def complex_recipe_data(
 
 
 @pytest.fixture
+def inheritance_recipe_data(
+    sample_theory_file: Path, sample_tamarin_executable: Path
+) -> Dict[str, Any]:
+    """Create recipe data with inheritance."""
+    return {
+        "config": {
+            "global_max_cores": 8,
+            "global_max_memory": 16,
+            "default_timeout": 3600,
+            "output_directory": "./inherited-results",
+        },
+        "tamarin_versions": {"stable": {"path": str(sample_tamarin_executable)}},
+        "tasks": {
+            "base_task": {
+                "theory_file": str(sample_theory_file),
+                "tamarin_versions": ["stable"],
+                "output_file_prefix": "base_task",
+                "resources": {"max_cores": 3},
+                "lemmas": [
+                    {
+                        "name": "test_lemma",
+                        "tamarin_versions": ["stable"],
+                        "resources": {"max_memory": 4, "timeout": 1200},
+                    }
+                ],
+            },
+        },
+    }
+
+
+@pytest.fixture
 def invalid_recipe_data() -> Dict[str, Any]:
     """Create invalid recipe data for testing error handling."""
     return {
