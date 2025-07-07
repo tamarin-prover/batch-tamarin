@@ -1,0 +1,22 @@
+{
+  "config": {
+    "global_max_cores": "max",
+    "global_max_memory": "max",
+    "default_timeout": 3600,
+    "output_directory": "result"
+  },
+  "tamarin_versions": {
+    "default": {
+      "path": "tamarin-prover"
+    }
+  },
+  "tasks": {
+    "Minimal_HashChain": {
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+      "tamarin_versions": [
+        "default"
+      ],
+      "output_file_prefix": "Minimal_HashChain"
+    }
+  }
+}
