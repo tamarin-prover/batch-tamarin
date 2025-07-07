@@ -1,0 +1,74 @@
+{
+	"config": {
+		"global_max_cores": "max",
+		"global_max_memory": "85%",
+		"default_timeout": 3600,
+		"output_directory": "recipe-result"
+	},
+	"tamarin_versions": {
+		"default": {
+			"path": "tamarin-prover"
+		},
+		"stable": {
+			"path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+		},
+		"dev": {
+			"path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
+		},
+		"legacy": {
+			"path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+		}
+	},
+	"tasks": {
+		"MinimalInjectiveFact": {
+			"theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
+			"tamarin_versions": ["default"],
+			"output_file_prefix": "MinimalInjectiveFact",
+			"lemmas": [
+				{
+					"name": "injectivity",
+					"tamarin_versions": ["dev"],
+					"tamarin_options": ["--bound=10"],
+					"resources": {
+						"max_memory": 2
+					}
+				}
+			],
+			"preprocess_flags": ["DEBUG"],
+			"resources": {
+				"max_cores": 2,
+				"timeout": 60
+			}
+		},
+		"Minimal_HashChain": {
+			"theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+			"tamarin_versions": ["default", "stable", "dev", "legacy"],
+			"output_file_prefix": "Minimal_HashChain"
+		},
+		"wpa2": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["default"],
+			"output_file_prefix": "wpa2",
+			"lemmas": [
+				{
+					"name": "supplicant_rcv_m1_must_be_preceded_by_associate",
+					"tamarin_versions": ["stable", "dev"],
+					"resources": {
+						"max_cores": 2,
+						"max_memory": 1,
+						"timeout": 60
+					}
+				},
+				{
+					"name": "supplicant_can",
+					"tamarin_versions": ["dev"],
+					"resources": {
+						"max_cores": 4,
+						"max_memory": 1,
+						"timeout": 60
+					}
+				}
+			]
+		}
+	}
+}
