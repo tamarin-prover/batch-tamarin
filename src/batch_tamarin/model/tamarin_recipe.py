@@ -9,8 +9,6 @@ from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ..utils.system_resources import resolve_max_value
-
 
 class Lemma(BaseModel):
     """Individual lemma specification for proving."""
@@ -123,11 +121,11 @@ class GlobalConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    global_max_cores: int = Field(
+    global_max_cores: int | str = Field(
         ...,
         description="Maximum number of CPU cores available system-wide for all tasks (integer or 'max' for system maximum)",
     )
-    global_max_memory: int = Field(
+    global_max_memory: int | str = Field(
         ...,
         description="Maximum memory in GB available system-wide for all tasks (integer or 'max' for system maximum)",
     )
@@ -142,25 +140,23 @@ class GlobalConfig(BaseModel):
 
     @field_validator("global_max_cores", mode="before")
     @classmethod
-    def validate_global_max_cores(cls, v: Union[int, str]) -> int:
+    def validate_global_max_cores(cls, v: Union[int, str]) -> int | str:
         """Validate and resolve global_max_cores, converting 'max' to system maximum."""
         if isinstance(v, str) and v.lower() != "max":
             raise ValueError("String value must be 'max'")
-        resolved = resolve_max_value(v, "cores")
-        if resolved < 1:
+        if isinstance(v, int) and v < 1:
             raise ValueError("global_max_cores must be at least 1")
-        return resolved
+        return v
 
     @field_validator("global_max_memory", mode="before")
     @classmethod
-    def validate_global_max_memory(cls, v: Union[int, str]) -> int:
+    def validate_global_max_memory(cls, v: Union[int, str]) -> int | str:
         """Validate and resolve global_max_memory, converting 'max' to system maximum."""
         if isinstance(v, str) and v.lower() != "max":
             raise ValueError("String value must be 'max'")
-        resolved = resolve_max_value(v, "memory")
-        if resolved < 1:
+        if isinstance(v, int) and v < 1:
             raise ValueError("global_max_memory must be at least 1")
-        return resolved
+        return v
 
 
 class TamarinRecipe(BaseModel):

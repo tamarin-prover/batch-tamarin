@@ -1,9 +1,11 @@
 import asyncio
 from pathlib import Path
+from typing import List, Optional
 
 import typer
 
 from . import __author__, __version__
+from .commands.init import InitCommand
 from .modules.config_manager import ConfigManager
 from .modules.output_manager import output_manager
 from .modules.tamarin_test_cmd import check_tamarin_integrity
@@ -150,8 +152,33 @@ def check(
         raise typer.Exit(1)
 
 
+@app.command()
+def init(
+    spthy_files: List[str] = typer.Argument(
+        ..., help="One or more .spthy files to configure"
+    ),
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output file for generated configuration"
+    ),
+) -> None:
+    """
+    Interactive configuration generator for batch-tamarin.
+
+    Creates a JSON configuration file from spthy files with interactive prompts.
+    """
+    try:
+        init_command = InitCommand()
+        init_command.run(spthy_files, output)
+    except KeyboardInterrupt:
+        notification_manager.info("Configuration generation cancelled by user")
+        raise typer.Exit(1)
+    except Exception as e:
+        notification_manager.error(f"Configuration generation failed: {e}")
+        raise typer.Exit(1)
+
+
 def cli():
-    """Entry point for the CLI when installed via pip."""
+    """Entry point for the CLI"""
     app()
 
 
