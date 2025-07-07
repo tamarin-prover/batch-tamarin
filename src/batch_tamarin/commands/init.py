@@ -16,11 +16,13 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 
 from ..model.tamarin_recipe import (
     GlobalConfig,
+    Lemma,
     Resources,
     TamarinRecipe,
     TamarinVersion,
     Task,
 )
+from ..modules.lemma_parser import LemmaParser, LemmaParsingError
 from ..utils.system_resources import get_max_cpu_cores, get_max_memory_gb
 
 
@@ -226,30 +228,36 @@ class InitCommand:
                 "Result output file prefix", default=task_name, show_default=True
             )
 
+            # Select Tamarin versions for this task
+            selected_versions = self._select_tamarin_versions(
+                tamarin_aliases, f"task '{task_name}'"
+            )
+
             # Collect task-wide parameters
-            tamarin_options = self._collect_tamarin_options()
-            preprocess_flags = self._collect_preprocess_flags()
-            resources = self._collect_task_resources()
+            tamarin_options = self._collect_tamarin_options(f"task '{task_name}'")
+            preprocess_flags = self._collect_preprocess_flags(f"task '{task_name}'")
+            resources = self._collect_resources(f"task '{task_name}'")
+            lemmas = self._collect_lemmas(spthy_file, preprocess_flags, tamarin_aliases)
 
             # Create task with collected parameters
             task = Task(
                 theory_file=str(spthy_file),
-                tamarin_versions=tamarin_aliases,
+                tamarin_versions=selected_versions,
                 output_file_prefix=output_prefix,
-                lemmas=None,
+                resources=resources,
                 tamarin_options=tamarin_options,
                 preprocess_flags=preprocess_flags,
-                resources=resources,
+                lemmas=lemmas,
             )
 
             tasks[task_name] = task
 
         return tasks
 
-    def _collect_tamarin_options(self) -> Optional[List[str]]:
+    def _collect_tamarin_options(self, context: str) -> Optional[List[str]]:
         """Collect tamarin command-line options interactively."""
         if not Confirm.ask(
-            "Add tamarin command-line options for this task?", default=False
+            f"Add tamarin command-line options for {context}?", default=False
         ):
             return None
 
@@ -279,9 +287,9 @@ class InitCommand:
 
         return options if options else None
 
-    def _collect_preprocess_flags(self) -> Optional[List[str]]:
+    def _collect_preprocess_flags(self, context: str) -> Optional[List[str]]:
         """Collect preprocessor flags interactively."""
-        if not Confirm.ask("Add preprocessor flags for this task?", default=False):
+        if not Confirm.ask(f"Add preprocessor flags for {context}?", default=False):
             return None
 
         self.console.print(
@@ -312,10 +320,10 @@ class InitCommand:
 
         return cleaned_flags if cleaned_flags else None
 
-    def _collect_task_resources(self) -> Optional[Resources]:
+    def _collect_resources(self, context: str) -> Optional[Resources]:
         """Collect resource allocation settings interactively."""
         if not Confirm.ask(
-            "Configure custom resource allocation for this task?", default=False
+            f"Configure custom resource allocation for {context}?", default=False
         ):
             return None
 
@@ -385,6 +393,221 @@ class InitCommand:
             )
 
         return None
+
+    def _collect_lemmas(
+        self,
+        spthy_file: Path,
+        preprocess_flags: Optional[List[str]],
+        tamarin_aliases: List[str],
+    ) -> Optional[List[Lemma]]:
+        """Collect lemmas for the task using interactive prefix-based selection with per-lemma configuration."""
+        if not Confirm.ask("Configure specific lemmas for this task?", default=False):
+            self.console.print("[dim]Using all lemmas (default behavior)[/dim]")
+            return None
+
+        # Parse lemmas from the file
+        try:
+            parser = LemmaParser(preprocess_flags)
+            all_lemmas = parser.parse_lemmas_from_file(spthy_file)
+
+            if not all_lemmas:
+                self.console.print(
+                    f"[yellow]No lemmas found in {spthy_file.name}[/yellow]"
+                )
+                return None
+
+            self.console.print(
+                f"[green]Found {len(all_lemmas)} lemmas in {spthy_file.name}[/green]"
+            )
+
+        except LemmaParsingError as e:
+            self.console.print(
+                f"[red]Error parsing lemmas from {spthy_file.name}: {e}[/red]"
+            )
+            return None
+
+        # Interactive lemma selection with per-lemma configuration
+        selected_lemmas: List[Lemma] = []
+
+        self.console.print("[dim]Enter lemma names or prefixes one at a time[/dim]")
+        self.console.print("[dim]Matching lemmas will be shown[/dim]")
+
+        while True:
+            # Interactive prefix input with immediate feedback
+            prefix = self._get_lemma_prefix(all_lemmas)
+            if not prefix:
+                if not Confirm.ask("Add another lemma?", default=False):
+                    break
+                continue
+
+            # Create lemma with per-lemma configuration
+            lemma_obj = self._configure_individual_lemma(prefix, tamarin_aliases)
+            selected_lemmas.append(lemma_obj)
+
+            # Ask if user wants to add more
+            if not Confirm.ask("Add another lemma?", default=False):
+                break
+
+        return selected_lemmas if selected_lemmas else None
+
+    def _get_lemma_prefix(self, all_lemmas: List[str]) -> Optional[str]:
+        """Get lemma prefix with immediate matching feedback."""
+        while True:
+            prefix = Prompt.ask("Lemma name or prefix", default="")
+            if not prefix.strip():
+                self.console.print("[yellow]Empty input, skipping[/yellow]")
+                return None
+
+            # Find matching lemmas (case-sensitive)
+            matching_lemmas = [lemma for lemma in all_lemmas if prefix in lemma]
+
+            if not matching_lemmas:
+                self.console.print(f"[red]No lemmas match '{prefix}'[/red]")
+                if not Confirm.ask("Try again?", default=True):
+                    return None
+                continue
+
+            # Show matches immediately
+            display_lemmas = matching_lemmas[:7]
+
+            if len(matching_lemmas) == 1:
+                self.console.print(
+                    f"[green]✓[/green] '{prefix}' matches: {matching_lemmas[0]}"
+                )
+            else:
+                self.console.print(
+                    f"[green]✓[/green] '{prefix}' matches {len(matching_lemmas)} lemmas (showing first {len(display_lemmas)}):"
+                )
+                for match in display_lemmas:
+                    self.console.print(f"    - {match}")
+
+                if len(matching_lemmas) > 7:
+                    self.console.print(f"    ... and {len(matching_lemmas) - 7} more")
+
+            # Confirm this prefix
+            if Confirm.ask(f"Use '{prefix}' as lemma prefix?", default=True):
+                return prefix
+
+    def _configure_individual_lemma(
+        self, prefix: str, tamarin_aliases: List[str]
+    ) -> Lemma:
+        """Configure individual lemma settings (options, flags, resources, versions)."""
+        self.console.print(f"\n[bold cyan]Configuring lemma '{prefix}'[/bold cyan]")
+
+        # Ask if user wants to configure lemma-specific settings
+        if not Confirm.ask(
+            "Configure lemma-specific settings (versions, options, flags, resources)?",
+            default=False,
+        ):
+            return Lemma(
+                name=prefix,
+                tamarin_versions=None,  # Will inherit from task
+                tamarin_options=None,  # Will inherit from task
+                preprocess_flags=None,  # Will inherit from task
+                resources=None,  # Will inherit from task
+            )
+
+        # Collect lemma-specific tamarin versions (first)
+        lemma_versions = self._select_tamarin_versions(
+            tamarin_aliases, f"lemma '{prefix}'"
+        )
+
+        # Collect lemma-specific tamarin options
+        lemma_options = self._collect_tamarin_options(f"lemma '{prefix}'")
+
+        # Collect lemma-specific preprocessor flags
+        lemma_flags = self._collect_preprocess_flags(f"lemma '{prefix}'")
+
+        # Collect lemma-specific resources
+        lemma_resources = self._collect_resources(f"lemma '{prefix}'")
+
+        return Lemma(
+            name=prefix,
+            tamarin_versions=lemma_versions,
+            tamarin_options=lemma_options,
+            preprocess_flags=lemma_flags,
+            resources=lemma_resources,
+        )
+
+    def _select_tamarin_versions(
+        self, tamarin_aliases: List[str], context: str
+    ) -> List[str]:
+        """Select Tamarin versions"""
+        if not tamarin_aliases:
+            return []
+
+        if len(tamarin_aliases) == 1:
+            self.console.print(
+                f"[dim]Only one Tamarin version available: '{tamarin_aliases[0]}' (auto-selected)[/dim]"
+            )
+            return tamarin_aliases
+
+        self.console.print(f"\n[bold]Select Tamarin versions for {context}[/bold]")
+        self.console.print("[dim]Enter version numbers or 'all' for all versions[/dim]")
+
+        self.console.print(f"\n[bold] Available Tamarin versions: [/bold]")
+        for i, alias in enumerate(tamarin_aliases, start=1):
+            self.console.print(f"[bold]{i}.[/bold] {alias}")
+
+        while True:
+            selection_input = Prompt.ask(
+                f"Select versions for {context}, comma or space separated [dim](e.g., '1,3' or '1 3' or 'all')[/dim]",
+                default="all",
+            ).strip()
+
+            if selection_input.lower() == "all":
+                self.console.print(
+                    f"[green]✓[/green] Selected all {len(tamarin_aliases)} versions"
+                )
+                return tamarin_aliases
+
+            # Parse selection
+            try:
+                if "," in selection_input:
+                    indices = [
+                        int(x.strip()) for x in selection_input.split(",") if x.strip()
+                    ]
+                else:
+                    indices = [
+                        int(x.strip()) for x in selection_input.split() if x.strip()
+                    ]
+
+                # Validate indices
+                invalid_indices = [
+                    i for i in indices if i < 1 or i > len(tamarin_aliases)
+                ]
+                if invalid_indices:
+                    self.console.print(
+                        f"[red]Invalid selection(s): {invalid_indices}. Please choose numbers 1-{len(tamarin_aliases)}[/red]"
+                    )
+                    continue
+
+                # Check for duplicates
+                if len(indices) != len(set(indices)):
+                    self.console.print(
+                        "[yellow]Warning: Duplicate selections removed[/yellow]"
+                    )
+                    indices = list(set(indices))
+
+                if not indices:
+                    self.console.print("[red]No valid selections made[/red]")
+                    continue
+
+                # Convert to aliases
+                selected_versions = [
+                    tamarin_aliases[i - 1] for i in sorted(set(indices))
+                ]
+
+                self.console.print(
+                    f"[green]✓[/green] Selected {len(selected_versions)} version(s): {', '.join(selected_versions)}"
+                )
+                return selected_versions
+
+            except ValueError:
+                self.console.print(
+                    f"[red]Invalid input: '{selection_input}'. Please enter numbers, 'all', or comma/space separated numbers[/red]"
+                )
+                continue
 
     def _save_config(self, recipe: TamarinRecipe, output_path: str) -> None:
         """Save the configuration to a file."""
