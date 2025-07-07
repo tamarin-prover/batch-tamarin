@@ -3,7 +3,7 @@
     "global_max_cores": "max",
     "global_max_memory": "max",
     "default_timeout": 80,
-    "output_directory": "./complete-example-results"
+    "output_directory": "complete-example-results"
   },
   "tamarin_versions": {
     "stable": {
@@ -18,13 +18,13 @@
   },
   "tasks": {
     "minInjection": {
-      "theory_file": "examples/complete/protocols/MinimalInjectiveFact.spthy",
+      "theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
       "tamarin_versions": ["dev"],
       "output_file_prefix": "minInjection",
       "tamarin_options": ["--heuristic=S"]
     },
     "minHashChain": {
-      "theory_file": "examples/complete/protocols/Minimal_HashChain.spthy",
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
       "tamarin_versions": ["stable", "dev", "legacy"],
       "output_file_prefix": "minHashChain",
       "resources": {
@@ -33,7 +33,7 @@
       }
     },
     "minHashChainSuccessLemma": {
-      "theory_file": "examples/complete/protocols/Minimal_HashChain.spthy",
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "minHashChainSuccessLemma",
       "resources": {
@@ -51,7 +51,7 @@
       ]
     },
     "simpleChallengePreprocessorKEYWORD1": {
-      "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "basic_KEYWORD1",
       "resources": {
@@ -61,7 +61,7 @@
       "preprocess_flags": ["KEYWORD1"]
     },
     "simpleChallengePreprocessorKEYWORD2": {
-      "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "basic_KEYWORD2",
       "resources": {
@@ -71,7 +71,7 @@
       "preprocess_flags": ["KEYWORD1", "KEYWORD2"]
     },
     "shouldFail": {
-      "theory_file": "examples/complete/protocols/SimpleChallengeResponse.spthy",
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "shouldFail",
       "resources": {
@@ -81,7 +81,7 @@
       "preprocess_flags": ["KEYWORD2"]
     },
     "shouldMemoryLimit": {
-      "theory_file": "examples/complete/protocols/wpa2.spthy",
+      "theory_file": "examples/__protocols__/wpa2.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "shouldMemoryLimit",
       "resources": {
@@ -95,7 +95,7 @@
       ]
     },
     "shouldTimeout": {
-      "theory_file": "examples/complete/protocols/wpa2.spthy",
+      "theory_file": "examples/__protocols__/wpa2.spthy",
       "tamarin_versions": ["stable"],
       "output_file_prefix": "shouldTimeout",
       "lemmas": [

@@ -12,7 +12,7 @@
 	},
 	"tasks": {
         "FullErrors": {
-            "theory_file": "examples/errors/protocols/errors.spthy",
+            "theory_file": "examples/__protocols__/errors.spthy",
             "tamarin_versions": ["default"],
             "output_file_prefix": "FullErrors"
         }

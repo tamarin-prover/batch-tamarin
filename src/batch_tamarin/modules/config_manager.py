@@ -14,7 +14,7 @@ from ..model.tamarin_recipe import (
     Task,
 )
 from ..utils.notifications import notification_manager
-from ..utils.system_resources import resolve_executable_path
+from ..utils.system_resources import resolve_executable_path, resolve_resource_value
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
 
@@ -378,7 +378,12 @@ class ConfigManager:
         else:
             cores, memory, timeout = default_cores, default_memory, default_timeout
 
-        # Apply lemma-level overrides (if lemma specified)
+        # Validate against global limits after task-level overrides
+        cores, memory = ConfigManager.validate_and_cap_resources(
+            cores, memory, global_config, f"Task '{task_name}'"
+        )
+
+        # Apply lemma-level overrides (if lemma specified), bypassing global caps
         if lemma_spec is not None and lemma_spec.resources is not None:
             cores = (
                 lemma_spec.resources.max_cores
@@ -395,12 +400,6 @@ class ConfigManager:
                 if lemma_spec.resources.timeout is not None
                 else timeout
             )
-
-        # Validate against global limits
-        cores, memory = ConfigManager.validate_and_cap_resources(
-            cores, memory, global_config, f"Task '{task_name}'"
-        )
-
         return cores, memory, timeout
 
     @staticmethod
@@ -471,17 +470,22 @@ class ConfigManager:
         max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
     ) -> Tuple[int, int]:
         """Validate and cap resources against global limits."""
-        if max_cores > global_config.global_max_cores:
-            notification_manager.warning(
-                f"{context_name} max_cores ({max_cores}) exceeds global_max_cores, falling back to this value : ({global_config.global_max_cores})"
-            )
-            max_cores = global_config.global_max_cores
+        glob_max_cores = resolve_resource_value(global_config.global_max_cores, "cores")
+        glob_max_memory = resolve_resource_value(
+            global_config.global_max_memory, "memory"
+        )
 
-        if max_memory > global_config.global_max_memory:
+        if max_cores > glob_max_cores:
             notification_manager.warning(
-                f"{context_name} max_memory ({max_memory}) exceeds global_max_memory, falling back to this value : ({global_config.global_max_memory})"
+                f"{context_name} max_cores ({max_cores}c) exceeds global_max_cores, falling back to this value : {glob_max_cores}c"
             )
-            max_memory = global_config.global_max_memory
+            max_cores = glob_max_cores
+
+        if max_memory > glob_max_memory:
+            notification_manager.warning(
+                f"{context_name} max_memory ({max_memory}GB) exceeds global_max_memory, falling back to this value : {glob_max_memory}GB"
+            )
+            max_memory = glob_max_memory
 
         return max_cores, max_memory
 

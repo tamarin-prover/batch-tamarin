@@ -9,8 +9,6 @@ from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ..utils.system_resources import resolve_max_value
-
 
 class Lemma(BaseModel):
     """Individual lemma specification for proving."""
@@ -51,10 +49,14 @@ class Resources(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     max_cores: Optional[int] = Field(
-        default=4, ge=1, description="Maximum CPU cores for this task (default: 4)"
+        default=None,
+        ge=1,
+        description="Maximum CPU cores for this task (inherited if not set)",
     )
     max_memory: Optional[int] = Field(
-        default=8, ge=1, description="Maximum memory in GB for this task (default: 8)"
+        default=None,
+        ge=1,
+        description="Maximum memory in GB for this task (inherited if not set)",
     )
     timeout: Optional[int] = Field(
         default=None,
@@ -106,7 +108,7 @@ class Task(BaseModel):
     )
     resources: Optional[Resources] = Field(
         None,
-        description="Resource allocation for this task. If not specified, defaults to 4 cores, 8GB RAM, 3600s timeout",
+        description="Resource allocation for this task. If not specified, defaults to 4 cores, 16GB RAM, 3600s timeout",
     )
 
     @field_validator("tamarin_versions")
@@ -123,11 +125,11 @@ class GlobalConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    global_max_cores: int = Field(
+    global_max_cores: int | str = Field(
         ...,
         description="Maximum number of CPU cores available system-wide for all tasks (integer or 'max' for system maximum)",
     )
-    global_max_memory: int = Field(
+    global_max_memory: int | str = Field(
         ...,
         description="Maximum memory in GB available system-wide for all tasks (integer or 'max' for system maximum)",
     )
@@ -142,25 +144,35 @@ class GlobalConfig(BaseModel):
 
     @field_validator("global_max_cores", mode="before")
     @classmethod
-    def validate_global_max_cores(cls, v: Union[int, str]) -> int:
+    def validate_global_max_cores(cls, v: Union[int, str]) -> int | str:
         """Validate and resolve global_max_cores, converting 'max' to system maximum."""
         if isinstance(v, str) and v.lower() != "max":
             raise ValueError("String value must be 'max'")
-        resolved = resolve_max_value(v, "cores")
-        if resolved < 1:
+        if isinstance(v, int) and v < 1:
             raise ValueError("global_max_cores must be at least 1")
-        return resolved
+        return v
 
     @field_validator("global_max_memory", mode="before")
     @classmethod
-    def validate_global_max_memory(cls, v: Union[int, str]) -> int:
+    def validate_global_max_memory(cls, v: Union[int, str]) -> int | str:
         """Validate and resolve global_max_memory, converting 'max' to system maximum."""
-        if isinstance(v, str) and v.lower() != "max":
-            raise ValueError("String value must be 'max'")
-        resolved = resolve_max_value(v, "memory")
-        if resolved < 1:
+        if isinstance(v, str):
+            if v.lower() == "max":
+                return v
+            elif v.endswith("%"):
+                # Handle percentage case
+                try:
+                    percentage = int(v[:-1])
+                    if not (1 <= percentage <= 100):
+                        raise ValueError("Percentage must be between 1 and 100")
+                    return v
+                except ValueError:
+                    raise ValueError(f"Invalid percentage format: {v}")
+            else:
+                raise ValueError("String value must be 'max' or a percentage")
+        elif v < 1:
             raise ValueError("global_max_memory must be at least 1")
-        return resolved
+        return v
 
 
 class TamarinRecipe(BaseModel):
@@ -198,30 +210,3 @@ class TamarinRecipe(BaseModel):
                 )
 
         return self
-
-    def get_task_resources(self, task_name: str) -> Resources:
-        """
-        Get the effective resources for a task, applying defaults from global config.
-
-        Args:
-            task_name: Name of the task to get resources for
-
-        Returns:
-            Resources object with defaults applied
-
-        Raises:
-            KeyError: If task_name doesn't exist
-        """
-        task = self.tasks[task_name]
-        if task.resources is None:
-            # Apply defaults: 4 cores, 8GB memory, default_timeout from global config
-            return Resources(
-                max_cores=4, max_memory=8, timeout=self.config.default_timeout
-            )
-
-        # Apply global default_timeout if timeout is not specified
-        resources = task.resources.model_copy()
-        if resources.timeout is None:
-            resources.timeout = self.config.default_timeout
-
-        return resources

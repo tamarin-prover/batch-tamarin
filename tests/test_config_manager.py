@@ -199,6 +199,7 @@ class TestTaskGeneration:
     def test_recipe_to_executable_tasks_with_invalid_tamarin_version(
         self,
         minimal_recipe_data: Dict[str, Any],
+        create_json_file: Callable[[Dict[str, Any]], Path],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -212,6 +213,32 @@ class TestTaskGeneration:
             ConfigError, match="Tamarin version 'nonexistent' not found"
         ):
             ConfigManager.recipe_to_executable_tasks(recipe)
+
+    def test_resource_inheritance_for_lemma_overrides_only_specified(
+        self,
+        minimal_recipe_data: Dict[str, Any],
+        mock_notifications: Any,
+        setup_output_manager: Any,
+    ):
+        """Test that lemma-level resource overrides only apply to specified fields."""
+        from copy import deepcopy
+
+        # Prepare recipe data with task-level and lemma-level resources
+        recipe_data = deepcopy(minimal_recipe_data)
+        task = recipe_data["tasks"]["test_task"]
+        # Task-level resources override global defaults
+        task["resources"] = {"max_cores": 2, "max_memory": 8, "timeout": 100}
+        # Lemma spec only overrides max_memory
+        task["lemmas"] = [{"name": "", "resources": {"max_memory": 32}}]
+        recipe = TamarinRecipe.model_validate(recipe_data)
+        tasks = ConfigManager.recipe_to_executable_tasks(recipe)
+        # All lemmas matched, check resource values for each
+        for ex_task in tasks:
+            assert ex_task.max_cores == 2, "Expected cores from task-level override"
+            assert ex_task.max_memory == 32, "Expected memory from lemma-level override"
+            assert (
+                ex_task.task_timeout == 100
+            ), "Expected timeout from task-level override"
 
 
 class TestResourceResolution:
@@ -243,6 +270,26 @@ class TestResourceResolution:
                 assert task.max_cores == 4  # from lemma resources
                 assert task.max_memory == 8  # from lemma resources
                 assert task.task_timeout == 900  # from lemma resources
+
+    def test_resource_inheritance_shared_parameters(
+        self,
+        inheritance_recipe_data: Dict[str, Any],
+        mock_notifications: Any,
+        setup_output_manager: Any,
+    ):
+        """Test that shared parameters are inherited correctly."""
+        recipe = TamarinRecipe.model_validate(inheritance_recipe_data)
+        executable_tasks = ConfigManager.recipe_to_executable_tasks(recipe)
+
+        # Find base_task tasks (should have inherited resources)
+        base_tasks = [
+            t for t in executable_tasks if t.task_name.startswith("base_task--")
+        ]
+
+        for task in base_tasks:
+            assert task.max_cores == 3
+            assert task.max_memory == 4
+            assert task.task_timeout == 1200
 
     def test_resource_inheritance_task_overrides_global(
         self,

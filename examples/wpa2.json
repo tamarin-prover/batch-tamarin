@@ -18,7 +18,7 @@
   },
   "tasks": {
     "wpa2": {
-      "theory_file": "examples/wpa2/protocols/wpa2.spthy",
+      "theory_file": "examples/__protocols__/wpa2.spthy",
       "tamarin_versions": ["stable", "dev", "legacy"],
       "output_file_prefix": "WPA2_Example",
       "preprocess_flags": ["yes"],
