@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm, IntPrompt, Prompt
 
@@ -92,13 +93,17 @@ class InitCommand:
 
         # Max cores
         max_cores_input = Prompt.ask(
-            "Maximum CPU cores", default="max", show_default=True
+            f"Maximum CPU cores limit for all (concurrent) tasks [violet bold]{escape("[int, %, max]")}[/violet bold]",
+            default="max",
+            show_default=True,
         )
         max_cores = self._parse_resource_value(max_cores_input, system_cores, "cores")
 
         # Max memory
         max_memory_input = Prompt.ask(
-            "Maximum memory (GB)", default="max", show_default=True
+            f"Maximum memory (GB) limit for all (concurrent) tasks [violet bold]{escape("[int, %, max]")}[/violet bold]",
+            default="max",
+            show_default=True,
         )
         max_memory = self._parse_resource_value(
             max_memory_input, system_memory, "memory"
@@ -106,12 +111,12 @@ class InitCommand:
 
         # Default timeout
         default_timeout = IntPrompt.ask(
-            "Default timeout (seconds)", default=3600, show_default=True
+            "Default timeout (seconds) for each task", default=3600, show_default=True
         )
 
         # Output directory
         output_directory = Prompt.ask(
-            "Output directory", default="result", show_default=True
+            "Results output directory", default="result", show_default=True
         )
 
         return GlobalConfig(
@@ -150,9 +155,15 @@ class InitCommand:
 
         # First tamarin version
         first_path = Prompt.ask(
-            "Tamarin executable path", default="tamarin-prover", show_default=True
+            "Give a path or a symbolic link to a tamarin-prover binary (leave default for system-installed-prover)",
+            default="tamarin-prover",
+            show_default=True,
         )
-        first_alias = Prompt.ask("Alias name", default="default", show_default=True)
+        first_alias = Prompt.ask(
+            "What alias should this tamarin-prover be associated to ?",
+            default="default",
+            show_default=True,
+        )
 
         versions[first_alias] = TamarinVersion(
             path=first_path, version=None, test_success=None
@@ -160,11 +171,23 @@ class InitCommand:
 
         # Additional versions
         while Confirm.ask("Add another Tamarin version?", default=False):
-            path = Prompt.ask("Tamarin executable path")
-            alias = Prompt.ask("Alias name")
+            path = Prompt.ask("Path or symbolic link to tamarin-prover binary")
+            if not path:
+                self.console.print("[red]Path cannot be empty![/red]")
+                continue
 
-            if alias in versions:
-                self.console.print(f"[red]Alias '{alias}' already exists![/red]")
+            alias = Prompt.ask("Linked alias for this version")
+            if not alias:
+                self.console.print("[red]Alias cannot be empty![/red]")
+                continue
+
+            if path in versions or alias in versions:
+                self.console.print(
+                    f"[red]Path '{path}' or alias '{alias}' already exists![/red]"
+                )
+                continue
+            if not Path(path).exists():
+                self.console.print(f"[red]Path '{path}' does not exist![/red]")
                 continue
 
             versions[alias] = TamarinVersion(path=path, version=None, test_success=None)
@@ -192,7 +215,7 @@ class InitCommand:
 
             # Output file prefix
             output_prefix = Prompt.ask(
-                "Output file prefix", default=task_name, show_default=True
+                "Result output file prefix", default=task_name, show_default=True
             )
 
             # Create task with all tamarin versions by default
