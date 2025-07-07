@@ -12,8 +12,14 @@ The system is designed around a modular architecture with clear separation of co
 batch-tamarin/
 ├── src/batch_tamarin/                    # Main package source
 │   ├── __init__.py                         # Package initialization
-│   ├── main.py                             # CLI entry point with run/check commands
+│   ├── main.py                             # CLI entry point and command routing
 │   ├── runner.py                           # High-level task execution orchestration
+│   │
+│   ├── commands/                           # Command implementations
+│   │   ├── __init__.py
+│   │   ├── init.py                        # Interactive configuration generator
+│   │   ├── run.py                         # Task execution command logic
+│   │   └── check.py                       # Configuration validation command logic
 │   │
 │   ├── model/                              # Data models and type definitions
 │   │   ├── __init__.py
@@ -61,6 +67,7 @@ graph TB
         CLI[CLI Entry Point<br/>main.py]
         RUN_CMD[Run Command]
         CHECK_CMD[Check Command]
+        INIT_CMD[Init Command]
     end
 
     subgraph "Configuration Layer"
@@ -96,6 +103,7 @@ graph TB
 
     CLI --> RUN_CMD
     CLI --> CHECK_CMD
+    CLI --> INIT_CMD
     RUN_CMD --> CM
     CHECK_CMD --> CM
     JSON --> CM
@@ -122,7 +130,7 @@ graph TB
 
 ### Architecture Layers Explained
 
-1. **Entry Layer**: Handles CLI argument parsing with `run` and `check` commands
+1. **Entry Layer**: Handles CLI argument parsing with `run`, `check`, and `init` commands
 2. **Configuration Layer**: Validates JSON recipes and transforms them into executable objects
 3. **Execution Layer**: Orchestrates parallel task execution with resource management (run command)
 4. **Validation Layer**: Performs configuration validation and wellformedness checking (check command)
@@ -254,21 +262,38 @@ classDiagram
 
 ### 1. CLI Entry Point (`main.py`)
 
-The main entry point provides a Typer-based CLI interface with two main commands: `run` and `check`.
+The main entry point provides a Typer-based CLI interface with three main commands: `run`, `check`, and `init`.
 
 **Key Responsibilities:**
-- Parse command-line arguments and route to appropriate command handlers
+- Parse command-line arguments and route to appropriate command modules
 - Initialize the notification system and debug settings
 - Handle version display and help information
-- Orchestrate both execution and validation workflows
+- Delegate command execution to specialized command classes
 
 **Key Functions:**
 - `main_callback()`: Primary CLI entry point with version handling
-- `run()`: Execute tasks from configuration file
-- `check()`: Validate configuration and preview tasks
-- `process_config_file()`: Async orchestrator for task execution workflow
-- `check_command()`: Async orchestrator for validation workflow
+- `run()`: Delegate to RunCommand for task execution
+- `check()`: Delegate to CheckCommand for validation
+- `init()`: Delegate to InitCommand for interactive configuration generation
 - `cli()`: Entry point for pip-installed command
+
+### 1a. Command Modules (`commands/`)
+
+The CLI commands are now organized into separate modules for better maintainability:
+
+#### Run Command (`commands/run.py`)
+- Contains `RunCommand` class with execution logic
+- Handles configuration loading and task orchestration
+- Includes `process_config_file()` async function
+
+#### Check Command (`commands/check.py`)
+- Contains `CheckCommand` class with validation logic
+- Handles configuration validation and preview
+- Includes `check_command_logic()` async function
+
+#### Init Command (`commands/init.py`)
+- Contains `InitCommand` class for interactive configuration generation
+- Generates JSON configuration files from spthy files
 
 ### 2. Lemma Parser (`modules/lemma_parser.py`)
 
@@ -572,7 +597,7 @@ graph TD
         end
 
         subgraph "Generated Models"
-            MODELS_DIR[models/]
+            MODELS_DIR[proofs/]
             SPTHY_FILES[task_lemma_version.spthy<br/>Contains: generated Tamarin<br/>models from successful runs]
         end
     end
@@ -590,7 +615,7 @@ graph TD
 
 - **success/**: JSON files containing detailed results for successful task executions
 - **failed/**: JSON files with error information and diagnostics for failed tasks
-- **models/**: Generated .spthy model files from successful Tamarin runs
+- **proofs/**: Generated .spthy model files from successful Tamarin runs
 
 ## Check Command Architecture
 
