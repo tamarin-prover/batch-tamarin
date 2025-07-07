@@ -14,7 +14,13 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.prompt import Confirm, IntPrompt, Prompt
 
-from ..model.tamarin_recipe import GlobalConfig, TamarinRecipe, TamarinVersion, Task
+from ..model.tamarin_recipe import (
+    GlobalConfig,
+    Resources,
+    TamarinRecipe,
+    TamarinVersion,
+    Task,
+)
 from ..utils.system_resources import get_max_cpu_cores, get_max_memory_gb
 
 
@@ -47,6 +53,8 @@ class InitCommand:
 
         # Collect configuration interactively
         config = self._collect_global_config()
+        # store for use in task-specific resource defaults
+        self._global_config = config
         tamarin_versions = self._collect_tamarin_versions()
         tasks = self._collect_tasks(validated_files, list(tamarin_versions.keys()))
 
@@ -218,20 +226,165 @@ class InitCommand:
                 "Result output file prefix", default=task_name, show_default=True
             )
 
-            # Create task with all tamarin versions by default
+            # Collect task-wide parameters
+            tamarin_options = self._collect_tamarin_options()
+            preprocess_flags = self._collect_preprocess_flags()
+            resources = self._collect_task_resources()
+
+            # Create task with collected parameters
             task = Task(
                 theory_file=str(spthy_file),
                 tamarin_versions=tamarin_aliases,
                 output_file_prefix=output_prefix,
                 lemmas=None,
-                tamarin_options=None,
-                preprocess_flags=None,
-                resources=None,
+                tamarin_options=tamarin_options,
+                preprocess_flags=preprocess_flags,
+                resources=resources,
             )
 
             tasks[task_name] = task
 
         return tasks
+
+    def _collect_tamarin_options(self) -> Optional[List[str]]:
+        """Collect tamarin command-line options interactively."""
+        if not Confirm.ask(
+            "Add tamarin command-line options for this task?", default=False
+        ):
+            return None
+
+        self.console.print(
+            "[dim]Enter tamarin options separated by spaces or commas[/dim]"
+        )
+        self.console.print(
+            "[dim]Example: '--heuristic=I --bound=5' or '--heuristic=I, --bound=5'[/dim]"
+        )
+
+        options_input = Prompt.ask("Tamarin options", default="")
+        if not options_input.strip():
+            return None
+
+        # Split by comma or space, clean up whitespace
+        if "," in options_input:
+            options = [opt.strip() for opt in options_input.split(",") if opt.strip()]
+        else:
+            options = [opt.strip() for opt in options_input.split() if opt.strip()]
+
+        # Basic validation - warn if options don't start with - or --
+        for option in options:
+            if not option.startswith("-"):
+                self.console.print(
+                    f"[yellow]Warning:[/yellow] '{option}' doesn't start with '-' or '--'"
+                )
+
+        return options if options else None
+
+    def _collect_preprocess_flags(self) -> Optional[List[str]]:
+        """Collect preprocessor flags interactively."""
+        if not Confirm.ask("Add preprocessor flags for this task?", default=False):
+            return None
+
+        self.console.print(
+            "[dim]Enter preprocessor flags separated by spaces or commas[/dim]"
+        )
+        self.console.print("[dim]Example: 'DEBUG VERBOSE' or 'DEBUG, VERBOSE'[/dim]")
+        self.console.print("[dim]These will be passed to Tamarin as -D=flag[/dim]")
+
+        flags_input = Prompt.ask("Preprocessor flags", default="")
+        if not flags_input.strip():
+            return None
+
+        # Split by comma or space, clean up whitespace
+        if "," in flags_input:
+            flags = [flag.strip() for flag in flags_input.split(",") if flag.strip()]
+        else:
+            flags = [flag.strip() for flag in flags_input.split() if flag.strip()]
+
+        # Clean up flags - remove -D= prefix if user added it
+        cleaned_flags: List[str] = []
+        for flag in flags:
+            if flag.startswith("-D="):
+                cleaned_flags.append(flag[3:])
+            elif flag.startswith("-D"):
+                cleaned_flags.append(flag[2:])
+            else:
+                cleaned_flags.append(flag)
+
+        return cleaned_flags if cleaned_flags else None
+
+    def _collect_task_resources(self) -> Optional[Resources]:
+        """Collect resource allocation settings interactively."""
+        if not Confirm.ask(
+            "Configure custom resource allocation for this task?", default=False
+        ):
+            return None
+
+        self.console.print(
+            "[dim]Configure resource limits for this specific task[/dim]"
+        )
+        # show global defaults for cores, memory, and timeout
+        default_timeout = self._global_config.default_timeout
+        self.console.print(
+            f'[dim]Defaults : {{"cores": 4, "memory": 16, "timeout": {default_timeout}}} [/dim]'
+        )
+
+        # Collect max cores
+        cores_input = Prompt.ask(
+            "Override maximum CPU cores for this task [dim](empty for default)[/dim]",
+            default="",
+            show_default=False,
+        )
+        try:
+            max_cores = (
+                None if not cores_input else int(cores_input) if cores_input else None
+            )
+        except ValueError:
+            self.console.print(
+                f"[yellow]Warning:[/yellow] Invalid cores value '{cores_input}', using None"
+            )
+            max_cores = None
+
+        # Collect max memory
+        memory_input = Prompt.ask(
+            "Override maximum memory (GB) for this task [dim](empty for default)[/dim]",
+            default="",
+            show_default=False,
+        )
+        try:
+            max_memory = (
+                None
+                if not memory_input
+                else int(memory_input) if memory_input else None
+            )
+        except ValueError:
+            self.console.print(
+                f"[yellow]Warning:[/yellow] Invalid memory value '{memory_input}', using None"
+            )
+            max_memory = None
+
+        # Collect timeout
+        timeout_input = Prompt.ask(
+            "Override timeout (seconds) for this task [dim](empty for default)[/dim]",
+            default="",
+            show_default=False,
+        )
+        try:
+            timeout = int(timeout_input) if timeout_input else None
+        except ValueError:
+            self.console.print(
+                f"[yellow]Warning:[/yellow] Invalid timeout value '{timeout_input}', using None"
+            )
+            timeout = None
+
+        # Only create Resources object if at least one value was provided
+        if max_cores is not None or max_memory is not None or timeout is not None:
+            return Resources(
+                max_cores=max_cores,
+                max_memory=max_memory,
+                timeout=timeout,
+            )
+
+        return None
 
     def _save_config(self, recipe: TamarinRecipe, output_path: str) -> None:
         """Save the configuration to a file."""
