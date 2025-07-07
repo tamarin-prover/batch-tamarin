@@ -1,0 +1,39 @@
+{
+  "config": {
+    "global_max_cores": 8,
+    "global_max_memory": 20,
+    "default_timeout": 1600,
+    "output_directory": "custom"
+  },
+  "tamarin_versions": {
+    "default": {
+      "path": "tamarin-prover"
+    },
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+    },
+    "dev": {
+      "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
+    }
+  },
+  "tasks": {
+    "custom1": {
+      "theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
+      "tamarin_versions": [
+        "default",
+        "stable",
+        "dev"
+      ],
+      "output_file_prefix": "output_custom1"
+    },
+    "Minimal_HashChain": {
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+      "tamarin_versions": [
+        "default",
+        "stable",
+        "dev"
+      ],
+      "output_file_prefix": "custom2"
+    }
+  }
+}
