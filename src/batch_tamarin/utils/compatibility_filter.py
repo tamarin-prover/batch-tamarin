@@ -95,6 +95,20 @@ async def compatibility_filter(
     filtered_command: list[str] = []
 
     for arg in command:
+        # Filter --output-json for versions <= 1.10
+        if arg.startswith("--output-json="):
+            if is_version_greater_than(version_str, 1, 10):
+                filtered_command.append(arg)
+            # Skip this argument for versions <= 1.10
+            continue
+
+        # Filter --output-dot for versions <= 1.10
+        if arg.startswith("--output-dot="):
+            if is_version_greater_than(version_str, 1, 10):
+                filtered_command.append(arg)
+            # Skip this argument for versions <= 1.10
+            continue
+
         # Add other version-specific filters here in the future
         # Example:
         # if arg.startswith('--some-new-option='):
