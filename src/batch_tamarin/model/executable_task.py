@@ -164,4 +164,5 @@ class ExecutionSummary:
     task_results: List[TaskResult]
     cache_entries: int = 0
     cached_tasks: int = 0
+    cache_volume: int = 0
     cached_task_ids: Set[str] = field(default_factory=lambda: set())

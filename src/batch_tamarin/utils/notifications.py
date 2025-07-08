@@ -296,6 +296,24 @@ class NotificationManager:
         )
         overview_table.add_row("⚡ Avg Task Duration", f"{avg_duration:.1f}s")
 
+        # Create cache table
+        cache_table = Table(show_header=True, header_style="bold cyan")
+        cache_table.add_column("Cache Metric", style="cyan")
+        cache_table.add_column("Value", justify="right")
+
+        # Format cache volume with proper units
+        cache_size_display = self._format_bytes(summary.cache_volume)
+
+        cache_table.add_row(
+            "📦 Total Entries", f"[bold cyan]{summary.cache_entries}[/bold cyan]"
+        )
+        cache_table.add_row(
+            "🔄 Tasks from Cache", f"[bold cyan]{summary.cached_tasks}[/bold cyan]"
+        )
+        cache_table.add_row(
+            "💾 Cache Size", f"[bold cyan]{cache_size_display}[/bold cyan]"
+        )
+
         # Calculate memory statistics
         tasks_with_memory = [
             r for r in summary.task_results if r.memory_stats is not None
@@ -372,8 +390,17 @@ class NotificationManager:
         # Create components list
         from typing import Any, List
 
+        from rich.columns import Columns
+
+        # Combine overview and cache tables side by side
+        overview_panel = Panel(
+            Columns([overview_table, cache_table], equal=True, expand=True),
+            title="Overview",
+            border_style="blue",
+        )
+
         components: List[Any] = [
-            Panel(overview_table, title="Overview", border_style="blue"),
+            overview_panel,
             details_table,
         ]
 
@@ -453,6 +480,31 @@ class NotificationManager:
         else:
             memory_gb = memory_mb / 1024
             return f"{memory_gb:.1f} GB"
+
+    def _format_bytes(self, size_bytes: int) -> str:
+        """
+        Format bytes in human-readable format.
+
+        Args:
+            size_bytes: Size in bytes
+
+        Returns:
+            Formatted size string (e.g., "256 bytes", "1.5 kB", "2.0 MB", "1.2 GB")
+        """
+        if size_bytes == 0:
+            return "0 bytes"
+
+        volume = float(size_bytes)
+        unit = "bytes"
+        for unit in ["bytes", "kB", "MB", "GB"]:
+            if volume < 1024 or unit == "GB":
+                break
+            volume /= 1024
+
+        if unit == "bytes":
+            return f"{int(volume)} {unit}"
+        else:
+            return f"{volume:.1f} {unit}"
 
     def check_report(
         self,

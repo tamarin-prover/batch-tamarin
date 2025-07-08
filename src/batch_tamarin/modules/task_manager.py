@@ -295,9 +295,11 @@ class TaskManager:
         try:
             cache_stats = self._cache_manager.get_stats()
             cache_entries = cache_stats["size"]
+            cache_volume = cache_stats["volume"]
             cached_tasks = len(self._cached_tasks)
         except Exception:
             cache_entries = 0
+            cache_volume = 0
             cached_tasks = 0
 
         # Create summary with cache information
@@ -309,6 +311,7 @@ class TaskManager:
             task_results=task_results,
             cache_entries=cache_entries,
             cached_tasks=cached_tasks,
+            cache_volume=cache_volume,
             cached_task_ids=self._cached_tasks.copy(),
         )
 
