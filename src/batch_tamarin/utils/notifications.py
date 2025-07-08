@@ -356,8 +356,13 @@ class NotificationManager:
                 else "N/A"
             )
 
+            # Check if task was cached and add dim indicator
+            task_display = result.task_id
+            if result.task_id in summary.cached_task_ids:
+                task_display = f"{result.task_id} [dim](cached)[/dim]"
+
             details_table.add_row(
-                result.task_id,
+                task_display,
                 status_display,
                 f"{result.duration:.1f}s",
                 peak_memory_display,

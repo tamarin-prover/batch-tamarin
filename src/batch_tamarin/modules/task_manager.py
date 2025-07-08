@@ -6,7 +6,7 @@ built on top of the ProcessManager for actual process execution.
 """
 
 import asyncio
-from typing import Dict
+from typing import Dict, Set
 
 from ..model.executable_task import (
     ExecutableTask,
@@ -16,6 +16,7 @@ from ..model.executable_task import (
     TaskStatus,
 )
 from ..utils.notifications import notification_manager
+from .cache_manager import CacheManager
 from .output_manager import output_manager
 from .process_manager import process_manager
 
@@ -33,6 +34,10 @@ class TaskManager:
         self._task_status: Dict[str, TaskStatus] = {}
         self._task_results: Dict[str, TaskResult] = {}
         self._task_start_times: Dict[str, float] = {}
+        # Cache manager for task result caching
+        self._cache_manager = CacheManager()
+        # Track which tasks used cached results
+        self._cached_tasks: Set[str] = set()
 
     async def run_executable_task(self, task: ExecutableTask) -> TaskResult:
         """
@@ -49,6 +54,23 @@ class TaskManager:
         """
         # Generate task identifier
         task_id = task.task_name
+
+        # Check cache first
+        try:
+            cached_result = self._cache_manager.get_cached_result(task)
+            if cached_result is not None:
+                notification_manager.info(
+                    f"[TaskManager] Using cached result for task: {task_id}"
+                )
+                # Update tracking with cached result
+                self._task_status[task_id] = cached_result.status
+                self._task_results[task_id] = cached_result
+                self._cached_tasks.add(task_id)
+                return cached_result
+        except Exception as e:
+            notification_manager.debug(
+                f"[TaskManager] Cache check failed for task {task_id}: {e}"
+            )
 
         # Initialize task tracking
         start_time = asyncio.get_event_loop().time()
@@ -108,6 +130,17 @@ class TaskManager:
             # Update tracking
             self._task_status[task_id] = status
             self._task_results[task_id] = task_result
+
+            # Store all results in cache
+            try:
+                self._cache_manager.store_result(task, task_result)
+                notification_manager.debug(
+                    f"[TaskManager] Cached result for task: {task_id}"
+                )
+            except Exception as e:
+                notification_manager.debug(
+                    f"[TaskManager] Failed to cache result for task {task_id}: {e}"
+                )
 
             # Process result with output manager if initialized
             if output_manager.is_initialized():
@@ -258,12 +291,25 @@ class TaskManager:
         else:
             total_duration = 0.0
 
+        # Get cache statistics
+        try:
+            cache_stats = self._cache_manager.get_stats()
+            cache_entries = cache_stats["size"]
+            cached_tasks = len(self._cached_tasks)
+        except Exception:
+            cache_entries = 0
+            cached_tasks = 0
+
+        # Create summary with cache information
         return ExecutionSummary(
             total_tasks=total_tasks,
             successful_tasks=successful_tasks,
             failed_tasks=failed_tasks,
             total_duration=total_duration,
             task_results=task_results,
+            cache_entries=cache_entries,
+            cached_tasks=cached_tasks,
+            cached_task_ids=self._cached_tasks.copy(),
         )
 
     def get_task_results(self) -> Dict[str, TaskResult]:
