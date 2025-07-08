@@ -240,13 +240,20 @@ def setup_output_manager(tmp_dir: Path, monkeypatch: MonkeyPatch) -> Any:
         models_dir = output_dir / "models"
         success_dir = output_dir / "success"
         failed_dir = output_dir / "failed"
+        traces_dir = output_dir / "traces"
 
         # Create directories
         models_dir.mkdir(exist_ok=True)
         success_dir.mkdir(exist_ok=True)
         failed_dir.mkdir(exist_ok=True)
+        traces_dir.mkdir(exist_ok=True)
 
-        return {"models": models_dir, "success": success_dir, "failed": failed_dir}
+        return {
+            "models": models_dir,
+            "success": success_dir,
+            "failed": failed_dir,
+            "traces": traces_dir,
+        }
 
     monkeypatch.setattr(output_manager, "get_output_paths", mock_get_output_paths)
     return output_manager

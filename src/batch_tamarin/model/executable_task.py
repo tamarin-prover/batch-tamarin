@@ -57,19 +57,22 @@ class ExecutableTask:
     task_timeout: int
     """Timeout in seconds for this task"""
 
+    traces_dir: Path
+    """Directory where trace files should be written"""
+
     def to_command(self) -> List[str]:
         """
         Convert this task to a runnable command for ProcessManager.
 
         Generates command based on Tamarin CLI reference with Haskell RTS performance limiters:
-        tamarin-prover +RTS -N{cores} -RTS [theory_file] [--prove=lemma] [tamarin_options] [preprocess_flags] --output=[output_file]
+        tamarin-prover +RTS -N{cores} -RTS [theory_file] [--prove=lemma] [tamarin_options] [preprocess_flags] --output-json={traces_dir}/{task_name}.json --output-dot={traces_dir}/{task_name}.dot --output=[output_file]
 
         Returns:
             List[str]: Command components ready for ProcessManager execution
 
         Examples:
             Specific lemma: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/complex.spthy", "--prove=secrecy",
-                           "--diff", "-D=GoodKeysOnly", "--output=results_stable.txt"]
+                           "--diff", "-D=GoodKeysOnly", "--output-json=traces/task1.json", "--output-dot=traces/task1.dot", "--output=results_stable.txt"]
         """
         command = [str(self.tamarin_executable)]
 
@@ -93,6 +96,10 @@ class ExecutableTask:
         if self.preprocess_flags:
             for flag in self.preprocess_flags:
                 command.append(f"-D={flag}")
+
+        # Add trace output parameters
+        command.append(f"--output-json={self.traces_dir}/{self.task_name}.json")
+        command.append(f"--output-dot={self.traces_dir}/{self.task_name}.dot")
 
         # Add output file
         command.append(f"--output={self.output_file}")

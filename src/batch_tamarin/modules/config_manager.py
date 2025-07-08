@@ -113,6 +113,7 @@ class ConfigManager:
         try:
             output_paths = output_manager.get_output_paths()
             models_dir = output_paths["models"]
+            traces_dir = output_paths["traces"]
 
             for task_name, task in recipe.tasks.items():
                 theory_file = ConfigManager.validate_theory_file(
@@ -120,7 +121,13 @@ class ConfigManager:
                 )
 
                 ConfigManager._handle_config(
-                    task_name, task, recipe, models_dir, theory_file, executable_tasks
+                    task_name,
+                    task,
+                    recipe,
+                    models_dir,
+                    traces_dir,
+                    theory_file,
+                    executable_tasks,
                 )
 
             notification_manager.success(
@@ -141,6 +148,7 @@ class ConfigManager:
         task: Task,
         recipe: TamarinRecipe,
         models_dir: Path,
+        traces_dir: Path,
         theory_file: Path,
         executable_tasks: List[ExecutableTask],
     ) -> None:
@@ -157,6 +165,7 @@ class ConfigManager:
             task: Task configuration
             recipe: Full recipe configuration
             models_dir: Directory for output models
+            traces_dir: Directory for trace output files
             theory_file: Path to the theory file
             executable_tasks: List to append new ExecutableTask instances
         """
@@ -198,6 +207,7 @@ class ConfigManager:
             task,
             recipe,
             models_dir,
+            traces_dir,
             theory_file,
             lemma_configs,
             executable_tasks,
@@ -408,6 +418,7 @@ class ConfigManager:
         task: Task,
         recipe: TamarinRecipe,
         models_dir: Path,
+        traces_dir: Path,
         theory_file: Path,
         lemma_configs: List[LemmaConfig],
         executable_tasks: List[ExecutableTask],
@@ -420,6 +431,7 @@ class ConfigManager:
             task: Task configuration
             recipe: Full recipe configuration
             models_dir: Directory for output models
+            traces_dir: Directory for trace output files
             theory_file: Path to the theory file
             lemma_configs: List of lemma configurations
             executable_tasks: List to append new ExecutableTask instances
@@ -457,6 +469,7 @@ class ConfigManager:
                     max_cores=lemma_config.max_cores,
                     max_memory=lemma_config.max_memory,
                     task_timeout=lemma_config.timeout,
+                    traces_dir=traces_dir,
                 )
 
                 executable_tasks.append(executable_task)

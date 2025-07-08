@@ -107,6 +107,7 @@ class OutputManager:
         self.success_dir: Path = Path(".")  # Will be set during initialize()
         self.failed_dir: Path = Path(".")  # Will be set during initialize()
         self.models_dir: Path = Path(".")  # Will be set during initialize()
+        self.traces_dir: Path = Path(".")  # Will be set during initialize()
         self._is_setup = False
 
     def initialize(self, output_dir: Path, bypass: bool = False) -> None:
@@ -127,6 +128,7 @@ class OutputManager:
         self.success_dir = self.output_dir / "success"
         self.failed_dir = self.output_dir / "failed"
         self.models_dir = self.output_dir / "proofs"
+        self.traces_dir = self.output_dir / "traces"
         self._is_setup = True
 
         if bypass:
@@ -186,7 +188,8 @@ class OutputManager:
                 self.output_dir = parent / f"{base_name}_{timestamp}"
                 self.success_dir = self.output_dir / "success"
                 self.failed_dir = self.output_dir / "failed"
-                self.models_dir = self.output_dir / "models"
+                self.models_dir = self.output_dir / "proofs"
+                self.traces_dir = self.output_dir / "traces"
 
                 # Create the new base directory (empty)
                 self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -204,6 +207,7 @@ class OutputManager:
             self.success_dir.mkdir(parents=True, exist_ok=True)
             self.failed_dir.mkdir(parents=True, exist_ok=True)
             self.models_dir.mkdir(parents=True, exist_ok=True)
+            self.traces_dir.mkdir(parents=True, exist_ok=True)
 
             notification_manager.debug(
                 "[OutputManager] Created output directory structure"
@@ -485,6 +489,7 @@ class OutputManager:
             "success": self.success_dir,
             "failed": self.failed_dir,
             "models": self.models_dir,
+            "traces": self.traces_dir,
         }
 
     def is_initialized(self) -> bool:
