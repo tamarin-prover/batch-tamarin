@@ -60,7 +60,7 @@ class ExecutableTask:
     traces_dir: Path
     """Directory where trace files should be written"""
 
-    def to_command(self) -> List[str]:
+    async def to_command(self) -> List[str]:
         """
         Convert this task to a runnable command for ProcessManager.
 
@@ -104,7 +104,12 @@ class ExecutableTask:
         # Add output file
         command.append(f"--output={self.output_file}")
 
-        return command
+        # Apply compatibility filtering based on tamarin version
+        from ..utils.compatibility_filter import compatibility_filter
+
+        filtered_command = await compatibility_filter(command, self.tamarin_executable)
+
+        return filtered_command
 
 
 class TaskStatus(Enum):
