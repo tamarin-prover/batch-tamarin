@@ -78,7 +78,7 @@ class TaskManager:
         self.update_task_status(task_id, TaskStatus.PENDING)
 
         # Convert task to command
-        command = task.to_command()
+        command = await task.to_command()
         executable = task.tamarin_executable
         args = command[1:]  # Remove the executable from the command list
 

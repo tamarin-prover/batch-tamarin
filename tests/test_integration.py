@@ -58,7 +58,7 @@ async def test_minimal_recipe_end_to_end(
         ]
 
         # Verify command generation
-        command = task.to_command()
+        command = await task.to_command()
         assert len(command) > 0
         assert "+RTS" in command
         assert "-N4" in command
