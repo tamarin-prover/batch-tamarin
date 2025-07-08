@@ -6,6 +6,7 @@ from . import __author__, __version__
 from .commands.check import CheckCommand
 from .commands.init import InitCommand
 from .commands.run import RunCommand
+from .modules.cache_manager import CacheManager
 from .utils.notifications import notification_manager
 
 app = typer.Typer(help="batch-tamarin")
@@ -16,6 +17,9 @@ def main_callback(
     ctx: typer.Context,
     version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
+    ),
+    rm_cache: bool = typer.Option(
+        False, "--rm-cache", help="Remove all cached results"
     ),
 ):
     """
@@ -37,6 +41,24 @@ def main_callback(
         print(
             "Project initiated for an internship at CISPA, under the supervision of Pr.Dr. Cas Cremers."
         )
+        return
+
+    if rm_cache:
+        try:
+            cache_manager = CacheManager()
+            stats = cache_manager.get_stats()
+            cache_manager.clear_cache()
+            # Format volume in human-readable units
+            volume = stats["volume"]
+            unit = "bytes"
+            for unit in ["bytes", "kB", "MB", "GB"]:
+                if volume < 1024 or unit == "GB":
+                    break
+                volume /= 1024
+            print(f"Cleared cache: {stats['size']} entries, {volume:.2f} {unit}")
+        except Exception as e:
+            print(f"Failed to clear cache: {e}")
+            raise typer.Exit(1)
         return
 
     if ctx.invoked_subcommand is None:

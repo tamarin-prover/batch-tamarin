@@ -5,10 +5,10 @@ This module defines the ExecutableTask dataclass that represents a task
 with a specific tamarin version, ready for execution by the ProcessManager.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Set
 
 
 @dataclass
@@ -162,3 +162,7 @@ class ExecutionSummary:
     failed_tasks: int
     total_duration: float
     task_results: List[TaskResult]
+    cache_entries: int = 0
+    cached_tasks: int = 0
+    cache_volume: int = 0
+    cached_task_ids: Set[str] = field(default_factory=lambda: set())

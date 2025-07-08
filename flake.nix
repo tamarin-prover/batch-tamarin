@@ -23,6 +23,7 @@
           psutil
           tree-sitter
           # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
+          diskcache
         ];
 
         # Extract development dependencies
