@@ -22,8 +22,8 @@
           pydantic
           psutil
           tree-sitter
-          # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
           diskcache
+          # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
         ];
 
         # Extract development dependencies
@@ -38,6 +38,7 @@
           setuptools
           wheel
           pip
+          pre-commit-hooks
         ];
 
         # Build the batch-tamarin package properly
