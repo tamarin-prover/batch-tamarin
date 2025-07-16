@@ -23,6 +23,7 @@
           psutil
           tree-sitter
           diskcache
+          jinja2
           # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
         ];
 

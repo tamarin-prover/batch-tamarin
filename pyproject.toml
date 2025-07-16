@@ -34,6 +34,7 @@ dependencies = [
     "tree-sitter>=0.22.0",
     "py-tree-sitter-spthy>=1.2.0",
     "diskcache>=5.6.0",
+    "jinja2>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +65,7 @@ batch-tamarin = "batch_tamarin.main:cli"
 where = ["src"]
 
 [tool.setuptools.package-data]
-batch_tamarin = ["*.json"]
+batch_tamarin = ["*.json", "templates/*.j2"]
 
 [tool.black]
 line-length = 88
