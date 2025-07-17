@@ -1,0 +1,99 @@
+{
+  "config": {
+    "global_max_cores": "max",
+    "global_max_memory": "80%",
+    "default_timeout": 60,
+    "output_directory": "res-complex"
+  },
+  "tamarin_versions": {
+    "default": {
+      "path": "tamarin-prover"
+    },
+    "legacy": {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+    },
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+    },
+    "dev": {
+      "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
+    }
+  },
+  "tasks": {
+    "wpa2-1": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "tamarin_versions": [
+        "default",
+        "dev"
+      ],
+      "output_file_prefix": "wesh",
+      "lemmas": [
+        {
+          "name": "supplicant_wnm_sleep_thread_has_to_start",
+          "tamarin_versions": [
+            "legacy",
+            "stable"
+          ],
+          "preprocess_flags": [
+            "NOFLAG"
+          ],
+          "resources": {
+            "max_memory": 2,
+            "timeout": 30
+          }
+        },
+        {
+          "name": "pmks_are_ku_secret_unless_revealed",
+          "resources": {
+            "max_memory": 1
+          }
+        },
+        {
+          "name": "pmks_are_secret_unless_revealed"
+        }
+      ],
+      "tamarin_options": [
+        "--bound=50"
+      ],
+      "preprocess_flags": [
+        "FLAG"
+      ],
+      "resources": {
+        "max_cores": 2
+      }
+    },
+    "wpa2-2": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "tamarin_versions": [
+        "default",
+        "legacy",
+        "stable",
+        "dev"
+      ],
+      "output_file_prefix": "wpa2-2",
+      "lemmas": [
+        {
+          "name": "pmks_are_ku_secret_unless_revealed",
+          "tamarin_versions": [
+            "default",
+            "legacy"
+          ],
+          "tamarin_options": [
+            "--heuristic=I"
+          ],
+          "preprocess_flags": [
+            "VERBOSE"
+          ],
+          "resources": {
+            "max_cores": 1,
+            "max_memory": 1,
+            "timeout": 1
+          }
+        },
+        {
+          "name": "pmks_are_secret_unless_revealed"
+        }
+      ]
+    }
+  }
+}
