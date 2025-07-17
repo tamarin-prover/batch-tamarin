@@ -25,7 +25,7 @@ class TaskConfig(BaseModel):
     tamarin_alias: str = Field(
         ..., description="Alias representing tamarin used for this task"
     )
-    lemma: str = Field(..., description="Lemma runned for this task")
+    lemma: str = Field(..., description="Lemma ran for this task")
     output_theory_file: Path = Field(..., description="Output theory file path")
     output_trace_file: Path = Field(..., description="Output trace file path")
     options: Optional[List[str]] = Field(..., description="Options given to this task")
@@ -56,7 +56,7 @@ class TaskExecMetadata(BaseModel):
     exec_end: str = Field(..., description="End timestamp of execution")
     exec_duration_monotonic: float = Field(
         ...,
-        description="Duration of execution, in seconds, monotonic time measurement, close to wall-clock measurement (measuring pretty much the same things, batch-tamarin measure ALL the process execution, while tamarin-prover can't) but not using sytem clock.",
+        description="Duration of execution, in seconds, monotonic time measurement, close to wall-clock measurement (measuring pretty much the same things, batch-tamarin measure ALL the process execution, while tamarin-prover can't) but not using system clock.",
     )
     avg_memory: float = Field(
         ..., description="Average memory usage during execution, in MB"
@@ -134,7 +134,7 @@ class ExecMetadata(BaseModel):
 
 
 class RichExecutableTask(BaseModel):
-    """Task with execution informations"""
+    """Task with execution information"""
 
     model_config = ConfigDict(extra="forbid")
 
