@@ -22,7 +22,6 @@ class Resources(BaseModel):
 class TaskConfig(BaseModel):
     """Resolved config from recipe, complete description"""
 
-    theory_file: str = Field(..., description="Path to .spthy theory input file")
     tamarin_alias: str = Field(
         ..., description="Alias representing tamarin used for this task"
     )
@@ -122,9 +121,15 @@ class ExecMetadata(BaseModel):
     total_successes: int = Field(..., description="Total number of successful tasks")
     total_failures: int = Field(..., description="Total number of failed tasks")
     total_cache_hit: int = Field(..., description="Total number of cached tasks")
-    total_runtime: int = Field(..., description="Total runtime in seconds")
-    total_memory: int = Field(
+    total_runtime: float = Field(..., description="Total runtime in seconds")
+    total_memory: float = Field(
         ..., description="Total memory usage (combined peaks) in MB"
+    )
+    max_runtime: float = Field(
+        ..., description="Maximum runtime of a single task in seconds"
+    )
+    max_memory: float = Field(
+        ..., description="Maximum memory usage (peak) of a single task in MB"
     )
 
 
@@ -137,8 +142,22 @@ class RichExecutableTask(BaseModel):
     task_execution_metadata: TaskExecMetadata = Field(
         ..., description="Execution metadata"
     )
-    task_result: Union[TaskSucceedResult, TaskFailedResult] = Field(
-        ..., description="Result of the task"
+    task_result: Optional[Union[TaskSucceedResult, TaskFailedResult]] = Field(
+        None, description="Result of the task"
+    )
+
+
+class RichTask(BaseModel):
+    """Original recipe task with generated executable subtasks"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    theory_file: str = Field(
+        ..., description="Path to the .spthy theory file to analyze"
+    )
+    subtasks: Dict[str, RichExecutableTask] = Field(
+        ...,
+        description="Dictionary of generated executable tasks (lemma--version -> RichExecutableTask)",
     )
 
 
@@ -158,6 +177,7 @@ class Batch(BaseModel):
     execution_metadata: ExecMetadata = Field(
         ..., description="Global execution metadata"
     )
-    tasks: Dict[str, RichExecutableTask] = Field(
-        ..., description="List of named tasks, filled with execution information"
+    tasks: Dict[str, RichTask] = Field(
+        ...,
+        description="Dictionary of original recipe tasks with their generated executable subtasks",
     )

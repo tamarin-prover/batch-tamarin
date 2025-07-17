@@ -10,7 +10,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -495,6 +495,41 @@ class OutputManager:
     def is_initialized(self) -> bool:
         """Check if the output manager is initialized."""
         return self._is_setup
+
+    def parse_task_result(
+        self, task_result: TaskResult, output_file_name: str
+    ) -> Union[SuccessfulTaskResult, FailedTaskResult]:
+        """
+        Parse a TaskResult and return the structured result without saving to files.
+
+        This method provides access to the parsed data for integration with other components.
+
+        Args:
+            task_result: The TaskResult from task execution
+            output_file_name: Name of the output file (with .spthy extension)
+
+        Returns:
+            SuccessfulTaskResult or FailedTaskResult with parsed data
+        """
+        if task_result.status == TaskStatus.COMPLETED:
+            return self._parse_successful_output(
+                task_result.task_id,
+                task_result.stdout,
+                task_result.stderr,
+                task_result.duration,
+                task_result.memory_stats,
+                output_file_name,
+            )
+        else:
+            return self._parse_failed_output(
+                task_result.task_id,
+                task_result.stdout,
+                task_result.stderr,
+                task_result.duration,
+                task_result.memory_stats,
+                task_result.return_code,
+                task_result.status,
+            )
 
 
 # Global singleton instance

@@ -5,6 +5,16 @@ from typing import Dict, List, Optional, Tuple
 
 from pydantic import ValidationError
 
+from ..model.batch import (
+    Batch,
+    ExecMetadata,
+    Resources,
+    RichExecutableTask,
+    RichTask,
+    TaskConfig,
+    TaskExecMetadata,
+    TaskStatus,
+)
 from ..model.executable_task import ExecutableTask
 from ..model.tamarin_recipe import (
     GlobalConfig,
@@ -479,6 +489,125 @@ class ConfigManager:
                 )
 
     @staticmethod
+    def _create_rich_executable_tasks(
+        task_name: str,
+        task: Task,
+        recipe: TamarinRecipe,
+        models_dir: Path,
+        traces_dir: Path,
+        theory_file: Path,
+        rich_tasks: Dict[str, RichExecutableTask],
+    ) -> None:
+        """
+        Create RichExecutableTask instances for each lemma configuration × tamarin version.
+
+        This method follows the same logic as _create_executable_tasks but creates
+        RichExecutableTask objects with resolved TaskConfig and placeholder execution metadata.
+
+        Args:
+            task_name: Name of the original task
+            task: Task configuration
+            recipe: Full recipe configuration
+            models_dir: Directory for output models
+            traces_dir: Directory for trace output files
+            theory_file: Path to the theory file
+            rich_tasks: Dictionary to populate with RichExecutableTask instances
+        """
+        # Step 1: Parse all lemmas from the theory file with task-level preprocessor flags
+        try:
+            parser = LemmaParser(task.preprocess_flags)
+            all_lemmas = parser.parse_lemmas_from_file(theory_file)
+
+            if not all_lemmas:
+                notification_manager.warning(
+                    f"[ConfigManager] No lemmas found in theory file {theory_file} for task '{task_name}'"
+                )
+                return
+
+            notification_manager.debug(
+                f"[ConfigManager] Found {len(all_lemmas)} lemmas in {theory_file} for task '{task_name}': {all_lemmas}"
+            )
+        except LemmaParsingError as e:
+            error_msg = f"[ConfigManager] Failed to parse lemmas from theory file {theory_file} for task '{task_name}':\n{e}"
+            raise ConfigError(error_msg) from e
+        except Exception as e:
+            error_msg = f"[ConfigManager] Unexpected error parsing lemmas from {theory_file} for task '{task_name}': \n{e}"
+            raise ConfigError(error_msg) from e
+
+        # Step 2: Filter lemmas based on task configuration and Extract effective configurations for each lemma
+        lemma_configs = ConfigManager._filter_and_configure_lemmas(
+            task_name, task, recipe, all_lemmas
+        )
+
+        if not lemma_configs:
+            notification_manager.warning(
+                f"[ConfigManager] No lemma configurations generated for task '{task_name}'"
+            )
+            return
+
+        # Step 3: Create RichExecutableTask instances for each lemma
+        notification_manager.debug(
+            f"[ConfigManager] Creating RichExecutableTasks for task '{task_name}'"
+        )
+
+        for lemma_config in lemma_configs:
+            for tamarin_version in lemma_config.effective_tamarin_versions:
+                # Validate tamarin executable exists
+                if tamarin_version not in recipe.tamarin_versions:
+                    raise ConfigError(
+                        f"[ConfigManager] Tamarin version '{tamarin_version}' not found in recipe for task '{task_name}'"
+                    )
+
+                _ = ConfigManager.validate_tamarin_executable(
+                    tamarin_version, recipe.tamarin_versions[tamarin_version], recipe
+                )
+
+                # Generate unique task ID
+                task_suffix = f"{lemma_config.lemma_name}--{tamarin_version}"
+                base_task_id = f"{task.output_file_prefix}--{task_suffix}"
+                unique_task_id = ConfigManager.get_unique_task_id(base_task_id)
+
+                # Create TaskConfig with resolved settings (theory_file is in parent RichTask)
+                task_config = TaskConfig(
+                    tamarin_alias=tamarin_version,
+                    lemma=lemma_config.lemma_name,
+                    output_theory_file=models_dir / f"{unique_task_id}.spthy",
+                    output_trace_file=traces_dir / f"{unique_task_id}.json",
+                    options=lemma_config.tamarin_options,
+                    preprocessor_flags=lemma_config.preprocess_flags,
+                    resources=Resources(
+                        cores=lemma_config.max_cores,
+                        memory=lemma_config.max_memory,
+                        timeout=lemma_config.timeout,
+                    ),
+                )
+
+                # Create placeholder execution metadata
+                task_execution_metadata = TaskExecMetadata(
+                    command=[],  # Will be populated during execution
+                    status=TaskStatus.PENDING,
+                    cache_hit=False,
+                    exec_start="",  # Will be populated during execution
+                    exec_end="",  # Will be populated during execution
+                    exec_duration_monotonic=0.0,  # Will be populated during execution
+                    avg_memory=0.0,  # Will be populated during execution
+                    peak_memory=0.0,  # Will be populated during execution
+                )
+
+                # Create RichExecutableTask
+                rich_executable_task = RichExecutableTask(
+                    task_config=task_config,
+                    task_execution_metadata=task_execution_metadata,
+                    task_result=None,  # Will be populated during execution
+                )
+
+                rich_tasks[unique_task_id] = rich_executable_task
+
+                notification_manager.debug(
+                    f"[ConfigManager] Created RichExecutableTask for '{unique_task_id}' for lemma '{lemma_config.lemma_name}' with Tamarin '{tamarin_version}'"
+                )
+
+    @staticmethod
     def validate_and_cap_resources(
         max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
     ) -> Tuple[int, int]:
@@ -615,3 +744,101 @@ class ConfigManager:
         else:
             ConfigManager.task_id_counter[base_task_id] += 1
             return f"{base_task_id}_{ConfigManager.task_id_counter[base_task_id]}"
+
+    @staticmethod
+    def create_batch_from_recipe(recipe: TamarinRecipe, recipe_name: str) -> Batch:
+        """
+        Create initial Batch object from TamarinRecipe.
+
+        Args:
+            recipe: The loaded TamarinRecipe
+            recipe_name: Name of the recipe file
+
+        Returns:
+            Batch object with initial values (execution_metadata and tasks will be populated during execution)
+        """
+        # Initialize execution metadata with placeholder values
+        execution_metadata = ExecMetadata(
+            total_tasks=0,  # Will be updated when tasks are created
+            total_successes=0,
+            total_failures=0,
+            total_cache_hit=0,
+            total_runtime=0,
+            total_memory=0,
+            max_runtime=0,
+            max_memory=0,
+        )
+
+        # Create batch with initial values
+        batch = Batch(
+            recipe=recipe_name,
+            config=recipe.config,
+            tamarin_versions=recipe.tamarin_versions,
+            execution_metadata=execution_metadata,
+            tasks={},  # Will be populated with RichExecutableTask objects
+        )
+
+        return batch
+
+    @staticmethod
+    def recipe_to_rich_executable_tasks(recipe: TamarinRecipe, batch: Batch) -> Batch:
+        """
+        Create RichTask objects from TamarinRecipe and populate the batch.
+
+        This method creates RichTask objects (original recipe tasks) with their generated
+        RichExecutableTask subtasks.
+
+        Args:
+            recipe: The TamarinRecipe to convert
+            batch: The Batch object to populate with tasks
+
+        Returns:
+            Updated Batch object with populated tasks
+
+        Raises:
+            ConfigError: If conversion fails due to validation errors
+        """
+        try:
+            output_paths = output_manager.get_output_paths()
+            models_dir = output_paths["models"]
+            traces_dir = output_paths["traces"]
+
+            rich_tasks: Dict[str, RichTask] = {}
+            total_executable_tasks = 0
+
+            for task_name, task in recipe.tasks.items():
+                theory_file = ConfigManager.validate_theory_file(
+                    task.theory_file, task_name
+                )
+
+                # Create RichExecutableTask objects for this task
+                subtasks: Dict[str, RichExecutableTask] = {}
+                ConfigManager._create_rich_executable_tasks(
+                    task_name,
+                    task,
+                    recipe,
+                    models_dir,
+                    traces_dir,
+                    theory_file,
+                    subtasks,
+                )
+
+                # Create RichTask with the original task structure
+                rich_task = RichTask(theory_file=task.theory_file, subtasks=subtasks)
+
+                rich_tasks[task_name] = rich_task
+                total_executable_tasks += len(subtasks)
+
+            # Update batch with tasks and metadata
+            batch.tasks = rich_tasks
+            batch.execution_metadata.total_tasks = total_executable_tasks
+
+            notification_manager.success(
+                f"[ConfigManager] Generated {total_executable_tasks} rich executable task{'s' if total_executable_tasks > 1 else ''} from {len(rich_tasks)} recipe task{'s' if len(rich_tasks) > 1 else ''}"
+            )
+
+            return batch
+
+        except Exception as e:
+            error_msg = f"[ConfigManager] Failed to convert recipe to rich executable tasks: {e}"
+            raise ConfigError(error_msg) from e
