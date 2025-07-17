@@ -55,7 +55,10 @@ class TaskExecMetadata(BaseModel):
     cache_hit: bool = Field(..., description="Whether the task was cached")
     exec_start: str = Field(..., description="Start timestamp of execution")
     exec_end: str = Field(..., description="End timestamp of execution")
-    exec_duration: float = Field(..., description="Duration of execution, in seconds")
+    exec_duration_monotonic: float = Field(
+        ...,
+        description="Duration of execution, in seconds, monotonic time measurement, close to wall-clock measurement (measuring pretty much the same things, batch-tamarin measure ALL the process execution, while tamarin-prover can't) but not using sytem clock.",
+    )
     avg_memory: float = Field(
         ..., description="Average memory usage during execution, in MB"
     )
@@ -78,8 +81,9 @@ class TaskSucceedResult(BaseModel):
     warnings: List[str] = Field(
         default_factory=list, description="Warning messages from Tamarin"
     )
-    processing_time: float = Field(
-        ..., description="Tamarin reported processing time in seconds"
+    real_time_tamarin_measure: float = Field(
+        ...,
+        description="Tamarin reported processing time in seconds, this is a wall-clock time : computation time + I/O operations + external precesses (like Maude) wait + system scheduler wait + system calls. This is NOT : CPU Time, User Time or System Time",
     )
     lemma_result: LemmaResult = Field(..., description="Result of the lemma")
     steps: int = Field(..., description="Number of analysis steps")
