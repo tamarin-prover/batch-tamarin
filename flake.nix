@@ -24,6 +24,7 @@
           tree-sitter
           diskcache
           jinja2
+          graphviz
           # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
         ];
 

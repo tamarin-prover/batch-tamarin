@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Tamarin Execution Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 { color: #2c3e50; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .success { color: #28a745; }
+        .failed { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        .mermaid {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .chart-item {
+            flex: 1;
+            min-width: 400px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error-details {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .trace-visualization {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Batch Tamarin Execution Report</h1>
+
+    <div class="info">
+        <strong>Execution results from:</strong> {{ results_directory }}
+        <strong>Executed :</strong> {{ batch_execution_date.strftime('%Y-%m-%d %H:%M:%S') }}<br>
+    </div>
+
+    <h2>Overview</h2>
+
+    <h3>Configuration</h3>
+
+    <h4>Global Settings</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Setting</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Max cores</td>
+                <td>{{ report_data.config.global_max_cores or 'Not specified' }}</td>
+            </tr>
+            <tr>
+                <td>Max memory</td>
+                <td>{{ report_data.config.global_max_memory or 'Not specified' }}GB</td>
+            </tr>
+            <tr>
+                <td>Default timeout</td>
+                <td>{{ report_data.config.default_timeout or 'Not specified' }}s</td>
+            </tr>
+            <tr>
+                <td>Output directory</td>
+                <td>{{ report_data.config.output_directory or 'Not specified' }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h4>Tamarin Versions</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Alias</th>
+                <th>Path</th>
+                <th>Version</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alias, info in report_data.config.tamarin_versions.items() %}
+            <tr>
+                <td>{{ alias }}</td>
+                <td>{{ info.path }}</td>
+                <td>{{ info.version }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Summary</h3>
+
+    <h4>Global Statistics</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Total tasks</td>
+                <td>{{ report_data.statistics.total_tasks }}</td>
+            </tr>
+            <tr>
+                <td>Extracted lemmas</td>
+                <td>{{ report_data.statistics.total_lemmas }}</td>
+            </tr>
+            <tr>
+                <td>Cached lemmas</td>
+                <td>{{ report_data.statistics.cache_hits }}</td>
+            </tr>
+            <tr>
+                <td>Successful tasks</td>
+                <td class="success">{{ report_data.statistics.successful_tasks }} ({{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}%)</td>
+            </tr>
+            <tr>
+                <td>Failed tasks</td>
+                <td class="failed">{{ report_data.statistics.failed_tasks }} ({{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}%)</td>
+            </tr>
+            <tr>
+                <td>Total runtime</td>
+                <td>{{ "%.2f"|format(report_data.statistics.total_runtime) }}s</td>
+            </tr>
+            <tr>
+                <td>Total memory usage (peak)</td>
+                <td>{{ "%.2f"|format(report_data.statistics.total_memory_usage) }}MB</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        {% if charts.success_rate %}
+        <div class="chart-item">
+            <h4>Success Rate</h4>
+            <div class="mermaid">
+                {{ charts.success_rate.to_mermaid_pie() }}
+            </div>
+        </div>
+        {% endif %}
+        {% if charts.cache_hit_rate %}
+        <div class="chart-item">
+            <h4>Cache Hit Rate</h4>
+            <div class="mermaid">
+                {{ charts.cache_hit_rate.to_mermaid_pie() }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="chart-container">
+        {% if charts.runtime_per_task %}
+        <div class="chart-item">
+            <h4>Runtime per Task</h4>
+            <div class="mermaid">
+                {{ charts.runtime_per_task.to_mermaid_bar() }}
+            </div>
+        </div>
+        {% endif %}
+        {% if charts.memory_per_task %}
+        <div class="chart-item">
+            <h4>Memory Usage per Task</h4>
+            <div class="mermaid">
+                {{ charts.memory_per_task.to_mermaid_bar() }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if charts.execution_timeline %}
+    <h4>Execution Timeline</h4>
+    <div class="mermaid">
+        {{ charts.execution_timeline.to_mermaid_gantt() }}
+    </div>
+    {% endif %}
+
+    <h2>Task Details</h2>
+
+    {% for task in report_data.tasks %}
+    <h3>Task: {{ task.name }}</h3>
+
+    <h4>Execution Summary</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Lemma</th>
+                <th>Options</th>
+                <th>Cores</th>
+                <th>Memory</th>
+                <th>Timeout</th>
+                <th>Tamarin Version</th>
+                <th>Status</th>
+                <th>Memory Used</th>
+                <th>Runtime</th>
+                <th>Cache Hit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in task.results %}
+            <tr>
+                <td>{{ result.lemma }}</td>
+                <td>{{ result.tamarin_options|join(' ') if result.tamarin_options else 'None' }}</td>
+                <td>{{ result.max_cores or 'Default' }}</td>
+                <td>{{ result.max_memory or 'Default' }}GB</td>
+                <td>{{ result.timeout or 'Default' }}s</td>
+                <td>{{ result.tamarin_version }}</td>
+                <td class="{{ 'success' if result.status == 'success' else 'failed' }}">
+                    {{ "✅ Success" if result.status == "success" else "❌ Failed" }}
+                </td>
+                <td>{{ "%.2f"|format(result.peak_memory) }}MB</td>
+                <td>{{ "%.2f"|format(result.runtime) }}s</td>
+                <td class="{{ 'success' if result.cache_hit else 'failed' }}">
+                    {{ "✅" if result.cache_hit else "❌" }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if report_data.has_version_comparisons(task.name) %}
+    <h4>Version Comparisons</h4>
+
+    <div class="chart-container">
+        <div class="chart-item">
+            <h5>Runtime Comparison</h5>
+            <div class="mermaid">
+                xychart-beta
+                    title "Runtime by Version for {{ task.name }}"
+                    x-axis [{% for version in task.tamarin_versions %}"{{ version }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+                    y-axis "Runtime (seconds)"
+                    {% for lemma in task.lemmas %}
+                    line [{% for version in task.tamarin_versions %}{% set results = report_data.get_results_by_lemma(lemma)|selectattr('tamarin_version', 'equalto', version)|list %}{{ results[0].runtime if results else 0 }}{% if not loop.last %}, {% endif %}{% endfor %}]
+                    {% endfor %}
+            </div>
+        </div>
+        <div class="chart-item">
+            <h5>Memory Usage Comparison</h5>
+            <div class="mermaid">
+                xychart-beta
+                    title "Memory Usage by Version for {{ task.name }}"
+                    x-axis [{% for version in task.tamarin_versions %}"{{ version }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+                    y-axis "Memory (MB)"
+                    {% for lemma in task.lemmas %}
+                    line [{% for version in task.tamarin_versions %}{% set results = report_data.get_results_by_lemma(lemma)|selectattr('tamarin_version', 'equalto', version)|list %}{{ results[0].peak_memory if results else 0 }}{% if not loop.last %}, {% endif %}{% endfor %}]
+                    {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list %}
+    {% if task_traces %}
+    <h4>Traces</h4>
+    {% for trace in task_traces %}
+    <div class="trace-visualization">
+        <h5>{{ trace.lemma }} ({{ trace.tamarin_version }})</h5>
+        <p>
+            <strong>JSON File:</strong> <a href="{{ trace.json_file }}">{{ trace.json_file }}</a>
+            {% if trace.dot_file %}
+            <br><strong>DOT File:</strong> <a href="{{ trace.dot_file }}">{{ trace.dot_file }}</a>
+            {% endif %}
+        </p>
+        {% if trace.svg_content %}
+        <div style="text-align: center; margin: 20px 0;">
+            {{ trace.svg_content|safe }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% endfor %}
+
+    {% set failed_results = report_data.failed_results %}
+    {% if failed_results %}
+    <h2>Errors</h2>
+
+    {% if charts.error_types %}
+    <h3>Error Types Distribution</h3>
+    <div class="mermaid">
+        {{ charts.error_types.to_mermaid_pie() }}
+    </div>
+    {% endif %}
+
+    <h3>Error Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Lemma</th>
+                <th>Version</th>
+                <th>Options</th>
+                <th>Resources</th>
+                <th>Error Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for error in report_data.error_details %}
+            <tr>
+                <td>{{ error.task }}</td>
+                <td>{{ error.lemma }}</td>
+                <td>{{ error.version }}</td>
+                <td>{{ error.options }}</td>
+                <td>{{ error.resources }}</td>
+                <td>{{ error.type }}</td>
+                <td>{{ error.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Detailed Error Information</h3>
+    {% for result in failed_results %}
+    <div class="error-details">
+        <h4>{{ result.task_name }}--{{ result.lemma }}--{{ result.tamarin_version }}</h4>
+        <p>{{ result.error_description }}</p>
+        {% if result.stderr_lines %}
+        <pre>{{ result.stderr_lines|join('\n') }}</pre>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <hr>
+    <footer>
+        <p><em>Report generated by Batch Tamarin v{{ version or 'unknown' }} on {{ report_data.generation_date.strftime('%Y-%m-%d at %H:%M:%S') }}</em></p>
+    </footer>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>

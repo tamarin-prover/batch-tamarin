@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from .. import __version__
+from ..modules.report_generator import ReportGenerator
 from ..utils.notifications import notification_manager
 
 
@@ -20,16 +22,14 @@ class ReportCommand:
             raise ValueError(
                 f"Results directory '{results_directory}' does not exist or is not a directory."
             )
-        expected_items = {
-            "success": (results_directory / "success").is_dir(),
-            "failed": (results_directory / "failed").is_dir(),
-            "proofs": (results_directory / "proofs").is_dir(),
-            "traces": (results_directory / "traces").is_dir(),
-            "execution_report.json": (
-                results_directory / "execution_report.json"
-            ).is_file(),
-        }
+
+        # Initialize report generator
+        report_generator = ReportGenerator()
+
+        # Validate results directory structure
+        expected_items = report_generator.validate_results_directory(results_directory)
         missing = [name for name, exists in expected_items.items() if not exists]
+
         if len(missing) == len(expected_items):
             raise ValueError(
                 f"Results directory '{results_directory}' is missing all expected items: "
@@ -42,24 +42,36 @@ class ReportCommand:
             )
 
         # Format type validation
-        if format_type not in ["md", "html", "tex", "typ"]:
+        available_formats = report_generator.get_available_formats()
+        if format_type not in available_formats:
             raise ValueError(
-                f"Unsupported format type '{format_type}'. Supported formats are: md, html, tex, typ."
+                f"Unsupported format type '{format_type}'. Supported formats are: {', '.join(available_formats)}."
             )
+
+        # Check template availability
+        if not report_generator.check_template_availability(format_type):
+            raise ValueError(f"Template for format '{format_type}' is not available.")
 
         # Output file validation
         if not output.suffix:
             output = output.with_suffix(f".{format_type}")
         if (
-            output.suffix not in [".md", ".html", ".tex", ".typ"]
+            output.suffix not in [f".{fmt}" for fmt in available_formats]
             or output.suffix != f".{format_type}"
         ):
             notification_manager.warning(
-                f"Output file {output} have a different suffix ({output.suffix}) than the specified format type '{format_type}'."
+                f"Output file {output} has a different suffix ({output.suffix}) than the specified format type '{format_type}'."
             )
         output.parent.mkdir(parents=True, exist_ok=True)
 
-        print(
+        notification_manager.info(
             f"Generating report from {results_directory} to {output.absolute()} in {format_type} format"
         )
-        raise Exception("Report generation not implemented yet")
+
+        # Generate the report
+        report_generator.generate_report(
+            results_directory=results_directory,
+            output_path=output,
+            format_type=format_type,
+            version=__version__,
+        )

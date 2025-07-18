@@ -28,9 +28,9 @@ class TaskConfig(BaseModel):
     lemma: str = Field(..., description="Lemma ran for this task")
     output_theory_file: Path = Field(..., description="Output theory file path")
     output_trace_file: Path = Field(..., description="Output trace file path")
-    options: Optional[List[str]] = Field(..., description="Options given to this task")
+    options: Optional[List[str]] = Field(None, description="Options given to this task")
     preprocessor_flags: Optional[List[str]] = Field(
-        ..., description="Flags given to the preprocessor"
+        None, description="Flags given to the preprocessor"
     )
     resources: Resources = Field(..., description="Resources given to this task")
 
