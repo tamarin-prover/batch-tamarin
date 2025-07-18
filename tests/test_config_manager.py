@@ -255,11 +255,7 @@ class TestResourceResolution:
         executable_tasks = ConfigManager.recipe_to_executable_tasks(recipe)
 
         # Find test_lemma tasks (should have lemma-specific resources)
-        test_lemma_tasks = [
-            t
-            for t in executable_tasks
-            if t.lemma is not None and "test_lemma" in t.lemma
-        ]
+        test_lemma_tasks = [t for t in executable_tasks if "test_lemma" in t.lemma]
 
         for task in test_lemma_tasks:
             if task.task_name.startswith("full_task--"):
