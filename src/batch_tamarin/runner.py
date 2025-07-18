@@ -11,24 +11,13 @@ import signal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from .model.batch import (
-    Batch,
-    ErrorType,
-    LemmaResult,
-    RichExecutableTask,
-    TaskFailedResult,
-)
-from .model.batch import TaskStatus as BatchTaskStatus
-from .model.batch import (
-    TaskSucceedResult,
-)
 from .model.executable_task import (
     ExecutableTask,
     TaskResult,
     TaskStatus,
 )
 from .model.tamarin_recipe import TamarinRecipe
-from .modules.output_manager import SuccessfulTaskResult, output_manager
+from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
@@ -69,6 +58,9 @@ class TaskRunner:
         self._completed_tasks: Set[str] = set()
         self._failed_tasks: Set[str] = set()
         self._task_results: Dict[str, TaskResult] = {}
+        self.completed_tasks: Set[str] = set()
+        self.failed_tasks: Set[str] = set()
+        self.task_results: Dict[str, TaskResult] = {}
 
         # Track shutdown state
         self._shutdown_requested = False
@@ -105,6 +97,9 @@ class TaskRunner:
         self._completed_tasks.clear()
         self._failed_tasks.clear()
         self._task_results.clear()
+        self.completed_tasks.clear()
+        self.failed_tasks.clear()
+        self.task_results.clear()
         self._shutdown_requested = False
 
         # Set up shutdown handler
@@ -335,24 +330,29 @@ class TaskRunner:
 
         # Update internal tracking
         self._task_results[task_id] = result
+        self.task_results[task_id] = result
 
         if result.status == TaskStatus.COMPLETED:
             self._completed_tasks.add(task_id)
+            self.completed_tasks.add(task_id)
             notification_manager.success(
                 f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.TIMEOUT:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task exceeded memory limit: {task_id} (duration: {result.duration:.2f}s)"
             )
         else:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.error(
                 f"[TaskRunner] Task failed: {task_id} (status: {result.status.value}, "
                 f"return_code: {result.return_code}, duration: {result.duration:.2f}s)"
@@ -463,297 +463,3 @@ class TaskRunner:
         self._pending_tasks.clear()
 
         notification_manager.info("[TaskRunner] Force shutdown cleanup completed")
-
-    async def execute_batch(self, batch: Batch) -> Batch:
-        """
-        Execute tasks from a Batch model and populate execution metadata.
-
-        This method is the new unified way to execute tasks using the Batch model.
-        It converts RichExecutableTask objects to ExecutableTask objects, executes them,
-        and then populates the batch with execution results.
-
-        Args:
-            batch: Batch object containing tasks to execute
-
-        Returns:
-            Updated Batch object with execution results
-        """
-        import time
-
-        notification_manager.phase_separator("Batch Execution")
-
-        if not batch.tasks:
-            notification_manager.error("[TaskRunner] No tasks provided for execution")
-            return batch
-
-        # Record start time
-        start_time = time.time()
-
-        # Convert RichExecutableTask objects to ExecutableTask objects
-        executable_tasks: List[ExecutableTask] = []
-        for _, rich_task in batch.tasks.items():
-            # Extract all RichExecutableTask objects from subtasks
-            for subtask_id, rich_executable_task in rich_task.subtasks.items():
-                executable_task = self._convert_rich_to_executable_task(
-                    rich_executable_task, rich_task.theory_file
-                )
-                # Set the task name to match the subtask ID
-                executable_task.task_name = subtask_id
-                executable_tasks.append(executable_task)
-
-        # Execute tasks using the existing execution pipeline
-        await self.execute_all_tasks(executable_tasks)
-
-        # Record end time
-        end_time = time.time()
-        total_runtime = end_time - start_time
-
-        # Update batch with execution results
-        await self._update_batch_with_results(batch, total_runtime)
-
-        return batch
-
-    def _convert_rich_to_executable_task(
-        self, rich_task: RichExecutableTask, theory_file: str
-    ) -> ExecutableTask:
-        """
-        Convert a RichExecutableTask to an ExecutableTask for execution.
-
-        Args:
-            rich_task: RichExecutableTask to convert
-            theory_file: Path to the theory file (from parent RichTask)
-
-        Returns:
-            ExecutableTask ready for execution
-        """
-        task_config = rich_task.task_config
-
-        # Create ExecutableTask from the resolved task config
-        executable_task = ExecutableTask(
-            task_name=f"{task_config.lemma}--{task_config.tamarin_alias}",  # Will be updated with unique ID
-            tamarin_version_name=task_config.tamarin_alias,
-            tamarin_executable=Path(theory_file).parent
-            / "tamarin",  # This will be resolved properly
-            theory_file=Path(theory_file),
-            output_file=task_config.output_theory_file,
-            lemma=task_config.lemma,
-            tamarin_options=task_config.options,
-            preprocess_flags=task_config.preprocessor_flags,
-            max_cores=task_config.resources.cores,
-            max_memory=task_config.resources.memory,
-            task_timeout=task_config.resources.timeout,
-            traces_dir=task_config.output_trace_file.parent,
-        )
-
-        # Set tamarin executable path based on the recipe's tamarin_versions
-        for version_name, version_info in self.recipe.tamarin_versions.items():
-            if version_name == task_config.tamarin_alias:
-                from .utils.system_resources import resolve_executable_path
-
-                executable_task.tamarin_executable = resolve_executable_path(
-                    version_info.path
-                )
-                break
-
-        return executable_task
-
-    async def _update_batch_with_results(
-        self, batch: Batch, total_runtime: float
-    ) -> None:
-        """
-        Update the Batch object with execution results.
-
-        Args:
-            batch: Batch object to update
-            total_runtime: Total runtime in seconds
-        """
-        from datetime import datetime
-
-        # Update global execution metadata
-        total_successes = len(self._completed_tasks)
-        total_failures = len(self._failed_tasks)
-
-        # Get cached tasks information through proper method
-        execution_summary = self.task_manager.generate_execution_summary()
-        total_cache_hit = execution_summary.cached_tasks
-
-        # Calculate total memory usage (sum of peak memory for all tasks)
-        total_memory = 0
-        for task_result in self._task_results.values():
-            if task_result.memory_stats:
-                total_memory += task_result.memory_stats.peak_memory_mb
-
-        batch.execution_metadata.total_successes = total_successes
-        batch.execution_metadata.total_failures = total_failures
-        batch.execution_metadata.total_cache_hit = total_cache_hit
-        batch.execution_metadata.total_runtime = total_runtime
-        batch.execution_metadata.total_memory = total_memory
-        batch.execution_metadata.max_runtime = max(
-            (task_result.duration for task_result in self._task_results.values()),
-            default=0,
-        )
-        batch.execution_metadata.max_memory = max(
-            (
-                task_result.memory_stats.peak_memory_mb
-                for task_result in self._task_results.values()
-                if task_result.memory_stats
-            ),
-            default=0,
-        )
-
-        # Update individual task results
-        for _, rich_task in batch.tasks.items():
-            # Update subtasks with their results
-            for subtask_id, rich_executable_task in rich_task.subtasks.items():
-                # Find the corresponding task result
-                task_result = self._task_results.get(subtask_id)
-                if task_result:
-                    # Update execution metadata
-                    rich_executable_task.task_execution_metadata.status = (
-                        self._convert_task_status(task_result.status)
-                    )
-                    rich_executable_task.task_execution_metadata.exec_start = (
-                        datetime.fromtimestamp(task_result.start_time).isoformat()
-                    )
-                    rich_executable_task.task_execution_metadata.exec_end = (
-                        datetime.fromtimestamp(task_result.end_time).isoformat()
-                    )
-                    rich_executable_task.task_execution_metadata.exec_duration_monotonic = (
-                        task_result.duration
-                    )
-                    # Use execution summary to check if task was cached
-                    execution_summary = self.task_manager.generate_execution_summary()
-                    rich_executable_task.task_execution_metadata.cache_hit = (
-                        subtask_id in execution_summary.cached_task_ids
-                    )
-
-                    # Use output_manager to get properly parsed memory statistics
-                    parsed_result = output_manager.parse_task_result(
-                        task_result, f"{task_result.task_id}.spthy"
-                    )
-
-                    if isinstance(parsed_result, SuccessfulTaskResult):
-                        rich_executable_task.task_execution_metadata.avg_memory = (
-                            parsed_result.wrapper_measures.avg_memory
-                        )
-                        rich_executable_task.task_execution_metadata.peak_memory = (
-                            parsed_result.wrapper_measures.peak_memory
-                        )
-                    elif task_result.memory_stats:
-                        # Fallback to raw memory stats if parsing fails
-                        rich_executable_task.task_execution_metadata.avg_memory = (
-                            task_result.memory_stats.avg_memory_mb
-                        )
-                        rich_executable_task.task_execution_metadata.peak_memory = (
-                            task_result.memory_stats.peak_memory_mb
-                        )
-
-                    # Create task result based on success/failure
-                    if task_result.status == TaskStatus.COMPLETED:
-                        rich_executable_task.task_result = (
-                            self._create_task_succeed_result(task_result)
-                        )
-                    else:
-                        rich_executable_task.task_result = (
-                            self._create_task_failed_result(task_result)
-                        )
-
-    def _convert_task_status(self, old_status: TaskStatus) -> BatchTaskStatus:
-        """Convert TaskStatus to BatchTaskStatus."""
-        status_mapping = {
-            TaskStatus.PENDING: BatchTaskStatus.PENDING,
-            TaskStatus.RUNNING: BatchTaskStatus.RUNNING,
-            TaskStatus.COMPLETED: BatchTaskStatus.COMPLETED,
-            TaskStatus.FAILED: BatchTaskStatus.FAILED,
-            TaskStatus.TIMEOUT: BatchTaskStatus.TIMEOUT,
-            TaskStatus.MEMORY_LIMIT_EXCEEDED: BatchTaskStatus.MEMORY_LIMIT_EXCEEDED,
-        }
-        return status_mapping.get(old_status, BatchTaskStatus.FAILED)
-
-    def _create_task_succeed_result(self, task_result: TaskResult) -> TaskSucceedResult:
-        """Create TaskSucceedResult from TaskResult using existing output_manager parsing."""
-        # Use the existing output_manager parsing logic to get properly parsed data
-        parsed_result = output_manager.parse_task_result(
-            task_result, f"{task_result.task_id}.spthy"  # output_file_name
-        )
-
-        # Ensure we have a successful result
-        if not isinstance(parsed_result, SuccessfulTaskResult):
-            # This shouldn't happen for successful tasks, but handle gracefully
-            return TaskSucceedResult(
-                warnings=[],
-                real_time_tamarin_measure=task_result.duration,
-                lemma_result=LemmaResult.VERIFIED,
-                steps=0,
-                analysis_type="unknown",
-            )
-
-        # Extract lemma information for the current task
-        # The task_result.task_id should match the lemma name pattern
-        lemma_name = self._extract_lemma_name_from_task_id(task_result.task_id)
-
-        steps = 0
-        analysis_type = "unknown"
-        lemma_result = LemmaResult.VERIFIED
-
-        # Check verified lemmas first
-        if lemma_name in parsed_result.verified_lemma:
-            lemma_info = parsed_result.verified_lemma[lemma_name]
-            steps = lemma_info.steps
-            analysis_type = lemma_info.analysis_type
-            lemma_result = LemmaResult.VERIFIED
-        # Check falsified lemmas
-        elif lemma_name in parsed_result.falsified_lemma:
-            lemma_info = parsed_result.falsified_lemma[lemma_name]
-            steps = lemma_info.steps
-            analysis_type = lemma_info.analysis_type
-            lemma_result = LemmaResult.FALSIFIED
-        # Check unterminated lemmas
-        elif lemma_name in parsed_result.unterminated_lemma:
-            lemma_result = LemmaResult.UNTERMINATED
-            # For unterminated lemmas, we don't have steps/analysis_type from the parser
-
-        return TaskSucceedResult(
-            warnings=parsed_result.warnings,
-            real_time_tamarin_measure=parsed_result.tamarin_timing,
-            lemma_result=lemma_result,
-            steps=steps,
-            analysis_type=analysis_type,
-        )
-
-    def _extract_lemma_name_from_task_id(self, task_id: str) -> str:
-        """Extract lemma name from task ID format: prefix--lemma_name--tamarin_version"""
-        # Task ID format: {output_file_prefix}--{lemma_name}--{tamarin_version}
-        parts = task_id.split("--")
-        if len(parts) >= 3:
-            # The lemma name is the second-to-last part before the tamarin version
-            return parts[-2]
-        return task_id  # Fallback to full task_id if parsing fails
-
-    def _create_task_failed_result(self, task_result: TaskResult) -> TaskFailedResult:
-        """Create TaskFailedResult from TaskResult."""
-        # Determine error type based on task result
-        if task_result.status == TaskStatus.TIMEOUT:
-            error_type = ErrorType.TIMEOUT
-        elif task_result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
-            error_type = ErrorType.MEMORY_LIMIT
-        else:
-            error_type = ErrorType.TAMARIN_ERROR
-
-        return TaskFailedResult(
-            return_code=str(task_result.return_code),
-            error_type=error_type,
-            error_description=self._get_error_description(task_result),
-            last_stderr_lines=(
-                task_result.stderr.split("\n")[-10:] if task_result.stderr else []
-            ),
-        )
-
-    def _get_error_description(self, task_result: TaskResult) -> str:
-        """Get error description from task result."""
-        if task_result.status == TaskStatus.TIMEOUT:
-            return "Task timed out during execution"
-        elif task_result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
-            return "Task exceeded memory limit"
-        else:
-            return f"Task failed with return code {task_result.return_code}"

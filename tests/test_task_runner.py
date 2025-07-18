@@ -399,7 +399,8 @@ class TestTaskRunnerExecution:
         # Mock _execute_single_task and asyncio.create_task
         with patch.object(runner, "_execute_single_task") as mock_execute:
             with patch("asyncio.create_task") as mock_create_task:
-                mock_execute.return_value = AsyncMock()
+                # Mock execute returns a simple Mock - asyncio.create_task handles the async behavior
+                mock_execute.return_value = Mock()
                 mock_task_obj = Mock()
                 mock_create_task.return_value = mock_task_obj
 
@@ -447,7 +448,6 @@ class TestTaskRunnerExecution:
     @patch("batch_tamarin.runner.ResourceManager")
     async def test_handle_completed_tasks(
         self,
-        mock_notification: Mock,
         mock_resource_manager: Mock,
         mock_task_manager: Mock,
         mock_output_manager: Mock,
@@ -494,7 +494,6 @@ class TestTaskRunnerExecution:
     @patch("batch_tamarin.runner.ResourceManager")
     async def test_execute_single_task(
         self,
-        mock_notification: Mock,
         mock_resource_manager: Mock,
         mock_task_manager: Mock,
         mock_output_manager: Mock,
@@ -505,7 +504,7 @@ class TestTaskRunnerExecution:
         """Test _execute_single_task execution."""
         mock_resource_manager.return_value = Mock()
 
-        # Mock task manager
+        # Mock task manager with proper async handling
         mock_task_mgr = Mock()
         mock_task_mgr.run_executable_task = AsyncMock(return_value=mock_task_results[0])
         mock_task_manager.return_value = mock_task_mgr

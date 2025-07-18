@@ -39,8 +39,8 @@ class ExecutableTask:
     output_file: Path
     """Path where results should be written"""
 
-    lemma: Optional[str]
-    """Name of the specific lemma to prove, if None, it will just run without --prove option"""
+    lemma: str
+    """Name of the specific lemma to prove"""
 
     tamarin_options: Optional[List[str]]
     """Additional command-line options"""
