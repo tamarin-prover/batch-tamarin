@@ -12,8 +12,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from ..model.batch import Batch, TaskStatus
 from ..utils.dot_utils import is_dot_file_empty, process_dot_file
+from .batch import Batch, TaskStatus
 
 
 class ReportConfig(BaseModel):

@@ -11,9 +11,9 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from ..model.report_data import ReportData
 from ..utils.notifications import notification_manager
 from .report_charts import ChartCollection
-from .report_data import ReportData
 
 
 class ReportGenerator:

@@ -22,7 +22,7 @@ from batch_tamarin.model.batch import (
     TaskStatus,
     TaskSucceedResult,
 )
-from batch_tamarin.modules.report_data import ReportData
+from batch_tamarin.model.report_data import ReportData
 from batch_tamarin.modules.report_generator import ReportGenerator
 
 
