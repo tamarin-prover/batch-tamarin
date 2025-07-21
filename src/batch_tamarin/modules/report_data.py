@@ -102,7 +102,7 @@ class TaskSummary(BaseModel):
 
     name: str = Field(..., description="Task name")
     theory_file: str = Field(..., description="Theory file path")
-    results: List["TaskResult"] = Field(
+    results: List[TaskResult] = Field(  # type: ignore
         default_factory=list, description="Task results"
     )
 
@@ -151,13 +151,13 @@ class ReportData(BaseModel):
     batch_execution_date: datetime = Field(..., description="Batch execution date")
     config: ReportConfig = Field(..., description="Configuration information")
     statistics: ReportStatistics = Field(..., description="Global statistics")
-    tasks: List["TaskSummary"] = Field(
+    tasks: List[TaskSummary] = Field(  # type: ignore
         default_factory=list, description="Task summaries"
     )
-    traces: List["TraceInfo"] = Field(
+    traces: List[TraceInfo] = Field(  # type: ignore
         default_factory=list, description="Trace information"
     )
-    error_details: List["ErrorDetail"] = Field(
+    error_details: List[ErrorDetail] = Field(  # type: ignore
         default_factory=list, description="Error details"
     )
 

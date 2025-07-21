@@ -18,7 +18,7 @@ try:
     HAS_GRAPHVIZ = True
 except ImportError:
     graphviz = None
-    HAS_GRAPHVIZ = False
+    HAS_GRAPHVIZ = False  # type: ignore
 
 
 def is_dot_file_empty(dot_file: Path) -> bool:

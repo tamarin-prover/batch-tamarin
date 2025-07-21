@@ -80,7 +80,7 @@ class ConfigManager:
 
             return recipe
 
-        except ValidationError as e:
+        except ValidationError as e:  # type: ignore
             # Check if this is an extra_forbidden error and show context
             ConfigManager._handle_validation_error(e, config_path, json_data)
             error_msg = f"[ConfigManager] Invalid JSON structure in {config_path}: {e}"
