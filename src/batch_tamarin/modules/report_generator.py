@@ -99,7 +99,7 @@ class ReportGenerator:
 
         # Create report data
         report_data = ReportData.from_execution_report(
-            execution_report_path, results_directory
+            execution_report_path, results_directory, format_type
         )
 
         # Generate charts

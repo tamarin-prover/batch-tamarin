@@ -127,6 +127,9 @@ class TraceInfo(BaseModel):
     json_file: str = Field(..., description="JSON trace file path")
     dot_file: Optional[str] = Field(None, description="DOT trace file path")
     svg_content: Optional[str] = Field(None, description="SVG trace content")
+    png_file: Optional[Path] = Field(
+        None, description="PNG trace file path (for LaTeX)"
+    )
 
 
 class ErrorDetail(BaseModel):
@@ -189,7 +192,9 @@ class ReportData(BaseModel):
         return results
 
     @classmethod
-    def from_batch_and_output_dir(cls, batch: Batch, output_dir: Path) -> "ReportData":
+    def from_batch_and_output_dir(
+        cls, batch: Batch, output_dir: Path, format_type: str
+    ) -> "ReportData":
         """Create ReportData from Batch object and output directory."""
         # Extract basic information
         results_directory = str(output_dir.absolute())
@@ -238,10 +243,16 @@ class ReportData(BaseModel):
             task_results: List[TaskResult] = []
 
             for subtask_key, executable_task in rich_task.subtasks.items():
-                # Parse subtask key (format: lemma--version)
+                # Parse subtask key (format: task_prefix--lemma--version)
                 parts = subtask_key.split("--")
-                lemma = parts[0] if parts else "unknown"
-                version = parts[1] if len(parts) > 1 else "unknown"
+                if len(parts) >= 3:
+                    # Extract lemma (second-to-last part) and version (last part)
+                    lemma = parts[-2]  # Second to last part is lemma name
+                    version = parts[-1]  # Last part is tamarin version
+                else:
+                    # Fallback for unexpected format
+                    lemma = parts[0] if parts else "unknown"
+                    version = parts[1] if len(parts) > 1 else "unknown"
 
                 # Build task result
                 task_result = TaskResult(
@@ -315,41 +326,47 @@ class ReportData(BaseModel):
         if traces_dir.exists():
             for trace_file in traces_dir.glob("*.json"):
                 # Parse trace filename to extract lemma and version
+                # Format: task_prefix--lemma--version
                 filename = trace_file.stem
                 parts = filename.split("--")
-                if len(parts) >= 2:
+                if len(parts) >= 3:
+                    # Extract lemma (second-to-last part) and version (last part)
+                    lemma = parts[-2]  # Second to last part is lemma name
+                    version = parts[-1]  # Last part is tamarin version
+                elif len(parts) >= 2:
+                    # Fallback for legacy format
                     lemma = parts[0]
                     version = parts[1]
+                else:
+                    # Skip files that don't match expected format
+                    continue
 
-                    # Look for corresponding DOT file
-                    dot_file = trace_file.with_suffix(".dot")
+                # Look for corresponding DOT file
+                dot_file = trace_file.with_suffix(".dot")
 
-                    # Validate DOT file and generate SVG
-                    svg_content = None
-                    dot_file_path = None
+                # Validate DOT file and generate SVG
+                svg_content = None
+                dot_file_path = None
+                png_file = None
 
-                    if dot_file.exists() and not is_dot_file_empty(dot_file):
-                        dot_file_path = str(dot_file)
-                        # Try to process DOT file to generate SVG
-                        svg_content = process_dot_file(dot_file)
+                if dot_file.exists() and not is_dot_file_empty(dot_file):
+                    dot_file_path = str(dot_file)
+                    # Try to process DOT file to generate SVG
+                    svg_content = process_dot_file(dot_file, format_type)
 
-                    # If no SVG generated from DOT, check for existing SVG
-                    if svg_content is None:
-                        svg_file = trace_file.with_suffix(".svg")
-                        if svg_file.exists():
-                            try:
-                                svg_content = svg_file.read_text(encoding="utf-8")
-                            except Exception:
-                                pass
+                if svg_content is None and format_type == "tex":
+                    # Check if PNG file exists (for LaTeX compatibility)
+                    png_file = trace_file.with_suffix(".png")
 
-                    trace_info = TraceInfo(
-                        lemma=lemma,
-                        tamarin_version=version,
-                        json_file=str(trace_file),
-                        dot_file=dot_file_path,
-                        svg_content=svg_content,
-                    )
-                    traces.append(trace_info)
+                trace_info = TraceInfo(
+                    lemma=lemma,
+                    tamarin_version=version,
+                    json_file=str(trace_file),
+                    dot_file=dot_file_path,
+                    svg_content=svg_content,
+                    png_file=png_file if png_file is not None else None,
+                )
+                traces.append(trace_info)
 
         return cls(
             results_directory=results_directory,
@@ -363,11 +380,11 @@ class ReportData(BaseModel):
 
     @classmethod
     def from_execution_report(
-        cls, execution_report_path: Path, output_dir: Path
+        cls, execution_report_path: Path, output_dir: Path, format_type: str
     ) -> "ReportData":
         """Create ReportData from execution_report.json file."""
         with open(execution_report_path, "r", encoding="utf-8") as f:
             batch_data = json.load(f)
 
         batch = Batch.model_validate(batch_data)
-        return cls.from_batch_and_output_dir(batch, output_dir)
+        return cls.from_batch_and_output_dir(batch, output_dir, format_type)

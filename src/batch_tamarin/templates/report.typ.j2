@@ -87,39 +87,87 @@
   grid(
     columns: (1fr, 1fr),
     column-gutter: 2em,
-    align: center,
     [
-      #figure(
-        {{ charts.success_rate.to_typst_table() }},
-        caption: [Success Rate Distribution]
+      // Simple pie chart representation using rectangles
+      #stack(
+        dir: ttb,
+        spacing: 0.5em,
+        [*Success Rate Distribution*],
+        rect(
+          width: 100% * {{ "%.3f"|format(report_data.statistics.successful_tasks_percentage / 100) }},
+          height: 20pt,
+          fill: green
+        ),
+        text(size: 10pt)[Successful: {{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}%],
+        rect(
+          width: 100% * {{ "%.3f"|format(report_data.statistics.failed_tasks_percentage / 100) }},
+          height: 20pt,
+          fill: red
+        ),
+        text(size: 10pt)[Failed: {{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}%]
       )
     ],
     [
-      #figure(
-        {{ charts.cache_hit_rate.to_typst_table() }},
-        caption: [Cache Hit Rate Distribution]
+      // Simple bar chart for cache performance
+      #stack(
+        dir: ttb,
+        spacing: 0.5em,
+        [*Cache Performance*],
+        grid(
+          columns: (1fr, 1fr),
+          row-gutter: 0.5em,
+          [Cached],
+          rect(
+            width: 60pt * {{ "%.3f"|format(report_data.statistics.cache_hits / report_data.statistics.total_tasks if report_data.statistics.total_tasks > 0 else 0) }},
+            height: 20pt,
+            fill: blue
+          ),
+          [Not Cached],
+          rect(
+            width: 60pt * {{ "%.3f"|format((report_data.statistics.total_tasks - report_data.statistics.cache_hits) / report_data.statistics.total_tasks if report_data.statistics.total_tasks > 0 else 0) }},
+            height: 20pt,
+            fill: gray
+          )
+        ),
+        text(size: 10pt)[{{ report_data.statistics.cache_hits }} cached, {{ report_data.statistics.total_tasks - report_data.statistics.cache_hits }} not cached]
       )
     ]
   ),
-  caption: [Task Success and Cache Performance Overview]
+  caption: [Performance Overview]
 )
 
-#figure(
-  {{ charts.runtime_per_task.to_typst_table() }},
-  caption: [Average Runtime per Task]
+=== Runtime per Task
+
+#table(
+  columns: (1fr, 1fr),
+  stroke: 0.5pt,
+  [*Task*], [*Average Runtime (seconds)*],
+  {% for task in report_data.tasks %}
+  [{{ task.name }}], [{{ "%.2f"|format((task.results|sum(attribute='runtime')/task.results|length) if task.results else 0) }}],
+  {% endfor %}
 )
 
-#figure(
-  {{ charts.memory_per_task.to_typst_table() }},
-  caption: [Average Memory Usage per Task]
+=== Memory Usage per Task
+
+#table(
+  columns: (1fr, 1fr),
+  stroke: 0.5pt,
+  [*Task*], [*Average Memory Usage (MB)*],
+  {% for task in report_data.tasks %}
+  [{{ task.name }}], [{{ "%.2f"|format((task.results|sum(attribute='peak_memory')/task.results|length) if task.results else 0) }}],
+  {% endfor %}
 )
 
-{% if charts.execution_timeline %}
-#figure(
-  {{ charts.execution_timeline.to_typst_table() }},
-  caption: [Task Execution Timeline]
+=== Execution Timeline
+
+#table(
+  columns: (1fr, 1fr, 1fr),
+  stroke: 0.5pt,
+  [*Task*], [*Total Runtime (seconds)*], [*Results Count*],
+  {% for task in report_data.tasks %}
+  [{{ task.name }}], [{{ "%.2f"|format(task.results|sum(attribute='runtime') if task.results else 0) }}], [{{ task.results|length }}],
+  {% endfor %}
 )
-{% endif %}
 
 = Task Details
 
@@ -158,7 +206,13 @@
 - *DOT File:* `{{ trace.dot_file }}`
 {% endif %}
 
-{% if trace.svg_content %}
+{% if trace.dot_file %}
+{% set svg_file = trace.dot_file.replace('.dot', '.svg') %}
+#figure(
+  image("{{ svg_file }}", width: 80%, height: 400pt, fit: "contain"),
+  caption: [Trace visualization for {{ trace.lemma }}]
+)
+{% elif trace.svg_content %}
 #figure(
   raw(trace.svg_content, lang: "svg"),
   caption: [Trace visualization for {{ trace.lemma }}]
@@ -175,12 +229,6 @@
 
 == Error Summary
 
-{% if charts.error_types %}
-#figure(
-  {{ charts.error_types.to_typst_table() }},
-  caption: [Error Types Distribution]
-)
-{% endif %}
 
 #figure(
   table(

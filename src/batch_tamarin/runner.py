@@ -21,6 +21,7 @@ from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
+from .utils.dot_utils import cleanup_empty_trace_files
 from .utils.notifications import notification_manager
 
 
@@ -327,6 +328,14 @@ class TaskRunner:
 
         # Release resources
         self.resource_manager.release_resources(task)
+
+        # Clean up empty trace files
+        try:
+            cleanup_empty_trace_files(task.traces_dir)
+        except Exception as e:
+            notification_manager.debug(
+                f"[TaskRunner] Failed to clean up trace files for task {task_id}: {e}"
+            )
 
         # Update internal tracking
         self._task_results[task_id] = result

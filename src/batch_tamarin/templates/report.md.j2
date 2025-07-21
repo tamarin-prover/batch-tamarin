@@ -42,7 +42,7 @@
 {% endif %}
 
 {% if charts.cache_hit_rate %}
-**Cache Hit Rate**:
+**Cache Performance**:
 ```mermaid
 {{ charts.cache_hit_rate.to_mermaid_pie() }}
 ```
@@ -118,12 +118,11 @@ xychart-beta
 {% if trace.dot_file %}
 - **DOT File**: [{{ trace.dot_file }}]({{ trace.dot_file }})
 {% endif %}
-{% if trace.svg_content %}
+{% if trace.dot_file %}
+{% set svg_file = trace.dot_file.replace('.dot', '.svg') %}
 
 **Trace Visualization**:
-```svg
-{{ trace.svg_content }}
-```
+![{{ trace.lemma }}_trace]({{ svg_file }})
 {% endif %}
 {% endfor %}
 {% endif %}

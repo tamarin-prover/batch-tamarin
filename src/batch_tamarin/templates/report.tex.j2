@@ -13,10 +13,13 @@
 \usepackage{url}
 \usepackage{fancyhdr}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{listings}
 \usepackage{datetime}
-\usepackage{pgfplots}
 \usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgf-pie}
+\usetikzlibrary{calc}
 \pgfplotsset{compat=1.16}
 
 \geometry{margin=1in}
@@ -99,29 +102,43 @@ Total memory usage (peak) & {{ "%.2f"|format(report_data.statistics.total_memory
 \bottomrule
 \end{tabular}
 
-\subsubsection{Success Rate}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-Status & Count (Percentage) \\
-\midrule
-\textcolor{successgreen}{Successful} & {{ report_data.statistics.successful_tasks }} ({{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}\%) \\
-\textcolor{failedred}{Failed} & {{ report_data.statistics.failed_tasks }} ({{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}\%) \\
-\bottomrule
-\end{tabular}
-\end{center}
+\subsubsection{Charts Overview}
 
-\subsubsection{Cache Hit Rate}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-Cache Status & Count (Percentage) \\
-\midrule
-\textcolor{successgreen}{Cache Hit} & {{ report_data.statistics.cache_hits }} ({{ "%.1f"|format(report_data.statistics.cache_hit_percentage) }}\%) \\
-\textcolor{warningyellow}{Cache Miss} & {{ report_data.statistics.total_lemmas - report_data.statistics.cache_hits }} ({{ "%.1f"|format(100 - report_data.statistics.cache_hit_percentage) }}\%) \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \pie[text=legend, radius=2, sum=auto]{% raw %}{{% endraw %}
+                {{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}/Successful,
+                {{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}/Failed
+            {% raw %}}{% endraw %}
+        \end{tikzpicture}
+        \caption{Success Rate Distribution}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                ybar,
+                width=6cm,
+                height=4cm,
+                ylabel={Tasks},
+                symbolic x coords={Cached,Not Cached},
+                xtick=data,
+                nodes near coords,
+                ymin=0,
+            ]
+            \addplot coordinates {% raw %}{{% endraw %}
+                (Cached,{{ report_data.statistics.cache_hits }})
+                (Not Cached,{{ report_data.statistics.total_tasks - report_data.statistics.cache_hits }})
+            {% raw %}}{% endraw %};
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Cache Performance}
+    \end{minipage}
+\end{figure}
 
 \subsubsection{Runtime per Task}
 \begin{center}
@@ -199,9 +216,21 @@ Lemma & Options & Cores & Memory & Timeout & Tamarin Version & Status & Memory U
 {% endif %}
 \end{itemize}
 
-{% if trace.svg_content %}
+{% if trace.dot_file %}
+{% set png_file = trace.dot_file.replace('.dot', '.png') %}
+\begin{figure}[H]
+    \centering
+    \IfFileExists{% raw %}{{% endraw %}{{ png_file|latex_escape }}{% raw %}}{% endraw %}{% raw %}{{% endraw %}%
+        \includegraphics[width=0.6\textwidth,height=4cm,keepaspectratio]{% raw %}{{% endraw %}{{ png_file|latex_escape }}{% raw %}}{% endraw %}%
+    {% raw %}}{% endraw %}{% raw %}{{% endraw %}%
+        \textit{Trace visualization not available (DOT file: {{ trace.dot_file|latex_escape }})}%
+    {% raw %}}{% endraw %}
+    \caption{Trace visualization for {{ trace.lemma|latex_escape }}}
+    \label{fig:trace_{{ loop.index }}}
+\end{figure}
+{% elif trace.svg_content %}
 \begin{center}
-\textit{Note: Trace visualization available in HTML/Markdown formats}
+\textit{Trace visualization available in other formats}
 \end{center}
 {% endif %}
 {% endfor %}

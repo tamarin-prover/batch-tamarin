@@ -70,7 +70,22 @@
             margin: 10px 0;
             background-color: #fff;
         }
+        .trace-visualization svg {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+        .trace-svg-container {
+            text-align: center;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>hljs.highlightAll();</script>
 </head>
 <body>
     <h1>Batch Tamarin Execution Report</h1>
@@ -185,7 +200,7 @@
         {% endif %}
         {% if charts.cache_hit_rate %}
         <div class="chart-item">
-            <h4>Cache Hit Rate</h4>
+            <h4>Cache Performance</h4>
             <div class="mermaid">
                 {{ charts.cache_hit_rate.to_mermaid_pie() }}
             </div>
@@ -306,7 +321,7 @@
             {% endif %}
         </p>
         {% if trace.svg_content %}
-        <div style="text-align: center; margin: 20px 0;">
+        <div class="trace-svg-container">
             {{ trace.svg_content|safe }}
         </div>
         {% endif %}
@@ -361,7 +376,7 @@
         <h4>{{ result.task_name }}--{{ result.lemma }}--{{ result.tamarin_version }}</h4>
         <p>{{ result.error_description }}</p>
         {% if result.stderr_lines %}
-        <pre>{{ result.stderr_lines|join('\n') }}</pre>
+        <pre><code class="language-bash">{{ result.stderr_lines|join('\n') }}</code></pre>
         {% endif %}
     </div>
     {% endfor %}
