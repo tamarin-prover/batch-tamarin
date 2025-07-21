@@ -66,6 +66,19 @@ class TaskManager:
                 self._task_status[task_id] = cached_result.status
                 self._task_results[task_id] = cached_result
                 self._cached_tasks.add(task_id)
+
+                # Process cached result with output manager if initialized
+                if output_manager.is_initialized():
+                    try:
+                        output_file_name = task.output_file.name
+                        output_manager.process_task_result(
+                            cached_result, output_file_name
+                        )
+                    except Exception as e:
+                        notification_manager.error(
+                            f"[TaskManager] Failed to process cached task result with output manager: {e}"
+                        )
+
                 return cached_result
         except Exception as e:
             notification_manager.debug(
