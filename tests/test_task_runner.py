@@ -375,7 +375,8 @@ class TestTaskRunnerExecution:
     @patch("batch_tamarin.runner.TaskManager")
     @patch("batch_tamarin.runner.ResourceManager")
     @patch("batch_tamarin.runner.notification_manager")
-    def test_start_schedulable_tasks(
+    @pytest.mark.asyncio
+    async def test_start_schedulable_tasks(
         self,
         mock_notification: Mock,
         mock_resource_manager: Mock,
@@ -397,7 +398,9 @@ class TestTaskRunnerExecution:
         runner._pending_tasks = mock_executable_tasks.copy()  # type: ignore
 
         # Mock _execute_single_task and asyncio.create_task
-        with patch.object(runner, "_execute_single_task") as mock_execute:
+        with patch.object(
+            runner, "_execute_single_task", new_callable=AsyncMock
+        ) as mock_execute:
             with patch("asyncio.create_task") as mock_create_task:
                 # Mock execute returns a simple Mock - asyncio.create_task handles the async behavior
                 mock_execute.return_value = Mock()
@@ -492,6 +495,7 @@ class TestTaskRunnerExecution:
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
     @patch("batch_tamarin.runner.ResourceManager")
+    @pytest.mark.asyncio
     async def test_execute_single_task(
         self,
         mock_resource_manager: Mock,

@@ -254,7 +254,9 @@ class TestReportGenerator:
 
         # Create test data
         batch = self.create_sample_batch()
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
 
         # Generate charts
         charts = generator._generate_charts(report_data)  # type: ignore
@@ -272,7 +274,9 @@ class TestReportGenerator:
 
         # Create test data
         batch = self.create_sample_batch()
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
         charts = generator._generate_charts(report_data)  # type: ignore
 
         # Prepare context
@@ -291,7 +295,9 @@ class TestReportGenerator:
     def test_report_data_from_batch(self):
         """Test ReportData creation from Batch object."""
         batch = self.create_sample_batch()
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
 
         # Verify report data structure
         assert report_data.results_directory == str(self.results_dir)
@@ -311,7 +317,9 @@ class TestReportGenerator:
         batch = self.create_sample_batch()
         report_path = self.create_execution_report(batch)
 
-        report_data = ReportData.from_execution_report(report_path, self.results_dir)
+        report_data = ReportData.from_execution_report(
+            report_path, self.results_dir, "md"
+        )
 
         # Verify report data was created correctly
         assert report_data.results_directory == str(self.results_dir)
@@ -338,7 +346,9 @@ class TestReportGenerator:
             "test_lemma--latest"
         ].task_result = failed_result
 
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
         charts = generator._generate_charts(report_data)  # type: ignore
 
         # Verify error types chart is created when there are errors
@@ -374,7 +384,9 @@ class TestReportGenerator:
             tasks={},
         )
 
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
         charts = generator._generate_charts(report_data)  # type: ignore
 
         # Charts should be None when there's no data
@@ -488,7 +500,9 @@ digraph test {
             tasks={},
         )
 
-        report_data = ReportData.from_batch_and_output_dir(batch, self.results_dir)
+        report_data = ReportData.from_batch_and_output_dir(
+            batch, self.results_dir, "md"
+        )
         charts = generator._generate_charts(report_data)  # type: ignore
 
         # Prepare context
