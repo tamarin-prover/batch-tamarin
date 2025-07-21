@@ -41,7 +41,7 @@ def is_version_greater_than(
     version_str: str, target_major: int, target_minor: int, target_patch: int = 0
 ) -> bool:
     """
-    Check if a version string represents a version greater than the target.
+    Check if a version string represents a version greater than or equal to the target.
 
     Args:
         version_str: Version string to check
@@ -50,7 +50,7 @@ def is_version_greater_than(
         target_patch: Target patch version (default: 0)
 
     Returns:
-        True if version is greater than target, False otherwise
+        True if version is greater than or equal to target, False otherwise
     """
     try:
         major, minor, patch = parse_version(version_str)
@@ -61,11 +61,11 @@ def is_version_greater_than(
             if minor > target_minor:
                 return True
             elif minor == target_minor:
-                return patch > target_patch
+                return patch >= target_patch
 
         return False
     except ValueError:
-        # If we can't parse the version, assume it's not greater
+        # If we can't parse the version, assume it's not greater or equal
         return False
 
 
