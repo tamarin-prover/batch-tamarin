@@ -459,6 +459,7 @@ class ConfigManager:
                 # Create ExecutableTask
                 executable_task = ExecutableTask(
                     task_name=unique_task_id,
+                    original_task_name=task_name,
                     tamarin_version_name=tamarin_version,
                     tamarin_executable=tamarin_executable,
                     theory_file=theory_file,

@@ -60,6 +60,7 @@ def mock_executable_tasks() -> List[ExecutableTask]:
     return [
         ExecutableTask(
             task_name="task1",
+            original_task_name="task1",
             tamarin_version_name="stable",
             tamarin_executable=Path("/mock/tamarin-prover"),
             theory_file=Path("/mock/theory.spthy"),
@@ -74,6 +75,7 @@ def mock_executable_tasks() -> List[ExecutableTask]:
         ),
         ExecutableTask(
             task_name="task2",
+            original_task_name="task2",
             tamarin_version_name="stable",
             tamarin_executable=Path("/mock/tamarin-prover"),
             theory_file=Path("/mock/theory.spthy"),

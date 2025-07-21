@@ -237,6 +237,7 @@ class TestResourceAllocation:
         # Create test task
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -285,6 +286,7 @@ class TestResourceAllocation:
         # Create task that requires more cores than available
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -331,6 +333,7 @@ class TestResourceAllocation:
         # Create task that requires more memory than available
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -377,6 +380,7 @@ class TestResourceAllocation:
         # Create test task
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -428,6 +432,7 @@ class TestResourceAllocation:
         # Create test task
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -480,6 +485,7 @@ class TestResourceAllocation:
         # Create test task
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -527,6 +533,7 @@ class TestResourceAllocation:
         # Create test task
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -582,6 +589,7 @@ class TestTaskScheduling:
         # Create test task within limits
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -622,6 +630,7 @@ class TestTaskScheduling:
         # Create test task that exceeds limits
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -687,6 +696,7 @@ class TestTaskScheduling:
         # Create tasks with different resource requirements
         task_small = ExecutableTask(
             task_name="small_task",
+            original_task_name="small_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -702,6 +712,7 @@ class TestTaskScheduling:
 
         task_medium = ExecutableTask(
             task_name="medium_task",
+            original_task_name="medium_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -717,6 +728,7 @@ class TestTaskScheduling:
 
         task_large = ExecutableTask(
             task_name="large_task",
+            original_task_name="large_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -769,6 +781,7 @@ class TestTaskScheduling:
         # Pre-allocate some resources to limit available resources
         dummy_task = ExecutableTask(
             task_name="dummy_task",
+            original_task_name="dummy_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -788,6 +801,7 @@ class TestTaskScheduling:
         # Create tasks
         task_small = ExecutableTask(
             task_name="small_task",
+            original_task_name="small_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -803,6 +817,7 @@ class TestTaskScheduling:
 
         task_large = ExecutableTask(
             task_name="large_task",
+            original_task_name="large_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -849,6 +864,7 @@ class TestTaskScheduling:
         # Allocate all resources
         dummy_task = ExecutableTask(
             task_name="dummy_task",
+            original_task_name="dummy_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -866,6 +882,7 @@ class TestTaskScheduling:
         # Create task that won't fit
         task_large = ExecutableTask(
             task_name="large_task",
+            original_task_name="large_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -940,6 +957,7 @@ class TestResourceQueries:
         # Allocate resources
         task = ExecutableTask(
             task_name="test_task",
+            original_task_name="test_task",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -984,6 +1002,7 @@ class TestResourceQueries:
         # Allocate resources for multiple tasks
         task1 = ExecutableTask(
             task_name="task1",
+            original_task_name="task1",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -999,6 +1018,7 @@ class TestResourceQueries:
 
         task2 = ExecutableTask(
             task_name="task2",
+            original_task_name="task2",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",

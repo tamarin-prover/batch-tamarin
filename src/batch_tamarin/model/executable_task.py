@@ -25,7 +25,10 @@ class ExecutableTask:
     """
 
     task_name: str
-    """Name of the original task"""
+    """Generated unique task name for execution"""
+
+    original_task_name: str
+    """Name of the original recipe task"""
 
     tamarin_version_name: str
     """Name of the tamarin version being used"""

@@ -234,6 +234,7 @@ class TestBatchPopulation:
         executable_tasks = [
             ExecutableTask(
                 task_name="task1",
+                original_task_name="task1",
                 tamarin_version_name="stable",
                 tamarin_executable=tmp_dir / "tamarin-prover",
                 theory_file=tmp_dir / "theory.spthy",
@@ -248,6 +249,7 @@ class TestBatchPopulation:
             ),
             ExecutableTask(
                 task_name="task2",
+                original_task_name="task2",
                 tamarin_version_name="stable",
                 tamarin_executable=tmp_dir / "tamarin-prover",
                 theory_file=tmp_dir / "theory.spthy",
@@ -334,6 +336,7 @@ class TestBatchPopulation:
         executable_tasks = [
             ExecutableTask(
                 task_name="task1",
+                original_task_name="task1",
                 tamarin_version_name="stable",
                 tamarin_executable=tmp_dir / "tamarin-prover",
                 theory_file=tmp_dir / "theory.spthy",
@@ -407,6 +410,7 @@ class TestRichTaskCreation:
         executable_tasks = [
             ExecutableTask(
                 task_name="task1--lemma1--stable",
+                original_task_name="task1",
                 tamarin_version_name="stable",
                 tamarin_executable=tmp_dir / "tamarin-prover",
                 theory_file=tmp_dir / "theory.spthy",
@@ -421,6 +425,7 @@ class TestRichTaskCreation:
             ),
             ExecutableTask(
                 task_name="task1--lemma2--stable",
+                original_task_name="task1",
                 tamarin_version_name="stable",
                 tamarin_executable=tmp_dir / "tamarin-prover",
                 theory_file=tmp_dir / "theory.spthy",
@@ -483,6 +488,7 @@ class TestRichTaskCreation:
 
         executable_task = ExecutableTask(
             task_name="task1--lemma1--stable",
+            original_task_name="task1",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -557,6 +563,7 @@ class TestRichTaskCreation:
 
         executable_task = ExecutableTask(
             task_name="task1--lemma1--stable",
+            original_task_name="task1",
             tamarin_version_name="stable",
             tamarin_executable=tmp_dir / "tamarin-prover",
             theory_file=tmp_dir / "theory.spthy",
@@ -948,39 +955,6 @@ class TestTaskResultCreation:
 
 class TestUtilityMethods:
     """Test utility methods for name extraction and error description."""
-
-    def test_extract_original_task_name(self, minimal_recipe_data: Dict[str, Any]):
-        """Test extracting original task name from executable task name."""
-        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
-        batch_manager = BatchManager(recipe, "test_recipe.json")
-
-        # Test standard format
-        assert (
-            batch_manager._extract_original_task_name(  # type:ignore
-                "task1--lemma1--stable"
-            )
-            == "task1"
-        )
-        assert (
-            batch_manager._extract_original_task_name(  # type:ignore
-                "complex_task--lemma2--dev"
-            )
-            == "complex"
-        )
-
-        # Test edge cases
-        assert (
-            batch_manager._extract_original_task_name(  # type:ignore
-                "simple"
-            )
-            == "simple"
-        )
-        assert (
-            batch_manager._extract_original_task_name(  # type:ignore
-                "task--lemma"
-            )
-            == "task--lemma"
-        )  # Only 2 parts, returns unchanged
 
     def test_extract_lemma_name_from_task_id(self, minimal_recipe_data: Dict[str, Any]):
         """Test extracting lemma name from task ID."""

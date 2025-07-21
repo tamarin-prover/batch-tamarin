@@ -38,6 +38,7 @@ def sample_task(sample_theory_file: Path, tmp_dir: Path) -> ExecutableTask:
 
     return ExecutableTask(
         task_name="test_task_001",
+        original_task_name="test_task_001",
         tamarin_version_name="stable",
         theory_file=sample_theory_file,
         tamarin_executable=tamarin_exe,
@@ -97,6 +98,7 @@ class TestCacheManager:
         tamarin_exe = sample_task.tamarin_executable
         task2 = ExecutableTask(
             task_name="test_task_002",
+            original_task_name="test_task_002",
             tamarin_version_name="stable",
             theory_file=sample_theory_file,
             tamarin_executable=tamarin_exe,
@@ -134,6 +136,7 @@ class TestCacheManager:
 
         task1 = ExecutableTask(
             task_name="test_task_001",
+            original_task_name="test_task_001",
             tamarin_version_name="stable",
             theory_file=file1,
             tamarin_executable=tamarin_exe,
@@ -149,6 +152,7 @@ class TestCacheManager:
 
         task2 = ExecutableTask(
             task_name="test_task_002",
+            original_task_name="test_task_002",
             tamarin_version_name="stable",
             theory_file=file2,
             tamarin_executable=tamarin_exe,
@@ -302,6 +306,7 @@ class TestCacheManager:
 
         base_task = ExecutableTask(
             task_name="test_task_001",
+            original_task_name="test_task_001",
             tamarin_version_name="stable",
             theory_file=sample_theory_file,
             tamarin_executable=tamarin_exe,
@@ -362,6 +367,7 @@ class TestCacheManager:
 
         task = ExecutableTask(
             task_name="test_task_001",
+            original_task_name="test_task_001",
             tamarin_version_name="stable",
             theory_file=nonexistent_file,
             tamarin_executable=tamarin_exe,

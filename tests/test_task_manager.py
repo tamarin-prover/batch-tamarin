@@ -25,6 +25,7 @@ def mock_executable_task() -> ExecutableTask:
     """Create a mock ExecutableTask for testing."""
     return ExecutableTask(
         task_name="test_task",
+        original_task_name="test_task",
         tamarin_version_name="stable",
         tamarin_executable=Path("/mock/tamarin-prover"),
         theory_file=Path("/mock/theory.spthy"),

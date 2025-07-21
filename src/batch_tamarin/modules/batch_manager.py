@@ -174,10 +174,8 @@ class BatchManager:
         # Group tasks by original task name
         task_groups: Dict[str, List[ExecutableTask]] = {}
         for executable_task in executable_tasks:
-            # Extract original task name from executable task name
-            original_task_name = self._extract_original_task_name(
-                executable_task.task_name
-            )
+            # Use the stored original task name instead of parsing
+            original_task_name = executable_task.original_task_name
 
             if original_task_name not in task_groups:
                 task_groups[original_task_name] = []
@@ -357,15 +355,6 @@ class BatchManager:
                 task_result.stderr.split("\n")[-10:] if task_result.stderr else []
             ),
         )
-
-    def _extract_original_task_name(self, task_name: str) -> str:
-        """Extract original task name from executable task name."""
-        # Format: {output_file_prefix}--{lemma_name}--{tamarin_version}
-        parts = task_name.split("--")
-        if len(parts) >= 3:
-            # Get the base task name from the prefix
-            return parts[0].split("_")[0]
-        return task_name
 
     def _extract_lemma_name_from_task_id(self, task_id: str) -> str:
         """Extract lemma name from task ID format: prefix--lemma_name--tamarin_version"""
