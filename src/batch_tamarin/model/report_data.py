@@ -243,16 +243,9 @@ class ReportData(BaseModel):
             task_results: List[TaskResult] = []
 
             for subtask_key, executable_task in rich_task.subtasks.items():
-                # Parse subtask key (format: task_prefix--lemma--version)
-                parts = subtask_key.split("--")
-                if len(parts) >= 3:
-                    # Extract lemma (second-to-last part) and version (last part)
-                    lemma = parts[-2]  # Second to last part is lemma name
-                    version = parts[-1]  # Last part is tamarin version
-                else:
-                    # Fallback for unexpected format
-                    lemma = parts[0] if parts else "unknown"
-                    version = parts[1] if len(parts) > 1 else "unknown"
+                # Extract lemma and version directly from the task config
+                lemma = executable_task.task_config.lemma
+                version = executable_task.task_config.tamarin_alias
 
                 # Build task result
                 task_result = TaskResult(
@@ -320,25 +313,28 @@ class ReportData(BaseModel):
             )
             tasks.append(task_summary)
 
-        # Build trace information (scan traces directory)
+        # Build trace information using batch data (avoid filename parsing)
         traces: List[TraceInfo] = []
         traces_dir = output_dir / "traces"
         if traces_dir.exists():
+            # Build mapping from subtask_key to (lemma, version) for trace lookup
+            subtask_mapping: Dict[str, tuple[str, str]] = {}
+            for task_name, rich_task in batch.tasks.items():
+                for subtask_key, executable_task in rich_task.subtasks.items():
+                    subtask_mapping[subtask_key] = (
+                        executable_task.task_config.lemma,
+                        executable_task.task_config.tamarin_alias,
+                    )
+
             for trace_file in traces_dir.glob("*.json"):
-                # Parse trace filename to extract lemma and version
-                # Format: task_prefix--lemma--version
+                # Use subtask key to lookup lemma and version from batch data
                 filename = trace_file.stem
-                parts = filename.split("--")
-                if len(parts) >= 3:
-                    # Extract lemma (second-to-last part) and version (last part)
-                    lemma = parts[-2]  # Second to last part is lemma name
-                    version = parts[-1]  # Last part is tamarin version
-                elif len(parts) >= 2:
-                    # Fallback for legacy format
-                    lemma = parts[0]
-                    version = parts[1]
+                if filename in subtask_mapping:
+                    lemma: str
+                    version: str
+                    lemma, version = subtask_mapping[filename]
                 else:
-                    # Skip files that don't match expected format
+                    # Skip files that don't match any subtask
                     continue
 
                 # Look for corresponding DOT file
