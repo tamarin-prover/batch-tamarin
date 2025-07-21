@@ -21,6 +21,7 @@ from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
 from .modules.task_manager import TaskManager
+from .utils.dot_utils import cleanup_empty_trace_files
 from .utils.notifications import notification_manager
 
 
@@ -58,6 +59,9 @@ class TaskRunner:
         self._completed_tasks: Set[str] = set()
         self._failed_tasks: Set[str] = set()
         self._task_results: Dict[str, TaskResult] = {}
+        self.completed_tasks: Set[str] = set()
+        self.failed_tasks: Set[str] = set()
+        self.task_results: Dict[str, TaskResult] = {}
 
         # Track shutdown state
         self._shutdown_requested = False
@@ -94,10 +98,13 @@ class TaskRunner:
         self._completed_tasks.clear()
         self._failed_tasks.clear()
         self._task_results.clear()
+        self.completed_tasks.clear()
+        self.failed_tasks.clear()
+        self.task_results.clear()
         self._shutdown_requested = False
 
         # Set up shutdown handler
-        def signal_handler(signum: int, frame: Any) -> None:
+        def signal_handler(_signum: int, _frame: Any) -> None:
             self._signal_count += 1
 
             if self._signal_count == 1:
@@ -322,26 +329,39 @@ class TaskRunner:
         # Release resources
         self.resource_manager.release_resources(task)
 
+        # Clean up empty trace files
+        try:
+            cleanup_empty_trace_files(task.traces_dir)
+        except Exception as e:
+            notification_manager.debug(
+                f"[TaskRunner] Failed to clean up trace files for task {task_id}: {e}"
+            )
+
         # Update internal tracking
         self._task_results[task_id] = result
+        self.task_results[task_id] = result
 
         if result.status == TaskStatus.COMPLETED:
             self._completed_tasks.add(task_id)
+            self.completed_tasks.add(task_id)
             notification_manager.success(
                 f"[TaskRunner] Task completed successfully: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.TIMEOUT:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task timed out: {task_id} (duration: {result.duration:.2f}s)"
             )
         elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task exceeded memory limit: {task_id} (duration: {result.duration:.2f}s)"
             )
         else:
             self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
             notification_manager.error(
                 f"[TaskRunner] Task failed: {task_id} (status: {result.status.value}, "
                 f"return_code: {result.return_code}, duration: {result.duration:.2f}s)"

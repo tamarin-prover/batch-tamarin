@@ -5,6 +5,7 @@ import typer
 from . import __author__, __version__
 from .commands.check import CheckCommand
 from .commands.init import InitCommand
+from .commands.report import ReportCommand
 from .commands.run import RunCommand
 from .modules.cache_manager import CacheManager
 from .utils.notifications import notification_manager
@@ -129,6 +130,43 @@ def init(
         raise typer.Exit(1)
     except Exception as e:
         notification_manager.error(f"Configuration generation failed: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def report(
+    results_directory: str = typer.Argument(
+        ..., help="Directory containing execution results"
+    ),
+    output: str = typer.Option(
+        "report",
+        "--output",
+        "-o",
+        help="Output file path",
+    ),
+    format_type: str = typer.Option(
+        "md", "--format", "-f", help="Output format (md/html/tex/typ)"
+    ),
+) -> None:
+    """
+    Generate a comprehensive report from execution results.
+
+    Analyzes the results directory and generates a detailed report containing
+    execution statistics, performance metrics, error analysis, and trace
+    visualizations.
+    """
+    from pathlib import Path
+
+    try:
+        results_path = Path(results_directory)
+        output_path = Path(output)
+
+        ReportCommand.run(results_path, output_path, format_type)
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        notification_manager.error(f"Report generation failed: {e}")
         raise typer.Exit(1)
 
 

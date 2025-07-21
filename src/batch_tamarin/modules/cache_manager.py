@@ -82,7 +82,7 @@ class CacheManager:
         theory_hash = hasher.hexdigest()
 
         # Hash executable info (cross-platform compatible)
-        exe_stat = task.tamarin_executable.stat()
+        exe_stat = Path(task.tamarin_executable).stat()
         exe_info = f"{task.tamarin_executable}_{exe_stat.st_mtime}_{exe_stat.st_size}"
         exe_hash = hashlib.sha256(exe_info.encode()).hexdigest()
 

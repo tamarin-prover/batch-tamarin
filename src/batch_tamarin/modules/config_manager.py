@@ -80,7 +80,7 @@ class ConfigManager:
 
             return recipe
 
-        except ValidationError as e:
+        except ValidationError as e:  # type: ignore
             # Check if this is an extra_forbidden error and show context
             ConfigManager._handle_validation_error(e, config_path, json_data)
             error_msg = f"[ConfigManager] Invalid JSON structure in {config_path}: {e}"
@@ -459,6 +459,7 @@ class ConfigManager:
                 # Create ExecutableTask
                 executable_task = ExecutableTask(
                     task_name=unique_task_id,
+                    original_task_name=task_name,
                     tamarin_version_name=tamarin_version,
                     tamarin_executable=tamarin_executable,
                     theory_file=theory_file,

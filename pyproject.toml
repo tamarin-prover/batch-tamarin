@@ -34,6 +34,8 @@ dependencies = [
     "tree-sitter>=0.22.0",
     "py-tree-sitter-spthy>=1.2.0",
     "diskcache>=5.6.0",
+    "jinja2>=3.1.0",
+    "graphviz>=0.20.0",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +44,7 @@ dev = [
     "isort>=6.0.1",
     "autoflake>=2.3.1",
     "pre-commit>=4.2.0",
+    "pre-commit-hooks>=5.0.0",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.21.0",
     "build>=1.0.0",
@@ -63,7 +66,7 @@ batch-tamarin = "batch_tamarin.main:cli"
 where = ["src"]
 
 [tool.setuptools.package-data]
-batch_tamarin = ["*.json"]
+batch_tamarin = ["*.json", "templates/*.j2"]
 
 [tool.black]
 line-length = 88

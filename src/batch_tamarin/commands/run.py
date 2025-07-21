@@ -7,27 +7,31 @@ This module handles the execution of tasks from configuration files.
 import asyncio
 from pathlib import Path
 
+from ..modules.batch_manager import BatchManager
 from ..modules.config_manager import ConfigManager
 from ..runner import TaskRunner
 from ..utils.notifications import notification_manager
 
 
 async def process_config_file(config_path: Path) -> None:
-    """Process configuration file and execute tasks."""
+    """Process configuration file and execute tasks using unified direct path."""
     try:
         # Load recipe from configuration file
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path)
 
         # Initialize TaskRunner - this validates and potentially corrects resource limits
-        # The ResourceManager within TaskRunner may update recipe.config with corrected values
         runner = TaskRunner(recipe)
 
-        # Convert recipe to executable tasks using the recipe
+        # Convert recipe to executable tasks directly (unified path like check.py)
         executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
 
-        # Execute all tasks using runner
+        # Execute tasks using the direct execution path
         await runner.execute_all_tasks(executable_tasks)
+
+        # Create BatchManager to handle batch operations and generate report
+        batch_manager = BatchManager(recipe, config_path.name)
+        await batch_manager.generate_execution_report(runner, executable_tasks)
 
     except Exception as e:
         notification_manager.error(f"Execution failed: {e}")

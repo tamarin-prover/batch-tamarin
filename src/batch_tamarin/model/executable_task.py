@@ -25,7 +25,10 @@ class ExecutableTask:
     """
 
     task_name: str
-    """Name of the original task"""
+    """Generated unique task name for execution"""
+
+    original_task_name: str
+    """Name of the original recipe task"""
 
     tamarin_version_name: str
     """Name of the tamarin version being used"""
@@ -39,8 +42,8 @@ class ExecutableTask:
     output_file: Path
     """Path where results should be written"""
 
-    lemma: Optional[str]
-    """Name of the specific lemma to prove, if None, it will just run without --prove option"""
+    lemma: str
+    """Name of the specific lemma to prove"""
 
     tamarin_options: Optional[List[str]]
     """Additional command-line options"""
