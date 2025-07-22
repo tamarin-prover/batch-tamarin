@@ -71,6 +71,7 @@ class TaskRunner:
         self._shutdown_requested = False
         self._force_shutdown_requested = False
         self._signal_count = 0
+        self._signal_interrupted_tasks: Set[str] = set()
 
     async def execute_all_tasks(self, tasks: List[ExecutableTask]) -> None:
         """
@@ -108,7 +109,8 @@ class TaskRunner:
         self._shutdown_requested = False
 
         # Set up shutdown handler
-        def signal_handler(_signum: int, _frame: Any) -> None:
+        def signal_handler(signum: int, frame: Any) -> None:
+            _ = signum, frame  # Suppress unused parameter warnings
             self._signal_count += 1
 
             if self._signal_count == 1:
@@ -260,6 +262,9 @@ class TaskRunner:
                         break
 
                 if corresponding_task:
+                    # Check if task was signal interrupted and update status
+                    if task_id in self._signal_interrupted_tasks:
+                        task_result.status = TaskStatus.SIGNAL_INTERRUPTED
                     self._handle_task_completion(corresponding_task, task_result)
                 else:
                     notification_manager.error(
@@ -277,11 +282,17 @@ class TaskRunner:
             notification_manager.debug(
                 "[TaskRunner] Force shutdown requested. Killing all running tasks immediately..."
             )
+            # Mark running tasks as signal interrupted before killing
+            for task_id in self._running_tasks.keys():
+                self._signal_interrupted_tasks.add(task_id)
             await self._force_kill_all_tasks()
         elif self._shutdown_requested:
             notification_manager.debug(
                 "[TaskRunner] Graceful shutdown requested. Waiting for running tasks to complete..."
             )
+            # Mark running tasks as signal interrupted for graceful shutdown too
+            for task_id in self._running_tasks.keys():
+                self._signal_interrupted_tasks.add(task_id)
             await self._cleanup_running_tasks()
 
     async def _execute_single_task(self, task: ExecutableTask) -> TaskResult:
@@ -362,6 +373,12 @@ class TaskRunner:
             self.failed_tasks.add(task_id)
             notification_manager.warning(
                 f"[TaskRunner] Task exceeded memory limit: {task_id} (duration: {result.duration:.2f}s)"
+            )
+        elif result.status == TaskStatus.SIGNAL_INTERRUPTED:
+            self._failed_tasks.add(task_id)
+            self.failed_tasks.add(task_id)
+            notification_manager.warning(
+                f"[TaskRunner] Task interrupted by signal: {task_id} (duration: {result.duration:.2f}s)"
             )
         else:
             self._failed_tasks.add(task_id)
@@ -444,32 +461,51 @@ class TaskRunner:
 
     async def _force_kill_all_tasks(self) -> None:
         """
-        Force kill all running tasks immediately.
+        Force kill all running tasks with brief grace period.
 
-        Cancels all asyncio tasks and kills underlying processes via ProcessManager.
+        Gives tasks a 2-second grace period to complete naturally before
+        canceling asyncio tasks and killing underlying processes.
         """
         if not self._running_tasks:
             return
 
-        # Cancel all asyncio tasks immediately
         running_tasks: List[asyncio.Task[TaskResult]] = list(
             self._running_tasks.values()
         )
 
-        for task in running_tasks:
-            if not task.done():
-                task.cancel()
+        # Give tasks a brief grace period to complete naturally
+        notification_manager.info(
+            f"[TaskRunner] Giving {len(running_tasks)} running tasks 2 seconds to complete before force termination..."
+        )
 
-        # Force kill all processes via ProcessManager
-        await process_manager.kill_all_processes()
-
-        # Wait briefly for cancellations to complete
         if running_tasks:
-            _, pending = await asyncio.wait(running_tasks, timeout=5.0)
+            done, pending = await asyncio.wait(running_tasks, timeout=2.0)
+
+            # Process any tasks that completed during grace period
+            for task in done:
+                if not task.cancelled():
+                    try:
+                        # Task completed naturally - let normal completion handling work
+                        await task
+                    except Exception:
+                        # Task failed during grace period, still better than cancellation
+                        pass
+
+            # Cancel remaining tasks that didn't complete
+            for task in pending:
+                if not task.done():
+                    task.cancel()
+
+            # Force kill all remaining processes via ProcessManager
+            await process_manager.kill_all_processes()
+
+            # Wait briefly for cancellations to complete
             if pending:
-                notification_manager.warning(
-                    "[TaskRunner] Some tasks did not respond to cancellation within timeout"
-                )
+                _, still_pending = await asyncio.wait(pending, timeout=3.0)
+                if still_pending:
+                    notification_manager.warning(
+                        f"[TaskRunner] {len(still_pending)} tasks did not respond to cancellation within timeout"
+                    )
 
         # Clear all tracking - both running and pending tasks
         self._running_tasks.clear()
