@@ -1,0 +1,19 @@
+{
+  "task_id": "minInjection--injectivity--dev",
+  "warnings": [],
+  "tamarin_timing": 0.09,
+  "wrapper_measures": {
+    "time": 0.31670675000350457,
+    "avg_memory": 0.21875,
+    "peak_memory": 0.21875
+  },
+  "output_spthy": "complete-example-results/proofs/minInjection--injectivity--dev.spthy",
+  "verified_lemma": {
+    "injectivity": {
+      "steps": 2,
+      "analysis_type": "all-traces"
+    }
+  },
+  "falsified_lemma": {},
+  "unterminated_lemma": []
+}

@@ -1,0 +1,53 @@
+theory MinimalInjectiveFact begin
+
+// Function signature and definition of the equational theory E
+
+functions: fst/1, pair/2, snd/1
+equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
+
+
+
+
+
+/* looping facts with injective instances: Inj/2 */
+
+rule (modulo E) Init:
+   [ Fr( ~i ) ] --[ Initiated( ~i ) ]-> [ Inj( ~i, $Z ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader:
+   [ Inj( i, $Z ) ] --[ Read( i, $Z ) ]-> [ Inj( i, $Z ) ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+lemma injectivity:
+  all-traces
+  "∀ id #i #j Z1 Z2.
+    ((Read( id, Z1 ) @ #i) ∧ (Read( id, Z2 ) @ #j)) ⇒ (Z1 = Z2)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ id #i #j Z1 Z2.
+  (Read( id, Z1 ) @ #i) ∧ (Read( id, Z2 ) @ #j) ∧ ¬(Z1 = Z2)"
+*/
+simplify
+by contradiction /* from formulas */
+
+
+
+
+
+
+
+/* All wellformedness checks were successful. */
+
+/*
+Generated from:
+Tamarin version 1.11.0
+Maude version 3.4
+Git revision: 689a25737fd061027606a12889edcf3347d84267, branch: dev
+Compiled at: 2025-06-20 07:25:48.92758 UTC
+*/
+
+end

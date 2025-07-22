@@ -6,14 +6,19 @@ operations and generates execution reports from TaskRunner results.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import jinja2
 
 from ..model.batch import (
     Batch,
     ErrorType,
     ExecMetadata,
     LemmaResult,
-    Resources,
+)
+from ..model.batch import Resources as BatchResources
+from ..model.batch import (
     RichExecutableTask,
     RichTask,
     TaskConfig,
@@ -27,7 +32,7 @@ from ..model.executable_task import (
     TaskResult,
 )
 from ..model.executable_task import TaskStatus as ExecutableTaskStatus
-from ..model.tamarin_recipe import TamarinRecipe, TamarinVersion
+from ..model.tamarin_recipe import Lemma, Resources, TamarinRecipe, TamarinVersion, Task
 from ..modules.output_manager import SuccessfulTaskResult, output_manager
 from ..modules.tamarin_test_cmd import extract_tamarin_version
 from ..modules.task_manager import ExecutionSummary
@@ -75,6 +80,9 @@ class BatchManager:
 
             # Generate execution report file
             await self._write_execution_report(batch)
+
+            # Generate HTML summary and rerun recipe
+            await self._generate_html_summary_and_rerun_recipe(batch)
 
         except Exception as e:
             notification_manager.error(
@@ -221,7 +229,7 @@ class BatchManager:
             / f"{executable_task.task_name}.json",
             options=executable_task.tamarin_options,
             preprocessor_flags=executable_task.preprocess_flags,
-            resources=Resources(
+            resources=BatchResources(
                 cores=executable_task.max_cores,
                 memory=executable_task.max_memory,
                 timeout=executable_task.task_timeout,
@@ -392,3 +400,273 @@ class BatchManager:
                 f"[BatchManager] Failed to write execution report: {e}"
             )
             raise
+
+    async def _generate_html_summary_and_rerun_recipe(self, batch: Batch) -> None:
+        """Generate HTML summary and rerun recipe JSON files."""
+        try:
+            output_paths = output_manager.get_output_paths()
+            base_dir = output_paths["base"]
+
+            # Generate HTML summary
+            await self._generate_html_summary(batch, base_dir)
+
+            # Generate rerun recipe for failed tasks
+            await self._generate_rerun_recipe(batch, base_dir)
+
+        except Exception as e:
+            notification_manager.error(
+                f"[BatchManager] Failed to generate HTML summary and rerun recipe: {e}"
+            )
+            # Don't raise - this is not a critical failure
+
+    async def _generate_html_summary(self, batch: Batch, output_dir: Path) -> None:
+        """Generate HTML summary from batch data."""
+        try:
+            # Load Jinja2 template
+            template_dir = Path(__file__).parent.parent / "templates"
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
+            template = env.get_template("summary.html.j2")
+
+            # Prepare template data
+            template_data = self._prepare_html_template_data(batch)
+
+            # Render HTML
+            html_content = template.render(**template_data)
+
+            # Write HTML file
+            html_path = output_dir / "summary.html"
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(html_content)
+
+            notification_manager.success(
+                f"[BatchManager] Generated HTML summary: {html_path}"
+            )
+
+        except Exception as e:
+            notification_manager.error(
+                f"[BatchManager] Failed to generate HTML summary: {e}"
+            )
+            raise
+
+    def _prepare_html_template_data(self, batch: Batch) -> Dict[str, Any]:
+        """Prepare data for HTML template rendering."""
+        # Collect failed, timeout, and memory limit tasks
+        failed_tasks: List[Dict[str, Any]] = []
+        timeout_tasks: List[Dict[str, Any]] = []
+        memory_limit_tasks: List[Dict[str, Any]] = []
+
+        # Prepare structured table data with lemma grouping
+        task_table_data = self._prepare_task_table_data(batch)
+
+        for task_name, rich_task in batch.tasks.items():
+            for subtask_name, rich_executable in rich_task.subtasks.items():
+                task_info: Dict[str, Any] = {
+                    "task_name": task_name,
+                    "subtask_name": subtask_name,
+                    "rich_executable": rich_executable,
+                }
+
+                if rich_executable.task_execution_metadata.status == TaskStatus.FAILED:
+                    failed_tasks.append(task_info)
+                elif (
+                    rich_executable.task_execution_metadata.status == TaskStatus.TIMEOUT
+                ):
+                    timeout_tasks.append(task_info)
+                elif (
+                    rich_executable.task_execution_metadata.status
+                    == TaskStatus.MEMORY_LIMIT_EXCEEDED
+                ):
+                    memory_limit_tasks.append(task_info)
+
+        # Get recipe name without extension
+        recipe_name = (
+            batch.recipe.replace(".json", "")
+            if batch.recipe.endswith(".json")
+            else batch.recipe
+        )
+
+        return {
+            "batch": batch,
+            "execution_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "failed_tasks": failed_tasks,
+            "timeout_tasks": timeout_tasks,
+            "memory_limit_tasks": memory_limit_tasks,
+            "has_failed_tasks": bool(
+                failed_tasks or timeout_tasks or memory_limit_tasks
+            ),
+            "recipe_name": recipe_name,
+            "task_table_data": task_table_data,
+        }
+
+    def _prepare_task_table_data(self, batch: Batch) -> List[Dict[str, Any]]:
+        """Prepare structured table data with proper task and lemma grouping."""
+        task_table_data: List[Dict[str, Any]] = []
+
+        for task_name, rich_task in batch.tasks.items():
+            # Group subtasks by lemma
+            lemma_groups: Dict[str, List[RichExecutableTask]] = {}
+
+            for _subtask_name, rich_executable in rich_task.subtasks.items():
+                lemma_name = rich_executable.task_config.lemma
+                if lemma_name not in lemma_groups:
+                    lemma_groups[lemma_name] = []
+                lemma_groups[lemma_name].append(rich_executable)
+
+            # Calculate total subtasks for this task
+            total_subtasks = sum(len(subtasks) for subtasks in lemma_groups.values())
+
+            # Create lemma data structures
+            lemmas: List[Dict[str, Any]] = []
+            for lemma_name, subtasks in lemma_groups.items():
+                lemmas.append({"lemma_name": lemma_name, "subtasks": subtasks})
+
+            task_table_data.append(
+                {
+                    "task_name": task_name,
+                    "theory_file": rich_task.theory_file,
+                    "total_subtasks": total_subtasks,
+                    "lemmas": lemmas,
+                }
+            )
+
+        return task_table_data
+
+    async def _generate_rerun_recipe(self, batch: Batch, output_dir: Path) -> None:
+        """Generate rerun recipe JSON with only failed tasks."""
+        try:
+            # Collect all failed tasks (including timeouts and memory limits)
+            failed_executable_tasks: List[Tuple[str, RichExecutableTask]] = []
+
+            for task_name, rich_task in batch.tasks.items():
+                for _subtask_name, rich_executable in rich_task.subtasks.items():
+                    status = rich_executable.task_execution_metadata.status
+                    if status in [
+                        TaskStatus.FAILED,
+                        TaskStatus.TIMEOUT,
+                        TaskStatus.MEMORY_LIMIT_EXCEEDED,
+                    ]:
+                        failed_executable_tasks.append((task_name, rich_executable))
+
+            if not failed_executable_tasks:
+                notification_manager.info(
+                    "[BatchManager] No failed tasks found, skipping rerun recipe generation"
+                )
+                return
+
+            # Create rerun recipe structure
+            rerun_recipe = self._create_rerun_recipe_from_failed_tasks(
+                batch, failed_executable_tasks
+            )
+
+            # Write rerun recipe
+            recipe_name = (
+                batch.recipe.replace(".json", "")
+                if batch.recipe.endswith(".json")
+                else batch.recipe
+            )
+            rerun_path = output_dir / f"{recipe_name}-rerun.json"
+
+            with open(rerun_path, "w", encoding="utf-8") as f:
+                f.write(rerun_recipe.model_dump_json(indent=2, exclude_none=True))
+
+            notification_manager.success(
+                f"[BatchManager] Generated rerun recipe: {rerun_path}"
+            )
+
+        except Exception as e:
+            notification_manager.error(
+                f"[BatchManager] Failed to generate rerun recipe: {e}"
+            )
+            raise
+
+    def _create_rerun_recipe_from_failed_tasks(
+        self,
+        batch: Batch,
+        failed_executable_tasks: List[Tuple[str, RichExecutableTask]],
+    ) -> TamarinRecipe:
+        """Create a new TamarinRecipe containing only failed tasks."""
+        # Group failed tasks by original task name
+        failed_tasks_by_name: Dict[str, List[RichExecutableTask]] = {}
+
+        for task_name, rich_executable in failed_executable_tasks:
+            if task_name not in failed_tasks_by_name:
+                failed_tasks_by_name[task_name] = []
+            failed_tasks_by_name[task_name].append(rich_executable)
+
+        # Reconstruct tasks from the original recipe structure
+        rerun_tasks: Dict[str, Task] = {}
+
+        # We need to find the original task configurations to recreate the recipe
+        for task_name, failed_executables in failed_tasks_by_name.items():
+            # Get original task theory file from the rich task
+            original_rich_task = batch.tasks[task_name]
+            theory_file = original_rich_task.theory_file
+
+            # Collect unique tamarin versions and lemmas from failed tasks
+            tamarin_versions: set[str] = set()
+            lemma_configs: Dict[str, Lemma] = {}
+
+            for rich_executable in failed_executables:
+                config = rich_executable.task_config
+                tamarin_versions.add(config.tamarin_alias)
+
+                # Create lemma configuration
+                lemma_name = config.lemma
+                if lemma_name not in lemma_configs:
+                    # Create minimal lemma config with only the failed version
+                    lemma_configs[lemma_name] = Lemma(
+                        name=lemma_name,
+                        tamarin_versions=[config.tamarin_alias],
+                        tamarin_options=config.options,
+                        preprocess_flags=config.preprocessor_flags,
+                        resources=(
+                            Resources(
+                                max_cores=config.resources.cores,
+                                max_memory=config.resources.memory,
+                                timeout=config.resources.timeout,
+                            )
+                            if config.resources
+                            else None
+                        ),
+                    )
+                else:
+                    # Add tamarin version to existing lemma
+                    existing_versions = lemma_configs[lemma_name].tamarin_versions or []
+                    if config.tamarin_alias not in existing_versions:
+                        existing_versions.append(config.tamarin_alias)
+                        lemma_configs[lemma_name].tamarin_versions = existing_versions
+
+            # Create task configuration
+            # Use the first failed executable's config as base
+            first_executable = failed_executables[0]
+            first_config = first_executable.task_config
+
+            rerun_tasks[task_name] = Task(
+                theory_file=theory_file,
+                tamarin_versions=list(tamarin_versions),
+                output_file_prefix=task_name,
+                lemmas=list(lemma_configs.values()) if lemma_configs else None,
+                tamarin_options=first_config.options,
+                preprocess_flags=first_config.preprocessor_flags,
+                resources=(
+                    Resources(
+                        max_cores=first_config.resources.cores,
+                        max_memory=first_config.resources.memory,
+                        timeout=first_config.resources.timeout,
+                    )
+                    if first_config.resources
+                    else None
+                ),
+            )
+
+        config = batch.config.model_copy()
+        config.output_directory = str(Path(config.output_directory) / "rerun")
+
+        # Create rerun recipe with same config and tamarin_versions
+        return TamarinRecipe(
+            config=config,
+            tamarin_versions={
+                k: v.model_copy() for k, v in batch.tamarin_versions.items()
+            },
+            tasks=rerun_tasks,
+        )

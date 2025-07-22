@@ -1,0 +1,21 @@
+{
+  "task_id": "basic_KEYWORD1--Client_auth_injective--stable",
+  "warnings": [],
+  "tamarin_timing": 0.18,
+  "wrapper_measures": {
+    "time": 0.4278947079947102,
+    "avg_memory": 19.015625,
+    "peak_memory": 19.015625
+  },
+  "output_spthy": "complete-example-results/proofs/basic_KEYWORD1--Client_auth_injective--stable.spthy",
+  "verified_lemma": {
+    "Client_auth_injective": {
+      "steps": 13,
+      "analysis_type": "all-traces"
+    }
+  },
+  "falsified_lemma": {},
+  "unterminated_lemma": [
+    "Client_session_key_setup"
+  ]
+}

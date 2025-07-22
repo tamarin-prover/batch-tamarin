@@ -1,0 +1,38 @@
+digraph "trace_SimpleChallengeResponse_SL2-AS0-CL0-A1-C1-NB_Client_session_key_setup_stronger-Client_1-Register_pk-Client_1-Serv_1-Client_1" {
+nodesep="0.3";
+ranksep="0.3";
+node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
+edge[fontsize="8",fontname="Helvetica"];
+n3[shape="record",label="{{<n0> Client_1( $S, ~k )|<n1> In( h(~k) )}|{<n2> #i : Client_2[SessKeyC( $S, ~k )]}}",fillcolor="#d5d897",style="filled",fontcolor="black",role="Undefined"];
+n8[shape="record",label="{{<n4> !Ltk( $S, ~ltk )|<n5> In( AE1 )}|{<n6> #j : Serv_1[AnswerRequest( $S, ~k )]}|{<n7> Out( h(~k) )}}",fillcolor="#a6dd9a",style="filled",fontcolor="black",role="Undefined"];
+n9[label="#vf : isend",shape="ellipse"];
+n10[label="#vk : coerce[!KU( AE1 )]",shape="ellipse"];
+n16[shape="record",label="{{<n11> Fr( ~k )|<n12> !Pk( $S, pk(~ltk) )}|{<n13> #vr : Client_1}|{<n14> Client_1( $S, ~k )|<n15> Out( AE1 )}}",fillcolor="#beda99",style="filled",fontcolor="black",role="Undefined"];
+n17[label="#vf.1 : isend",shape="ellipse"];
+n18[label="#vk.1 : coerce[!KU( h(~k) )]",shape="ellipse"];
+n19[label="#vl.1 : irecv",shape="ellipse"];
+n25[shape="record",label="{{<n20> Fr( ~ltk )}|{<n21> #vr.1 : Register_pk}|{<n22> !Ltk( $S, ~ltk )|<n23> !Pk( $S, pk(~ltk) )|<n24> Out( pk(~ltk) )}}",fillcolor="#aedc9a",style="filled",fontcolor="black",role="Undefined"];
+n30[shape="record",label="{{<n26> !Ltk( $S, ~ltk )|<n27> In( AE1 )}|{<n28> #vr.2 : Serv_1[AnswerRequest( $S, ~k )]}|{<n29> Out( h(~k) )}}",fillcolor="#a6dd9a",style="filled",fontcolor="black",role="Undefined"];
+n31[label="#vf.4 : isend",shape="ellipse"];
+n9 -> n3:n1[color="gray30"];
+n16:n14 -> n3:n0[style="bold",weight="10.0"];
+n16:n15 -> n10[color="orangered2"];
+n17 -> n8:n5[color="gray30"];
+n19 -> n18[color="orangered2"];
+n25:n22 -> n8:n4[style="bold",weight="10.0",color="gray50"];
+n25:n22 -> n30:n26[style="bold",weight="10.0",color="gray50"];
+n25:n23 -> n16:n12[style="bold",weight="10.0",color="gray50"];
+n30:n29 -> n19[color="gray30"];
+n31 -> n30:n27[color="gray30"];
+n10 -> n17[color="red",style="dashed"];
+n10 -> n31[color="red",style="dashed"];
+n18 -> n9[color="red",style="dashed"];
+{
+rank="sink";
+n32[shape="plain",label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="3" CELLPADDING="1"><TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">AE1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">aenc(&lt;'1', ~k&gt;, pk(~ltk))</TD></TR></TABLE>>];
+
+}
+n3:n2 -> n32[style="invis"];
+n8:n6 -> n32[style="invis"];
+
+}

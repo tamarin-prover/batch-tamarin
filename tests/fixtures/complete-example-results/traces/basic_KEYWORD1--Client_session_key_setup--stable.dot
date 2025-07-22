@@ -1,0 +1,32 @@
+digraph "trace_SimpleChallengeResponse_SL2-AS0-CL0-A1-C1-NB_Client_session_key_setup-Client_1-Serv_1-Client_1" {
+nodesep="0.3";
+ranksep="0.3";
+node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
+edge[fontsize="8",fontname="Helvetica"];
+n3[shape="record",label="{{<n0> Client_1( $S, ~k )|<n1> In( h(~k) )}|{<n2> #i : Client_2[SessKeyC( $S, ~k )]}}",fillcolor="#d5d897",style="filled",fontcolor="black",role="Undefined"];
+n4[label="#vf : isend",shape="ellipse"];
+n5[label="#vk : coerce[!KU( h(~k) )]",shape="ellipse"];
+n6[label="#vl : irecv",shape="ellipse"];
+n12[shape="record",label="{{<n7> Fr( ~k )|<n8> !Pk( $S, pk(~ltk) )}|{<n9> #vr : Client_1}|{<n10> Client_1( $S, ~k )|<n11> Out( AE1 )}}",fillcolor="#c3da98",style="filled",fontcolor="black",role="Undefined"];
+n13[label="#vk.1 : coerce[!KU( AE1 )]",shape="ellipse"];
+n19[shape="record",label="{{<n14> Fr( ~ltk )}|{<n15> #vr.1 : Register_pk}|{<n16> !Ltk( $S, ~ltk )|<n17> !Pk( $S, pk(~ltk) )|<n18> Out( pk(~ltk) )}}",fillcolor="#b1dc9a",style="filled",fontcolor="black",role="Undefined"];
+n24[shape="record",label="{{<n20> !Ltk( $S, ~ltk )|<n21> In( AE1 )}|{<n22> #vr.2 : Serv_1[AnswerRequest( $S, ~k )]}|{<n23> Out( h(~k) )}}",fillcolor="#a7dd9a",style="filled",fontcolor="black",role="Undefined"];
+n25[label="#vf.3 : isend",shape="ellipse"];
+n4 -> n3:n1[color="gray30"];
+n6 -> n5[color="orangered2"];
+n12:n10 -> n3:n0[style="bold",weight="10.0"];
+n12:n11 -> n13[color="orangered2"];
+n19:n16 -> n24:n20[style="bold",weight="10.0",color="gray50"];
+n19:n17 -> n12:n8[style="bold",weight="10.0",color="gray50"];
+n24:n23 -> n6[color="gray30"];
+n25 -> n24:n21[color="gray30"];
+n5 -> n4[color="red",style="dashed"];
+n13 -> n25[color="red",style="dashed"];
+{
+rank="sink";
+n26[shape="plain",label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="3" CELLPADDING="1"><TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">AE1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">aenc(&lt;'1', ~k&gt;, pk(~ltk))</TD></TR></TABLE>>];
+
+}
+n3:n2 -> n26[style="invis"];
+
+}

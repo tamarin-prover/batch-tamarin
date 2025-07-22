@@ -176,10 +176,15 @@ class TestTaskRunnerInitialization:
         mock_task_manager.return_value = Mock()
         mock_output_manager.initialize = Mock()
 
+        # Mock get_output_paths to return the expected structure
+        mock_output_paths = {"base": Path(mock_recipe.config.output_directory)}
+        mock_output_manager.get_output_paths.return_value = mock_output_paths
+
         _ = TaskRunner(mock_recipe)
 
         expected_output_dir = Path(mock_recipe.config.output_directory)
         mock_output_manager.initialize.assert_called_once_with(expected_output_dir)
+        mock_output_manager.get_output_paths.assert_called_once()
 
 
 class TestTaskRunnerExecution:
@@ -782,10 +787,15 @@ class TestTaskRunnerShutdown:
         }
 
         with patch("asyncio.wait") as mock_wait:
-            mock_wait.return_value = (set(), set())  # completed, pending
+            # Simulate that tasks don't complete during grace period (all pending)
+            mock_wait.return_value = (
+                set(),
+                {mock_task1, mock_task2},
+            )  # completed, pending
 
             await runner._force_kill_all_tasks()  # type: ignore
 
+            # Tasks should be cancelled since they were in pending set
             mock_task1.cancel.assert_called_once()
             mock_task2.cancel.assert_called_once()
             mock_process_manager.kill_all_processes.assert_called_once()

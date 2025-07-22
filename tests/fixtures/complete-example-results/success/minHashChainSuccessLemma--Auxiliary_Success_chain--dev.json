@@ -1,0 +1,21 @@
+{
+  "task_id": "minHashChainSuccessLemma--Auxiliary_Success_chain--dev",
+  "warnings": [],
+  "tamarin_timing": 0.22,
+  "wrapper_measures": {
+    "time": 0.4410218330012867,
+    "avg_memory": 30.125,
+    "peak_memory": 30.125
+  },
+  "output_spthy": "complete-example-results/proofs/minHashChainSuccessLemma--Auxiliary_Success_chain--dev.spthy",
+  "verified_lemma": {
+    "Auxiliary_Success_chain": {
+      "steps": 26,
+      "analysis_type": "all-traces"
+    }
+  },
+  "falsified_lemma": {},
+  "unterminated_lemma": [
+    "Success_chain"
+  ]
+}

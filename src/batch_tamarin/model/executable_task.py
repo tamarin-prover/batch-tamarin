@@ -124,6 +124,7 @@ class TaskStatus(Enum):
     FAILED = "failed"
     TIMEOUT = "timeout"
     MEMORY_LIMIT_EXCEEDED = "memory_limit_exceeded"
+    SIGNAL_INTERRUPTED = "signal_interrupted"
 
 
 @dataclass

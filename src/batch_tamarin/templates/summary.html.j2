@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Tamarin Execution Summary</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 { color: #2c3e50; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #dfe9ee;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f6f6f6;
+        }
+        /* Simple task and lemma alternating colors */
+        .task-table tr.task-white { background-color: white; }
+        .task-table tr.task-light-gray { background-color: #f4fbff; } /* light blue accent */
+
+        /* Lemma alternation within white tasks */
+        .task-table tr.task-white.lemma-alt { background-color: #f6f6f6; } /* lighter gray */
+
+        /* Lemma alternation within light gray tasks */
+        .task-table tr.task-light-gray.lemma-alt { background-color: #edf7ff; } /* deeper blue accent */
+        .success { color: #28a745; }
+        .failed { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #116dd7; }
+        .memory { color: #640dde; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error-details {
+            background-color: #ffeaec;
+            border: 1px solid #ffdcdf;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .error-details h3 {
+            margin: 0;
+        }
+        .settings, .summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+    <h1>Batch Tamarin Execution Summary</h1>
+
+    <div class="info">
+        <strong>Executed :</strong> {{ execution_time }}<br>
+        <strong>Full execution parameters :</strong> <a href="./execution_report.json">execution_report.json</a>
+    </div>
+
+    <h2>⚙️ Settings</h2>
+    <div class="settings">
+        <table>
+            <thead>
+                <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Max cores</td>
+                    <td>{{ batch.config.global_max_cores }}</td>
+                </tr>
+                <tr>
+                    <td>Max memory</td>
+                    <td>{{ "%.0f"|format(batch.config.global_max_memory) }}GB</td>
+                </tr>
+                <tr>
+                    <td>Default timeout</td>
+                    <td>{{ batch.config.default_timeout }}s</td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Alias</th>
+                    <th>Path</th>
+                    <th>Version</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alias, version_info in batch.tamarin_versions.items() %}
+                <tr>
+                    <td>{{ alias }}</td>
+                    <td>{{ version_info.path }}</td>
+                    <td>{{ version_info.version or "Unknown" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>📊 Summary</h2>
+    <div class="summary">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total Executions</td>
+                    <td>{{ batch.execution_metadata.total_tasks }}</td>
+                </tr>
+                <tr>
+                    <td>Successful Executions</td>
+                    <td class="success">{{ batch.execution_metadata.total_successes }}</td>
+                </tr>
+                <tr>
+                    <td>Failed Executions</td>
+                    <td class="failed">{{ failed_tasks|length }}</td>
+                </tr>
+                <tr>
+                    <td>Timed Out Executions</td>
+                    <td class="warning">{{ timeout_tasks|length }}</td>
+                </tr>
+                <tr>
+                    <td>Task killed for memory limit</td>
+                    <td class="memory">{{ memory_limit_tasks|length }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total duration</td>
+                    <td>{{ "%.1f"|format(batch.execution_metadata.total_runtime) }}s</td>
+                </tr>
+                <tr>
+                    <td>Total peak memory used</td>
+                    <td>{{ "%.1f"|format(batch.execution_metadata.total_memory / 1024) }}GB</td>
+                </tr>
+                <tr>
+                    <td>Max peak memory used</td>
+                    <td>{{ "%.1f"|format(batch.execution_metadata.max_memory / 1024) }}GB</td>
+                </tr>
+                <tr>
+                    <td>Freshly executed tasks</td>
+                    <td>{{ batch.execution_metadata.total_tasks - batch.execution_metadata.total_cache_hit }}</td>
+                </tr>
+                <tr>
+                    <td>Cache hits</td>
+                    <td class="info">{{ batch.execution_metadata.total_cache_hit }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>🔍 By task details</h3>
+    <table class="task-table">
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Extracted lemma</th>
+                <th>Tamarin Version</th>
+                <th>Status</th>
+                <th>Runtime</th>
+                <th>Peak Memory Used</th>
+                <th>Cache Hit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task_data in task_table_data %}
+                {% set task_rowspan = task_data.total_subtasks %}
+                {% set outer_loop = loop %}
+                {% set task_color = "task-white" if outer_loop.index0 % 2 == 0 else "task-light-gray" %}
+                {% for lemma_data in task_data.lemmas %}
+                    {% set lemma_rowspan = lemma_data.subtasks|length %}
+                    {% set middle_loop = loop %}
+                    {% set lemma_alt = middle_loop.index0 % 2 == 1 %}
+                    {% for rich_executable in lemma_data.subtasks %}
+                        <tr class="{{ task_color }}{% if lemma_alt %} lemma-alt{% endif %}">
+                            {% if loop.first and middle_loop.first %}
+                                <td{% if task_rowspan > 1 %} rowspan="{{ task_rowspan }}"{% endif %}>
+                                    <strong>{{ task_data.task_name }}</strong><br>
+                                    <small style="color: #6c757d;">{{ task_data.theory_file }}</small>
+                                </td>
+                            {% endif %}
+                            {% if loop.first %}
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_data.lemma_name }}</td>
+                            {% endif %}
+                            <td>{{ rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[rich_executable.task_config.tamarin_alias].version or "Unknown" }})</td>
+                            <td class="{% if rich_executable.task_execution_metadata.status.value == 'completed' %}success{% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}warning{% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}memory{% else %}failed{% endif %}">
+                                {% if rich_executable.task_execution_metadata.status.value == 'completed' %}✅ Success
+                                {% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}⏳ Timed Out
+                                {% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}🧠 Memory Limit
+                                {% else %}❌ Failed
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.1f"|format(rich_executable.task_execution_metadata.exec_duration_monotonic) }}s</td>
+                            <td>{{ "%.1f"|format(rich_executable.task_execution_metadata.peak_memory) }}MB</td>
+                            <td class="info">{% if rich_executable.task_execution_metadata.cache_hit %}💾 Yes{% else %}💻 No{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if failed_tasks or timeout_tasks or memory_limit_tasks %}
+    <h2>🚨 Error Report</h2>
+    {% for task in failed_tasks %}
+    <div class="error-details">
+        <h3><span class="failed">❌ FAILED :</span> {{ task.task_name }}</h3>
+        <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
+        <p>{{ task.rich_executable.task_result.error_description }}</p>
+        {% if task.rich_executable.task_result.last_stderr_lines %}
+        <pre><code class="zsh">{{ task.rich_executable.task_result.last_stderr_lines|join('\n') }}</code></pre>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% for task in timeout_tasks %}
+    <div class="error-details">
+        <h3><span class="warning">⏳ TIMED OUT :</span> {{ task.task_name }}</h3>
+        <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
+        <p>Task timed out during execution</p>
+        <pre><code class="zsh">Process timed out</code></pre>
+    </div>
+    {% endfor %}
+
+    {% for task in memory_limit_tasks %}
+    <div class="error-details">
+        <h3><span class="memory">🧠 MEMORY LIMIT :</span> {{ task.task_name }}</h3>
+        <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
+        <p>Task exceeded memory limit</p>
+        <pre><code class="zsh">Process exceeded memory limit</code></pre>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if has_failed_tasks %}
+    <h4>Rerun file : <a href="./{{ recipe_name }}-rerun.json">{{ recipe_name }}-rerun.json</a></h4>
+    {% endif %}
+</body>
+</html>

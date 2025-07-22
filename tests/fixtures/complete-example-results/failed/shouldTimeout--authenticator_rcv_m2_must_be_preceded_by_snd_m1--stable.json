@@ -1,0 +1,13 @@
+{
+  "task_id": "shouldTimeout--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable",
+  "error_description": "The task timed out. Review the timeout setting for this task.",
+  "wrapper_measures": {
+    "time": 15.235002333000011,
+    "avg_memory": 282.45625,
+    "peak_memory": 595.140625
+  },
+  "return_code": -1,
+  "last_stderr_lines": [
+    "Process timed out"
+  ]
+}

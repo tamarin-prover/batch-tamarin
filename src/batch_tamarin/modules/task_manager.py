@@ -144,15 +144,20 @@ class TaskManager:
             self._task_status[task_id] = status
             self._task_results[task_id] = task_result
 
-            # Store all results in cache
-            try:
-                self._cache_manager.store_result(task, task_result)
+            # Store results in cache, except for signal-interrupted tasks
+            if status != TaskStatus.SIGNAL_INTERRUPTED:  # type: ignore
+                try:
+                    self._cache_manager.store_result(task, task_result)
+                    notification_manager.debug(
+                        f"[TaskManager] Cached result for task: {task_id}"
+                    )
+                except Exception as e:
+                    notification_manager.debug(
+                        f"[TaskManager] Failed to cache result for task {task_id}: {e}"
+                    )
+            else:
                 notification_manager.debug(
-                    f"[TaskManager] Cached result for task: {task_id}"
-                )
-            except Exception as e:
-                notification_manager.debug(
-                    f"[TaskManager] Failed to cache result for task {task_id}: {e}"
+                    f"[TaskManager] Skipping cache for signal-interrupted task: {task_id}"
                 )
 
             # Process result with output manager if initialized
@@ -229,7 +234,12 @@ class TaskManager:
             1
             for status in self._task_status.values()
             if status
-            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
+            in [
+                TaskStatus.FAILED,
+                TaskStatus.TIMEOUT,
+                TaskStatus.MEMORY_LIMIT_EXCEEDED,
+                TaskStatus.SIGNAL_INTERRUPTED,
+            ]
         )
 
         total_tasks = len(self._task_status)
@@ -293,7 +303,12 @@ class TaskManager:
             1
             for result in task_results
             if result.status
-            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
+            in [
+                TaskStatus.FAILED,
+                TaskStatus.TIMEOUT,
+                TaskStatus.MEMORY_LIMIT_EXCEEDED,
+                TaskStatus.SIGNAL_INTERRUPTED,
+            ]
         )
 
         # Calculate total duration (earliest start to latest end)
@@ -363,6 +378,7 @@ class TaskManager:
             TaskStatus.FAILED,
             TaskStatus.TIMEOUT,
             TaskStatus.MEMORY_LIMIT_EXCEEDED,
+            TaskStatus.SIGNAL_INTERRUPTED,
         }
 
         # Get task IDs to remove

@@ -1,0 +1,105 @@
+{
+  "config": {
+    "global_max_cores": 10,
+    "global_max_memory": 32,
+    "default_timeout": 80,
+    "output_directory": "complete-example-results/rerun"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover",
+      "version": "v1.10.0"
+    },
+    "dev": {
+      "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover",
+      "version": "v1.11.0"
+    },
+    "legacy": {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
+      "version": "v1.8.0"
+    }
+  },
+  "tasks": {
+    "shouldFail": {
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+      "tamarin_versions": [
+        "stable"
+      ],
+      "output_file_prefix": "shouldFail",
+      "lemmas": [
+        {
+          "name": "Client_auth_injective",
+          "tamarin_versions": [
+            "stable"
+          ],
+          "preprocess_flags": [
+            "KEYWORD2"
+          ],
+          "resources": {
+            "max_cores": 2,
+            "max_memory": 2,
+            "timeout": 80
+          }
+        }
+      ],
+      "preprocess_flags": [
+        "KEYWORD2"
+      ],
+      "resources": {
+        "max_cores": 2,
+        "max_memory": 2,
+        "timeout": 80
+      }
+    },
+    "shouldMemoryLimit": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "tamarin_versions": [
+        "stable"
+      ],
+      "output_file_prefix": "shouldMemoryLimit",
+      "lemmas": [
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": [
+            "stable"
+          ],
+          "resources": {
+            "max_cores": 4,
+            "max_memory": 1,
+            "timeout": 80
+          }
+        }
+      ],
+      "resources": {
+        "max_cores": 4,
+        "max_memory": 1,
+        "timeout": 80
+      }
+    },
+    "shouldTimeout": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "tamarin_versions": [
+        "stable"
+      ],
+      "output_file_prefix": "shouldTimeout",
+      "lemmas": [
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": [
+            "stable"
+          ],
+          "resources": {
+            "max_cores": 4,
+            "max_memory": 16,
+            "timeout": 15
+          }
+        }
+      ],
+      "resources": {
+        "max_cores": 4,
+        "max_memory": 16,
+        "timeout": 15
+      }
+    }
+  }
+}
