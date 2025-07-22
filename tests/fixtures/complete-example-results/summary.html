@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Tamarin Execution Summary</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 { color: #2c3e50; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #dfe9ee;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f6f6f6;
+        }
+        /* Simple task and lemma alternating colors */
+        .task-table tr.task-white { background-color: white; }
+        .task-table tr.task-light-gray { background-color: #f4fbff; } /* light blue accent */
+
+        /* Lemma alternation within white tasks */
+        .task-table tr.task-white.lemma-alt { background-color: #f6f6f6; } /* lighter gray */
+
+        /* Lemma alternation within light gray tasks */
+        .task-table tr.task-light-gray.lemma-alt { background-color: #edf7ff; } /* deeper blue accent */
+        .success { color: #28a745; }
+        .failed { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #116dd7; }
+        .memory { color: #640dde; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error-details {
+            background-color: #ffeaec;
+            border: 1px solid #ffdcdf;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .error-details h3 {
+            margin: 0;
+        }
+        .settings, .summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+    <h1>Batch Tamarin Execution Summary</h1>
+
+    <div class="info">
+        <strong>Executed :</strong> 2025-07-22 16:00:20<br>
+        <strong>Full execution parameters :</strong> <a href="./execution_report.json">execution_report.json</a>
+    </div>
+
+    <h2>⚙️ Settings</h2>
+    <div class="settings">
+        <table>
+            <thead>
+                <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Max cores</td>
+                    <td>10</td>
+                </tr>
+                <tr>
+                    <td>Max memory</td>
+                    <td>32GB</td>
+                </tr>
+                <tr>
+                    <td>Default timeout</td>
+                    <td>80s</td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Alias</th>
+                    <th>Path</th>
+                    <th>Version</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>stable</td>
+                    <td>tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover</td>
+                    <td>v1.10.0</td>
+                </tr>
+
+                <tr>
+                    <td>dev</td>
+                    <td>tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover</td>
+                    <td>v1.11.0</td>
+                </tr>
+
+                <tr>
+                    <td>legacy</td>
+                    <td>tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover</td>
+                    <td>v1.8.0</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <h2>📊 Summary</h2>
+    <div class="summary">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total Executions</td>
+                    <td>17</td>
+                </tr>
+                <tr>
+                    <td>Successful Executions</td>
+                    <td class="success">14</td>
+                </tr>
+                <tr>
+                    <td>Failed Executions</td>
+                    <td class="failed">1</td>
+                </tr>
+                <tr>
+                    <td>Timed Out Executions</td>
+                    <td class="warning">1</td>
+                </tr>
+                <tr>
+                    <td>Task killed for memory limit</td>
+                    <td class="memory">1</td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total duration</td>
+                    <td>46.7s</td>
+                </tr>
+                <tr>
+                    <td>Total peak memory used</td>
+                    <td>1.8GB</td>
+                </tr>
+                <tr>
+                    <td>Max peak memory used</td>
+                    <td>1.0GB</td>
+                </tr>
+                <tr>
+                    <td>Freshly executed tasks</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>Cache hits</td>
+                    <td class="info">17</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>🔍 By task details</h3>
+    <table class="task-table">
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Extracted lemma</th>
+                <th>Tamarin Version</th>
+                <th>Status</th>
+                <th>Runtime</th>
+                <th>Peak Memory Used</th>
+                <th>Cache Hit</th>
+            </tr>
+        </thead>
+        <tbody>
+
+
+
+
+
+
+
+
+
+                        <tr class="task-white">
+
+                                <td>
+                                    <strong>minInjection</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/MinimalInjectiveFact.spthy</small>
+                                </td>
+
+
+                                <td>injectivity</td>
+
+                            <td>dev (v1.11.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.3s</td>
+                            <td>0.2MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-light-gray">
+
+                                <td rowspan="6">
+                                    <strong>minHashChain</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/Minimal_HashChain.spthy</small>
+                                </td>
+
+
+                                <td rowspan="3">Success_chain</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>30.7MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+                        <tr class="task-light-gray">
+
+
+                            <td>dev (v1.11.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>0.2MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+                        <tr class="task-light-gray">
+
+
+                            <td>legacy (v1.8.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>15.6MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+                        <tr class="task-light-gray lemma-alt">
+
+
+                                <td rowspan="3">Auxiliary_Success_chain</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>1.2MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+                        <tr class="task-light-gray lemma-alt">
+
+
+                            <td>dev (v1.11.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.5s</td>
+                            <td>1.8MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+                        <tr class="task-light-gray lemma-alt">
+
+
+                            <td>legacy (v1.8.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>24.8MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-white">
+
+                                <td rowspan="2">
+                                    <strong>minHashChainSuccessLemma</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/Minimal_HashChain.spthy</small>
+                                </td>
+
+
+                                <td>Success_chain</td>
+
+                            <td>dev (v1.11.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>0.2MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+                        <tr class="task-white lemma-alt">
+
+
+                                <td>Auxiliary_Success_chain</td>
+
+                            <td>dev (v1.11.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>30.1MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-light-gray">
+
+                                <td rowspan="2">
+                                    <strong>simpleChallengePreprocessorKEYWORD1</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/SimpleChallengeResponse.spthy</small>
+                                </td>
+
+
+                                <td>Client_session_key_setup</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>30.0MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+                        <tr class="task-light-gray lemma-alt">
+
+
+                                <td>Client_auth_injective</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>19.0MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-white">
+
+                                <td rowspan="3">
+                                    <strong>simpleChallengePreprocessorKEYWORD2</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/SimpleChallengeResponse.spthy</small>
+                                </td>
+
+
+                                <td>Client_session_key_setup_stronger</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>2.2MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+                        <tr class="task-white lemma-alt">
+
+
+                                <td>Client_session_key_setup</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>1.5MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+                        <tr class="task-white">
+
+
+                                <td>Client_auth_injective</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="success">
+                                ✅ Success
+
+                            </td>
+                            <td>0.4s</td>
+                            <td>21.4MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-light-gray">
+
+                                <td>
+                                    <strong>shouldFail</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/SimpleChallengeResponse.spthy</small>
+                                </td>
+
+
+                                <td>Client_auth_injective</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="failed">
+                                ❌ Failed
+
+                            </td>
+                            <td>0.2s</td>
+                            <td>21.3MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-white">
+
+                                <td>
+                                    <strong>shouldMemoryLimit</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/wpa2.spthy</small>
+                                </td>
+
+
+                                <td>authenticator_rcv_m2_must_be_preceded_by_snd_m1</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="memory">
+                                🧠 Memory Limit
+
+                            </td>
+                            <td>25.4s</td>
+                            <td>1031.0MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+
+
+
+
+
+
+
+
+                        <tr class="task-light-gray">
+
+                                <td>
+                                    <strong>shouldTimeout</strong><br>
+                                    <small style="color: #6c757d;">examples/__protocols__/wpa2.spthy</small>
+                                </td>
+
+
+                                <td>authenticator_rcv_m2_must_be_preceded_by_snd_m1</td>
+
+                            <td>stable (v1.10.0)</td>
+                            <td class="warning">
+                                ⏳ Timed Out
+
+                            </td>
+                            <td>15.2s</td>
+                            <td>595.1MB</td>
+                            <td class="info">💾 Yes</td>
+                        </tr>
+
+
+
+        </tbody>
+    </table>
+
+
+    <h2>🚨 Error Report</h2>
+
+    <div class="error-details">
+        <h3><span class="failed">❌ FAILED :</span> shouldFail</h3>
+        <h4>On lemma : Client_auth_injective, with tamarin-prover : stable (v1.10.0)</h4>
+        <p>Task failed with return code 1</p>
+
+        <pre><code class="zsh">maude tool: 'maude'
+ checking version: 3.4. OK.
+ checking installation: OK.
+"examples/__protocols__/SimpleChallengeResponse.spthy" (line 68, column 1):
+unexpected "#"
+expecting "heuristic", "tactic", "builtins", "options", "functions", "function", "equations", "macros", "restriction", "axiom", "test", "lemma", "rule", letter, top-level process, "let", "equivLemma", "diffEquivLemma", predicate block, export block, "#ifdef", "#define", "#include" or "end"
+</code></pre>
+
+    </div>
+
+
+
+    <div class="error-details">
+        <h3><span class="warning">⏳ TIMED OUT :</span> shouldTimeout</h3>
+        <h4>On lemma : authenticator_rcv_m2_must_be_preceded_by_snd_m1, with tamarin-prover : stable (v1.10.0)</h4>
+        <p>Task timed out during execution</p>
+        <pre><code class="zsh">Process timed out</code></pre>
+    </div>
+
+
+
+    <div class="error-details">
+        <h3><span class="memory">🧠 MEMORY LIMIT :</span> shouldMemoryLimit</h3>
+        <h4>On lemma : authenticator_rcv_m2_must_be_preceded_by_snd_m1, with tamarin-prover : stable (v1.10.0)</h4>
+        <p>Task exceeded memory limit</p>
+        <pre><code class="zsh">Process exceeded memory limit</code></pre>
+    </div>
+
+
+
+
+    <h4>Rerun file : <a href="./complete-rerun.json">complete-rerun.json</a></h4>
+
+</body>
+</html>

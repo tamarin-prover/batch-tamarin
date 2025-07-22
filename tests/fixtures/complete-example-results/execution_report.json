@@ -1,0 +1,624 @@
+{
+  "recipe": "complete.json",
+  "config": {
+    "global_max_cores": 10,
+    "global_max_memory": 32,
+    "default_timeout": 80,
+    "output_directory": "complete-example-results"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover",
+      "version": "v1.10.0"
+    },
+    "dev": {
+      "path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover",
+      "version": "v1.11.0"
+    },
+    "legacy": {
+      "path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover",
+      "version": "v1.8.0"
+    }
+  },
+  "execution_metadata": {
+    "total_tasks": 17,
+    "total_successes": 14,
+    "total_failures": 3,
+    "total_cache_hit": 17,
+    "total_runtime": 46.65651607998734,
+    "total_memory": 1826.375,
+    "max_runtime": 25.374023042000772,
+    "max_memory": 1030.984375
+  },
+  "tasks": {
+    "minInjection": {
+      "theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
+      "subtasks": {
+        "minInjection--injectivity--dev": {
+          "task_config": {
+            "tamarin_alias": "dev",
+            "lemma": "injectivity",
+            "output_theory_file": "complete-example-results/proofs/minInjection--injectivity--dev.spthy",
+            "output_trace_file": "complete-example-results/traces/minInjection--injectivity--dev.json",
+            "options": [
+              "--heuristic=S"
+            ],
+            "resources": {
+              "cores": 4,
+              "memory": 16,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:46.749197",
+            "exec_end": "1970-01-01T16:14:47.065904",
+            "exec_duration_monotonic": 0.31670675000350457,
+            "avg_memory": 0.21875,
+            "peak_memory": 0.21875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.09,
+            "lemma_result": "verified",
+            "steps": 2,
+            "analysis_type": "all-traces"
+          }
+        }
+      }
+    },
+    "minHashChain": {
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+      "subtasks": {
+        "minHashChain--Success_chain--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Success_chain--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Success_chain--stable.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:40.704959",
+            "exec_end": "1970-01-01T16:14:41.143093",
+            "exec_duration_monotonic": 0.438133415998891,
+            "avg_memory": 30.71875,
+            "peak_memory": 30.71875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.22,
+            "lemma_result": "verified",
+            "steps": 7,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChain--Success_chain--dev": {
+          "task_config": {
+            "tamarin_alias": "dev",
+            "lemma": "Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Success_chain--dev.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Success_chain--dev.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:40.707383",
+            "exec_end": "1970-01-01T16:14:41.127208",
+            "exec_duration_monotonic": 0.4198245829975349,
+            "avg_memory": 0.1875,
+            "peak_memory": 0.1875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.17,
+            "lemma_result": "verified",
+            "steps": 7,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChain--Success_chain--legacy": {
+          "task_config": {
+            "tamarin_alias": "legacy",
+            "lemma": "Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Success_chain--legacy.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Success_chain--legacy.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:40.709716",
+            "exec_end": "1970-01-01T16:14:41.103206",
+            "exec_duration_monotonic": 0.3934900829990511,
+            "avg_memory": 15.59375,
+            "peak_memory": 15.59375
+          },
+          "task_result": {
+            "warnings": [
+              "'maude --version' returned unsupported version '3.4'",
+              "Unsupported maude --version version: 3.4"
+            ],
+            "real_time_tamarin_measure": 0.19,
+            "lemma_result": "verified",
+            "steps": 7,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChain--Auxiliary_Success_chain--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Auxiliary_Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Auxiliary_Success_chain--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Auxiliary_Success_chain--stable.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:42.708905",
+            "exec_end": "1970-01-01T16:14:43.145424",
+            "exec_duration_monotonic": 0.436519082999439,
+            "avg_memory": 1.171875,
+            "peak_memory": 1.171875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.19,
+            "lemma_result": "verified",
+            "steps": 27,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChain--Auxiliary_Success_chain--dev": {
+          "task_config": {
+            "tamarin_alias": "dev",
+            "lemma": "Auxiliary_Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Auxiliary_Success_chain--dev.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Auxiliary_Success_chain--dev.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:42.719508",
+            "exec_end": "1970-01-01T16:14:43.176501",
+            "exec_duration_monotonic": 0.45699237500230083,
+            "avg_memory": 1.84375,
+            "peak_memory": 1.84375
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.2,
+            "lemma_result": "verified",
+            "steps": 26,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChain--Auxiliary_Success_chain--legacy": {
+          "task_config": {
+            "tamarin_alias": "legacy",
+            "lemma": "Auxiliary_Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChain--Auxiliary_Success_chain--legacy.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChain--Auxiliary_Success_chain--legacy.json",
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:42.727559",
+            "exec_end": "1970-01-01T16:14:43.119400",
+            "exec_duration_monotonic": 0.39184116599790286,
+            "avg_memory": 24.78125,
+            "peak_memory": 24.78125
+          },
+          "task_result": {
+            "warnings": [
+              "'maude --version' returned unsupported version '3.4'",
+              "Unsupported maude --version version: 3.4"
+            ],
+            "real_time_tamarin_measure": 0.16,
+            "lemma_result": "verified",
+            "steps": 27,
+            "analysis_type": "all-traces"
+          }
+        }
+      }
+    },
+    "minHashChainSuccessLemma": {
+      "theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+      "subtasks": {
+        "minHashChainSuccessLemma--Success_chain--dev": {
+          "task_config": {
+            "tamarin_alias": "dev",
+            "lemma": "Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChainSuccessLemma--Success_chain--dev.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChainSuccessLemma--Success_chain--dev.json",
+            "resources": {
+              "cores": 2,
+              "memory": 1,
+              "timeout": 50
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:40.700056",
+            "exec_end": "1970-01-01T16:14:41.128516",
+            "exec_duration_monotonic": 0.4284599579987116,
+            "avg_memory": 0.1875,
+            "peak_memory": 0.1875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.21,
+            "lemma_result": "verified",
+            "steps": 7,
+            "analysis_type": "all-traces"
+          }
+        },
+        "minHashChainSuccessLemma--Auxiliary_Success_chain--dev": {
+          "task_config": {
+            "tamarin_alias": "dev",
+            "lemma": "Auxiliary_Success_chain",
+            "output_theory_file": "complete-example-results/proofs/minHashChainSuccessLemma--Auxiliary_Success_chain--dev.spthy",
+            "output_trace_file": "complete-example-results/traces/minHashChainSuccessLemma--Auxiliary_Success_chain--dev.json",
+            "resources": {
+              "cores": 2,
+              "memory": 1,
+              "timeout": 50
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:40.703054",
+            "exec_end": "1970-01-01T16:14:41.144075",
+            "exec_duration_monotonic": 0.4410218330012867,
+            "avg_memory": 30.125,
+            "peak_memory": 30.125
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.22,
+            "lemma_result": "verified",
+            "steps": 26,
+            "analysis_type": "all-traces"
+          }
+        }
+      }
+    },
+    "simpleChallengePreprocessorKEYWORD1": {
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+      "subtasks": {
+        "basic_KEYWORD1--Client_session_key_setup--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_session_key_setup",
+            "output_theory_file": "complete-example-results/proofs/basic_KEYWORD1--Client_session_key_setup--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/basic_KEYWORD1--Client_session_key_setup--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD1"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:42.733781",
+            "exec_end": "1970-01-01T16:14:43.142526",
+            "exec_duration_monotonic": 0.4087455420012702,
+            "avg_memory": 30.046875,
+            "peak_memory": 30.046875
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.18,
+            "lemma_result": "verified",
+            "steps": 5,
+            "analysis_type": "exists-trace"
+          }
+        },
+        "basic_KEYWORD1--Client_auth_injective--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_auth_injective",
+            "output_theory_file": "complete-example-results/proofs/basic_KEYWORD1--Client_auth_injective--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/basic_KEYWORD1--Client_auth_injective--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD1"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:42.736775",
+            "exec_end": "1970-01-01T16:14:43.164669",
+            "exec_duration_monotonic": 0.4278947079947102,
+            "avg_memory": 19.015625,
+            "peak_memory": 19.015625
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.18,
+            "lemma_result": "verified",
+            "steps": 13,
+            "analysis_type": "all-traces"
+          }
+        }
+      }
+    },
+    "simpleChallengePreprocessorKEYWORD2": {
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+      "subtasks": {
+        "basic_KEYWORD2--Client_session_key_setup_stronger--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_session_key_setup_stronger",
+            "output_theory_file": "complete-example-results/proofs/basic_KEYWORD2--Client_session_key_setup_stronger--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/basic_KEYWORD2--Client_session_key_setup_stronger--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD1",
+              "KEYWORD2"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:44.720664",
+            "exec_end": "1970-01-01T16:14:45.145838",
+            "exec_duration_monotonic": 0.42517395799950464,
+            "avg_memory": 2.15625,
+            "peak_memory": 2.15625
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.18,
+            "lemma_result": "verified",
+            "steps": 7,
+            "analysis_type": "exists-trace"
+          }
+        },
+        "basic_KEYWORD2--Client_session_key_setup--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_session_key_setup",
+            "output_theory_file": "complete-example-results/proofs/basic_KEYWORD2--Client_session_key_setup--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/basic_KEYWORD2--Client_session_key_setup--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD1",
+              "KEYWORD2"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:44.731831",
+            "exec_end": "1970-01-01T16:14:45.147254",
+            "exec_duration_monotonic": 0.4154232079963549,
+            "avg_memory": 1.515625,
+            "peak_memory": 1.515625
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.17,
+            "lemma_result": "verified",
+            "steps": 5,
+            "analysis_type": "exists-trace"
+          }
+        },
+        "basic_KEYWORD2--Client_auth_injective--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_auth_injective",
+            "output_theory_file": "complete-example-results/proofs/basic_KEYWORD2--Client_auth_injective--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/basic_KEYWORD2--Client_auth_injective--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD1",
+              "KEYWORD2"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "completed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:44.737171",
+            "exec_end": "1970-01-01T16:14:45.157777",
+            "exec_duration_monotonic": 0.4206059999996796,
+            "avg_memory": 21.359375,
+            "peak_memory": 21.359375
+          },
+          "task_result": {
+            "warnings": [],
+            "real_time_tamarin_measure": 0.17,
+            "lemma_result": "verified",
+            "steps": 13,
+            "analysis_type": "all-traces"
+          }
+        }
+      }
+    },
+    "shouldFail": {
+      "theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+      "subtasks": {
+        "shouldFail--Client_auth_injective--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "Client_auth_injective",
+            "output_theory_file": "complete-example-results/proofs/shouldFail--Client_auth_injective--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/shouldFail--Client_auth_injective--stable.json",
+            "preprocessor_flags": [
+              "KEYWORD2"
+            ],
+            "resources": {
+              "cores": 2,
+              "memory": 2,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "failed",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:44.740811",
+            "exec_end": "1970-01-01T16:14:44.967469",
+            "exec_duration_monotonic": 0.2266580419964157,
+            "avg_memory": 21.328125,
+            "peak_memory": 21.328125
+          },
+          "task_result": {
+            "return_code": "1",
+            "error_type": "tamarin_error",
+            "error_description": "Task failed with return code 1",
+            "last_stderr_lines": [
+              "maude tool: 'maude'",
+              " checking version: 3.4. OK.",
+              " checking installation: OK.",
+              "\"examples/__protocols__/SimpleChallengeResponse.spthy\" (line 68, column 1):",
+              "unexpected \"#\"",
+              "expecting \"heuristic\", \"tactic\", \"builtins\", \"options\", \"functions\", \"function\", \"equations\", \"macros\", \"restriction\", \"axiom\", \"test\", \"lemma\", \"rule\", letter, top-level process, \"let\", \"equivLemma\", \"diffEquivLemma\", predicate block, export block, \"#ifdef\", \"#define\", \"#include\" or \"end\"",
+              ""
+            ]
+          }
+        }
+      }
+    },
+    "shouldMemoryLimit": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "subtasks": {
+        "shouldMemoryLimit--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+            "output_theory_file": "complete-example-results/proofs/shouldMemoryLimit--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/shouldMemoryLimit--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable.json",
+            "resources": {
+              "cores": 4,
+              "memory": 1,
+              "timeout": 80
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "memory_limit_exceeded",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:46.738084",
+            "exec_end": "1970-01-01T16:15:12.112107",
+            "exec_duration_monotonic": 25.374023042000772,
+            "avg_memory": 519.490985576923,
+            "peak_memory": 1030.984375
+          },
+          "task_result": {
+            "return_code": "-2",
+            "error_type": "memory_limit",
+            "error_description": "Task exceeded memory limit",
+            "last_stderr_lines": [
+              "Process exceeded memory limit"
+            ]
+          }
+        }
+      }
+    },
+    "shouldTimeout": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "subtasks": {
+        "shouldTimeout--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable": {
+          "task_config": {
+            "tamarin_alias": "stable",
+            "lemma": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+            "output_theory_file": "complete-example-results/proofs/shouldTimeout--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable.spthy",
+            "output_trace_file": "complete-example-results/traces/shouldTimeout--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable.json",
+            "resources": {
+              "cores": 4,
+              "memory": 16,
+              "timeout": 15
+            }
+          },
+          "task_execution_metadata": {
+            "command": [],
+            "status": "timeout",
+            "cache_hit": true,
+            "exec_start": "1970-01-01T16:14:48.741286",
+            "exec_end": "1970-01-01T16:15:03.976288",
+            "exec_duration_monotonic": 15.235002333000011,
+            "avg_memory": 282.45625,
+            "peak_memory": 595.140625
+          },
+          "task_result": {
+            "return_code": "-1",
+            "error_type": "timeout",
+            "error_description": "Task timed out during execution",
+            "last_stderr_lines": [
+              "Process timed out"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

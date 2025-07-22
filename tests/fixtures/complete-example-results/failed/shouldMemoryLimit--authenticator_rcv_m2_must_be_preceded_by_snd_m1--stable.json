@@ -1,0 +1,13 @@
+{
+  "task_id": "shouldMemoryLimit--authenticator_rcv_m2_must_be_preceded_by_snd_m1--stable",
+  "error_description": "The task exceeded its memory limit. Review the memory limit setting for this task.",
+  "wrapper_measures": {
+    "time": 25.374023042000772,
+    "avg_memory": 519.490985576923,
+    "peak_memory": 1030.984375
+  },
+  "return_code": -2,
+  "last_stderr_lines": [
+    "Process exceeded memory limit"
+  ]
+}

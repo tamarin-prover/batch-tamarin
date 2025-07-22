@@ -15,12 +15,12 @@ class TestReportData:
     @pytest.fixture
     def example_report_path(self) -> Path:
         """Fixture for example execution report path."""
-        return Path("complete-example-results/execution_report.json")
+        return Path("tests/fixtures/complete-example-results/execution_report.json")
 
     @pytest.fixture
     def example_output_dir(self) -> Path:
         """Fixture for example output directory."""
-        return Path("complete-example-results")
+        return Path("tests/fixtures/complete-example-results")
 
     def test_from_execution_report_success(
         self, example_report_path: Path, example_output_dir: Path
@@ -37,7 +37,7 @@ class TestReportData:
         assert report_data.statistics.total_tasks == 17
         assert report_data.statistics.successful_tasks == 14
         assert report_data.statistics.failed_tasks == 3
-        assert len(report_data.tasks) == 7
+        assert len(report_data.tasks) == 8
 
     def test_from_batch_and_output_dir_success(
         self, example_report_path: Path, example_output_dir: Path
@@ -59,7 +59,7 @@ class TestReportData:
         assert report_data.statistics.total_tasks == 17
         assert report_data.statistics.successful_tasks == 14
         assert report_data.statistics.failed_tasks == 3
-        assert len(report_data.tasks) == 7
+        assert len(report_data.tasks) == 8
 
     def test_report_data_attributes(
         self, example_report_path: Path, example_output_dir: Path

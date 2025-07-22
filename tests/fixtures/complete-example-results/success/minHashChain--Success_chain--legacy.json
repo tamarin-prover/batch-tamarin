@@ -1,0 +1,24 @@
+{
+  "task_id": "minHashChain--Success_chain--legacy",
+  "warnings": [
+    "'maude --version' returned unsupported version '3.4'",
+    "Unsupported maude --version version: 3.4"
+  ],
+  "tamarin_timing": 0.19,
+  "wrapper_measures": {
+    "time": 0.3934900829990511,
+    "avg_memory": 15.59375,
+    "peak_memory": 15.59375
+  },
+  "output_spthy": "complete-example-results/proofs/minHashChain--Success_chain--legacy.spthy",
+  "verified_lemma": {
+    "Success_chain": {
+      "steps": 7,
+      "analysis_type": "all-traces"
+    }
+  },
+  "falsified_lemma": {},
+  "unterminated_lemma": [
+    "Auxiliary_Success_chain"
+  ]
+}

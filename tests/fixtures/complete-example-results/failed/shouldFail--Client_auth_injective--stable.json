@@ -1,0 +1,18 @@
+{
+  "task_id": "shouldFail--Client_auth_injective--stable",
+  "error_description": "An unexpected error occurred, see stderr output below for details.",
+  "wrapper_measures": {
+    "time": 0.2266580419964157,
+    "avg_memory": 21.328125,
+    "peak_memory": 21.328125
+  },
+  "return_code": 1,
+  "last_stderr_lines": [
+    "maude tool: 'maude'",
+    " checking version: 3.4. OK.",
+    " checking installation: OK.",
+    "\"examples/__protocols__/SimpleChallengeResponse.spthy\" (line 68, column 1):",
+    "unexpected \"#\"",
+    "expecting \"heuristic\", \"tactic\", \"builtins\", \"options\", \"functions\", \"function\", \"equations\", \"macros\", \"restriction\", \"axiom\", \"test\", \"lemma\", \"rule\", letter, top-level process, \"let\", \"equivLemma\", \"diffEquivLemma\", predicate block, export block, \"#ifdef\", \"#define\", \"#include\" or \"end\""
+  ]
+}

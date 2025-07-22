@@ -1,0 +1,111 @@
+theory Minimal_HashChain begin
+
+// Function signature and definition of the equational theory E
+
+functions: f/1, fst/1, pair/2, snd/1
+equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
+
+
+
+
+
+/* looping facts with injective instances: Gen/2, Loop/3 */
+
+rule (modulo E) Gen_Start:
+   [ Fr( seed ) ] --> [ Gen( seed, seed ), Out( seed ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Gen_Step:
+   [ Gen( seed, chain ) ]
+  --[ ChainKey( chain ) ]->
+   [ Gen( seed, f(chain) ) ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Gen_Stop:
+   [ Gen( seed, kZero ) ] --[ ChainKey( kZero ) ]-> [ !Final( kZero ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Check0:
+   [ In( kOrig ), Fr( loopId ) ]
+  --[ Start( loopId, kOrig ) ]->
+   [ Loop( loopId, kOrig, kOrig ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Check:
+   [ Loop( loopId, k, kOrig ) ]
+  --[ Loop( loopId, k, kOrig ) ]->
+   [ Loop( loopId, f(k), kOrig ) ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Success:
+   [ Loop( loopId, kZero, kOrig ), !Final( kZero ) ]
+  --[ Success( loopId, kOrig ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma Auxiliary_Success_chain [use_induction, reuse]:
+  all-traces
+  "∀ lid kZero k #x #y.
+    ((Loop( lid, kZero, k ) @ #x) ∧ (ChainKey( kZero ) @ #y)) ⇒
+    (∃ #z. ChainKey( k ) @ #z)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ lid kZero k #x #y.
+  (Loop( lid, kZero, k ) @ #x) ∧ (ChainKey( kZero ) @ #y)
+ ∧
+  ∀ #z. (ChainKey( k ) @ #z) ⇒ ⊥"
+*/
+by sorry
+
+lemma Success_chain:
+  all-traces
+  "∀ lid k #i. (Success( lid, k ) @ #i) ⇒ (∃ #j. ChainKey( k ) @ #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ lid k #i. (Success( lid, k ) @ #i) ∧ ∀ #j. (ChainKey( k ) @ #j) ⇒ ⊥"
+*/
+simplify
+solve( Loop( lid, kZero, k ) ▶₀ #i )
+  case Check
+  solve( !Final( f(k) ) ▶₁ #i )
+    case Gen_Stop
+    by contradiction /* from formulas */
+  qed
+next
+  case Check0
+  solve( !Final( k ) ▶₁ #i )
+    case Gen_Stop_case_1
+    by contradiction /* from formulas */
+  next
+    case Gen_Stop_case_2
+    by contradiction /* from formulas */
+  qed
+qed
+
+
+
+
+
+
+
+
+
+/* All wellformedness checks were successful. */
+
+/*
+Generated from:
+Tamarin version 1.8.0
+Maude version 3.4 (unsuported)
+Git revision: UNKNOWN, branch: UNKNOWN
+Compiled at: 2023-09-01 12:12:18.719033 UTC
+*/
+
+end
