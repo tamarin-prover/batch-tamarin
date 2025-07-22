@@ -53,6 +53,10 @@ class TaskRunner:
         output_directory = Path(recipe.config.output_directory)
         output_manager.initialize(output_directory)
 
+        # Update recipe config with actual output directory (may have changed due to timestamping)
+        actual_output_paths = output_manager.get_output_paths()
+        self.recipe.config.output_directory = str(actual_output_paths["base"])
+
         # Internal state for task management
         self._pending_tasks: List[ExecutableTask] = []
         self._running_tasks: Dict[str, asyncio.Task[TaskResult]] = {}
