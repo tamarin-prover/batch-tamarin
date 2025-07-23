@@ -599,7 +599,7 @@ class NotificationManager:
 
         details_text = (
             f"\nFor more details, see the HTML summary: "
-            f"[link={file_uri} blue]{html_file}[/link blue]"
+            f"[blue][link={file_uri}]{html_file}[/link][/blue]"
         )
         components.append(details_text)
 
