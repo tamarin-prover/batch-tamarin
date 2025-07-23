@@ -602,7 +602,7 @@ class BatchManager:
             original_rich_task = batch.tasks[task_name]
             theory_file = original_rich_task.theory_file
 
-            # Collect unique tamarin versions and lemmas from failed tasks
+            # Collect unique tamarin versions and create lemma configs with their specific parameters
             tamarin_versions: set[str] = set()
             lemma_configs: Dict[str, Lemma] = {}
 
@@ -610,13 +610,15 @@ class BatchManager:
                 config = rich_executable.task_config
                 tamarin_versions.add(config.tamarin_alias)
 
-                # Create lemma configuration
+                # Create or update lemma configuration
                 lemma_name = config.lemma
-                if lemma_name not in lemma_configs:
-                    # Create minimal lemma config with only the failed version
+                if lemma_name in lemma_configs:
+                    break
+                else:
+                    # Create new lemma configuration
                     lemma_configs[lemma_name] = Lemma(
                         name=lemma_name,
-                        tamarin_versions=[config.tamarin_alias],
+                        tamarin_versions=None,
                         tamarin_options=config.options,
                         preprocess_flags=config.preprocessor_flags,
                         resources=(
@@ -629,34 +631,16 @@ class BatchManager:
                             else None
                         ),
                     )
-                else:
-                    # Add tamarin version to existing lemma
-                    existing_versions = lemma_configs[lemma_name].tamarin_versions or []
-                    if config.tamarin_alias not in existing_versions:
-                        existing_versions.append(config.tamarin_alias)
-                        lemma_configs[lemma_name].tamarin_versions = existing_versions
 
-            # Create task configuration
-            # Use the first failed executable's config as base
-            first_executable = failed_executables[0]
-            first_config = first_executable.task_config
-
+            # Create simplified task configuration with only theory file and output prefix
             rerun_tasks[task_name] = Task(
                 theory_file=theory_file,
                 tamarin_versions=list(tamarin_versions),
                 output_file_prefix=task_name,
                 lemmas=list(lemma_configs.values()) if lemma_configs else None,
-                tamarin_options=first_config.options,
-                preprocess_flags=first_config.preprocessor_flags,
-                resources=(
-                    Resources(
-                        max_cores=first_config.resources.cores,
-                        max_memory=first_config.resources.memory,
-                        timeout=first_config.resources.timeout,
-                    )
-                    if first_config.resources
-                    else None
-                ),
+                tamarin_options=None,
+                preprocess_flags=None,
+                resources=None,
             )
 
         config = batch.config.model_copy()
