@@ -4,6 +4,7 @@ Notification management system for the batch Tamarin.
 This module provides a centralized way to send notifications via Rich formatting.
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from rich.console import Console
@@ -11,7 +12,7 @@ from rich.highlighter import RegexHighlighter
 from rich.prompt import Prompt
 from rich.theme import Theme
 
-from ..model.executable_task import ExecutionSummary
+from ..model.batch import Batch, LemmaResult
 from ..model.tamarin_recipe import TamarinRecipe
 from ..utils.system_resources import resolve_resource_value
 
@@ -239,207 +240,370 @@ class NotificationManager:
             self.warning("Operation cancelled by user")
             return default
 
-    def task_execution_summary(self, summary: ExecutionSummary) -> None:
+    def task_execution_summary(self, batch: Batch) -> None:
         """
-        Display a comprehensive task execution summary using Rich formatting.
+        Display a comprehensive batch execution summary using Rich formatting.
 
         Args:
-            summary: ExecutionSummary with complete execution statistics
+            batch: Batch with complete execution results and metadata
         """
+        if not batch.tasks:
+            return
+
+        from rich.columns import Columns
         from rich.console import Group
         from rich.markdown import Markdown
         from rich.panel import Panel
         from rich.table import Table
 
-        # Import TaskStatus from the model - use relative import
-        from ..model.executable_task import TaskStatus
-
-        # Overview metrics table
+        # Overview metrics table (matching HTML summary)
         overview_table = Table(show_header=True, header_style="bold magenta")
         overview_table.add_column("Metric", style="cyan")
         overview_table.add_column("Value", justify="right")
 
-        # Calculate additional metrics
-        timeout_tasks = sum(
-            1 for r in summary.task_results if r.status == TaskStatus.TIMEOUT
-        )
-        memory_limit_exceeded_tasks = sum(
-            1
-            for r in summary.task_results
-            if r.status == TaskStatus.MEMORY_LIMIT_EXCEEDED
-        )
-        failed_tasks_other = (
-            summary.failed_tasks - timeout_tasks - memory_limit_exceeded_tasks
-        )
-        avg_duration = (
-            summary.total_duration / summary.total_tasks
-            if summary.total_tasks > 0
-            else 0
-        )
+        # Calculate metrics from batch
+        total_executions = batch.execution_metadata.total_tasks
+        successful_executions = batch.execution_metadata.total_successes
+        failed_executions = batch.execution_metadata.total_failures
 
-        overview_table.add_row("Total Tasks", f"[bold]{summary.total_tasks}[/bold]")
+        # Count timeout and memory limit tasks
+        timeout_count = 0
+        memory_limit_count = 0
+        for task_name, rich_task in batch.tasks.items():
+            for _subtask_name, rich_executable in rich_task.subtasks.items():
+                if rich_executable.task_execution_metadata.status.value == "timeout":
+                    timeout_count += 1
+                elif (
+                    rich_executable.task_execution_metadata.status.value
+                    == "memory_limit_exceeded"
+                ):
+                    memory_limit_count += 1
+
+        overview_table.add_row("Total Executions", f"[bold]{total_executions}[/bold]")
         overview_table.add_row(
-            "✅ Successful", f"[bold green]{summary.successful_tasks}[/bold green]"
-        )
-        overview_table.add_row(
-            "❌ Failed", f"[bold red]{failed_tasks_other}[/bold red]"
+            "Successful Executions",
+            f"[bold #28a745]{successful_executions}[/bold #28a745]",
         )
         overview_table.add_row(
-            "⏱️ Timed Out", f"[bold #ff8c00]{timeout_tasks}[/bold #ff8c00]"
+            "Failed Executions", f"[bold #ec1026]{failed_executions}[/bold #ec1026]"
         )
         overview_table.add_row(
-            "🧠 Memory Limit",
-            f"[bold purple]{memory_limit_exceeded_tasks}[/bold purple]",
+            "Timed Out Executions", f"[bold #ea9400]{timeout_count}[/bold #ea9400]"
         )
         overview_table.add_row(
-            "🕒 Total Duration", f"{self._format_duration(summary.total_duration)}"
-        )
-        overview_table.add_row("⚡ Avg Task Duration", f"{avg_duration:.1f}s")
-
-        # Create cache table
-        cache_table = Table(show_header=True, header_style="bold cyan")
-        cache_table.add_column("Cache Metric", style="cyan")
-        cache_table.add_column("Value", justify="right")
-
-        # Format cache volume with proper units
-        cache_size_display = self._format_bytes(summary.cache_volume)
-
-        cache_table.add_row(
-            "📦 Total Entries", f"[bold cyan]{summary.cache_entries}[/bold cyan]"
-        )
-        cache_table.add_row(
-            "🔄 Tasks from Cache", f"[bold cyan]{summary.cached_tasks}[/bold cyan]"
-        )
-        cache_table.add_row(
-            "💾 Cache Size", f"[bold cyan]{cache_size_display}[/bold cyan]"
+            "Task killed for memory limit",
+            f"[bold #8b5cf6]{memory_limit_count}[/bold #8b5cf6]",
         )
 
-        # Calculate memory statistics
-        tasks_with_memory = [
-            r for r in summary.task_results if r.memory_stats is not None
-        ]
-        if tasks_with_memory:
-            # Extract peak memory values safely
-            peak_memory_values = [
-                r.memory_stats.peak_memory_mb
-                for r in tasks_with_memory
-                if r.memory_stats
-            ]
-            if peak_memory_values:
-                total_peak_memory = sum(peak_memory_values)
-                max_peak_memory = max(peak_memory_values)
-                avg_peak_memory = sum(peak_memory_values) / len(peak_memory_values)
+        # Runtime table
+        runtime_table = Table(show_header=True, header_style="bold cyan")
+        runtime_table.add_column("Metric", style="cyan")
+        runtime_table.add_column("Value", justify="right")
 
-                overview_table.add_row(
-                    "🧠 Total Peak Memory", f"{self._format_memory(total_peak_memory)}"
-                )
-                overview_table.add_row(
-                    "🔥 Max Peak Memory", f"{self._format_memory(max_peak_memory)}"
-                )
-                overview_table.add_row(
-                    "📊 Avg Peak Memory", f"{self._format_memory(avg_peak_memory)}"
-                )
-
-        # Task details table
-        details_table = Table(
-            title="Task Details", show_header=True, header_style="bold blue"
+        runtime_table.add_row(
+            "Total duration",
+            f"{self._format_duration(batch.execution_metadata.total_runtime)}",
         )
-        details_table.add_column("Task", style="cyan", no_wrap=True)
+        runtime_table.add_row(
+            "Total peak memory used",
+            f"{self._format_memory(batch.execution_metadata.total_memory)}",
+        )
+        runtime_table.add_row(
+            "Max peak memory used",
+            f"{self._format_memory(batch.execution_metadata.max_memory)}",
+        )
+        runtime_table.add_row(
+            "Freshly executed tasks",
+            f"{total_executions - batch.execution_metadata.total_cache_hit}",
+        )
+        runtime_table.add_row(
+            "Cache hits",
+            f"[bold #116dd7]{batch.execution_metadata.total_cache_hit}[/bold #116dd7]",
+        )
+
+        # Task details table (matching HTML structure)
+        details_table = Table(show_header=True, header_style="bold blue")
+        details_table.add_column("Task", style="cyan")
+        details_table.add_column("Lemma", style="blue")
+        details_table.add_column("Tamarin Version", style="white")
         details_table.add_column("Status", justify="center")
-        details_table.add_column("Duration", justify="right")
+        details_table.add_column("Runtime", justify="right")
         details_table.add_column("Peak Memory", justify="right")
-        details_table.add_column("Avg Memory", justify="right")
+        details_table.add_column("Cache Hit", justify="center")
 
-        for result in summary.task_results:
-            # Format status with color and icon
-            if result.status == TaskStatus.COMPLETED:
-                status_display = "[green]✅ PASS[/green]"
-            elif result.status == TaskStatus.TIMEOUT:
-                status_display = "[yellow]⏱️ TIMEOUT[/yellow]"
-            elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
-                status_display = "[purple]🧠 MEMORY LIMIT[/purple]"
-            else:
-                status_display = "[red]❌ FAIL[/red]"
+        # Track previous values for grouping (like HTML)
+        prev_task_name = None
+        prev_lemma_name = None
 
-            # Format memory display
-            peak_memory_display = (
-                self._format_memory(result.memory_stats.peak_memory_mb)
-                if result.memory_stats
-                else "N/A"
+        # Convert tasks to list for easier iteration with lookahead
+        tasks_list = list(batch.tasks.items())
+
+        for task_idx, (task_name, rich_task) in enumerate(tasks_list):
+            subtasks_list = list(rich_task.subtasks.items())
+
+            for subtask_idx, (_subtask_name, rich_executable) in enumerate(
+                subtasks_list
+            ):
+                # Format status based on lemma result for completed tasks
+                if rich_executable.task_execution_metadata.status.value == "completed":
+                    if rich_executable.task_result and hasattr(
+                        rich_executable.task_result, "lemma_result"
+                    ):
+                        lemma_result = rich_executable.task_result.lemma_result  # type: ignore
+                        if lemma_result == LemmaResult.VERIFIED:
+                            status_display = "[#28a745]✅ Verified[/#28a745]"
+                        elif lemma_result == LemmaResult.FALSIFIED:
+                            status_display = "[#e600ff]❗ Falsified[/#e600ff]"
+                        elif lemma_result == LemmaResult.UNTERMINATED:
+                            status_display = "[#dbc100]🚧 Unterminated[/#dbc100]"
+                        else:
+                            status_display = "[#28a745]✅ Success[/#28a745]"
+                    else:
+                        status_display = "[#28a745]✅ Success[/#28a745]"
+                elif rich_executable.task_execution_metadata.status.value == "timeout":
+                    status_display = "[#ea9400]⏳ Timed Out[/#ea9400]"
+                elif (
+                    rich_executable.task_execution_metadata.status.value
+                    == "memory_limit_exceeded"
+                ):
+                    status_display = "[#8b5cf6]🧠 Memory Limit[/#8b5cf6]"
+                else:
+                    status_display = "[#ec1026]❌ Failed[/#ec1026]"
+
+                # Format other columns
+                tamarin_alias = rich_executable.task_config.tamarin_alias
+                tamarin_version_obj = batch.tamarin_versions.get(tamarin_alias)
+                tamarin_version = (
+                    tamarin_version_obj.version
+                    if tamarin_version_obj and tamarin_version_obj.version
+                    else "Unknown"
+                )
+                version_display = (
+                    f"{tamarin_alias} ({tamarin_version})"
+                    if tamarin_version != "Unknown"
+                    else tamarin_alias
+                )
+
+                duration_display = self._format_duration(
+                    rich_executable.task_execution_metadata.exec_duration_monotonic
+                )
+                memory_display = self._format_memory(
+                    rich_executable.task_execution_metadata.peak_memory
+                )
+
+                cache_display = (
+                    "[#116dd7]💾 Yes[/#116dd7]"
+                    if rich_executable.task_execution_metadata.cache_hit
+                    else "💻 No"
+                )
+
+                # Use -- for repeated task/lemma names (like HTML grouping)
+                display_task_name = (
+                    task_name + f"\n({rich_task.theory_file})"
+                    if prev_task_name != task_name
+                    else "--"
+                )
+                display_lemma_name = (
+                    rich_executable.task_config.lemma
+                    if prev_lemma_name != rich_executable.task_config.lemma
+                    or subtask_idx == 0
+                    else "--"
+                )
+
+                # Determine if we need separator after this row
+                end_section = False
+
+                # Check if this is the last subtask of the current task
+                is_last_subtask_in_task = subtask_idx == len(subtasks_list) - 1
+                # Check if this is the last task overall
+                is_last_task = task_idx == len(tasks_list) - 1
+
+                if is_last_subtask_in_task and not is_last_task:
+                    # End of task - add double separator by adding section twice
+                    end_section = True
+
+                details_table.add_row(
+                    display_task_name,
+                    display_lemma_name,
+                    version_display,
+                    status_display,
+                    duration_display,
+                    memory_display,
+                    cache_display,
+                    end_section=end_section,
+                )
+
+                # Add double separator for task changes (after the end_section=True row)
+                if is_last_subtask_in_task and not is_last_task:
+                    details_table.add_section()  # This adds the second separator line
+
+                # Update previous values
+                prev_task_name = task_name
+                prev_lemma_name = rich_executable.task_config.lemma
+
+        # Settings section (matching HTML structure)
+        config_table = Table(show_header=True, header_style="bold magenta")
+        config_table.add_column("Setting", style="cyan")
+        config_table.add_column("Value", justify="right")
+
+        config_table.add_row("Max cores", str(batch.config.global_max_cores))
+        config_table.add_row("Max memory", f"{batch.config.global_max_memory:.0f}GB")
+        config_table.add_row("Default timeout", f"{batch.config.default_timeout}s")
+
+        # Tamarin versions table
+        versions_table = Table(show_header=True, header_style="bold cyan")
+        versions_table.add_column("Alias", style="cyan")
+        versions_table.add_column("Path", style="white")
+        versions_table.add_column("Version", style="green")
+
+        for alias, version_info in batch.tamarin_versions.items():
+            versions_table.add_row(
+                alias, version_info.path, version_info.version or "Unknown"
             )
 
-            avg_memory_display = (
-                self._format_memory(result.memory_stats.avg_memory_mb)
-                if result.memory_stats
-                else "N/A"
-            )
-
-            # Check if task was cached and add dim indicator
-            task_display = result.task_id
-            if result.task_id in summary.cached_task_ids:
-                task_display = f"{result.task_id} [dim](cached)[/dim]"
-
-            details_table.add_row(
-                task_display,
-                status_display,
-                f"{result.duration:.1f}s",
-                peak_memory_display,
-                avg_memory_display,
-            )
-
-        # Create components list
-        from typing import Any, List
-
-        from rich.columns import Columns
-
-        # Combine overview and cache tables side by side
-        overview_panel = Panel(
-            Columns([overview_table, cache_table], equal=True, expand=True),
-            title="Overview",
+        # Settings panel
+        settings_panel = Panel(
+            Columns([config_table, versions_table]),
+            title="⚙️ Configuration",
             border_style="blue",
         )
 
-        components: List[Any] = [
-            overview_panel,
-            details_table,
-        ]
+        # Execution details panel
+        execution_panel = Panel(
+            Group(Columns([overview_table, runtime_table]), details_table),
+            title="⚡ Execution",
+            border_style="blue",
+        )
 
-        # Add failed task details if any
-        failed_results = [
-            r
-            for r in summary.task_results
-            if r.status
-            in [TaskStatus.FAILED, TaskStatus.TIMEOUT, TaskStatus.MEMORY_LIMIT_EXCEEDED]
-        ]
+        # Collect components
 
-        if failed_results:
-            error_details = Markdown("**❌ Failed Tasks Details:**")
-            components.append(error_details)
+        components: list[Panel | str] = [settings_panel, execution_panel]
 
-            for result in failed_results:
-                if result.status == TaskStatus.TIMEOUT:
-                    error_type = "Timeout"
-                elif result.status == TaskStatus.MEMORY_LIMIT_EXCEEDED:
-                    error_type = "Memory Limit Exceeded"
-                else:
-                    error_type = "Error"
-                # Get the last line of stderr, prefix with ... if there are multiple lines
-                if result.stderr:
-                    stderr_lines = result.stderr.strip().splitlines()
-                    if len(stderr_lines) > 1:
-                        last_stderr = f"**stderr** : (...) {stderr_lines[-1]}"
-                    else:
-                        last_stderr = f"**stderr** : {stderr_lines[-1]}"
-                else:
-                    last_stderr = ""
-                components.append(
+        # Error report section (matching HTML structure)
+        from typing import Any
+
+        failed_tasks: List[Dict[str, Any]] = []
+        timeout_tasks: List[Dict[str, Any]] = []
+        memory_limit_tasks: List[Dict[str, Any]] = []
+
+        for task_name, rich_task in batch.tasks.items():
+            for _subtask_name, rich_executable in rich_task.subtasks.items():
+                task_info: Dict[str, Any] = {
+                    "task_name": task_name,
+                    "rich_executable": rich_executable,
+                }
+
+                if rich_executable.task_execution_metadata.status.value == "failed":
+                    failed_tasks.append(task_info)
+                elif rich_executable.task_execution_metadata.status.value == "timeout":
+                    timeout_tasks.append(task_info)
+                elif (
+                    rich_executable.task_execution_metadata.status.value
+                    == "memory_limit_exceeded"
+                ):
+                    memory_limit_tasks.append(task_info)
+
+        if failed_tasks or timeout_tasks or memory_limit_tasks:
+
+            error_components: list[Markdown] = []
+
+            # Process all error tasks together with separators
+            all_errors: list[str] = []
+
+            # Failed tasks
+            for task in failed_tasks:
+                exec: Any = task["rich_executable"]
+                tamarin_version_obj = batch.tamarin_versions.get(
+                    exec.task_config.tamarin_alias
+                )
+                version = (
+                    tamarin_version_obj.version
+                    if tamarin_version_obj and tamarin_version_obj.version
+                    else "Unknown"
+                )
+
+                error_text = f"**❌ FAILED:** Task: {task['task_name']}, "
+                error_text += f"on lemma: {exec.task_config.lemma}, with tamarin-prover: {exec.task_config.tamarin_alias} ({version})\n\n"
+
+                if (
+                    exec.task_result
+                    and hasattr(exec.task_result, "last_stderr_lines")
+                    and exec.task_result.last_stderr_lines
+                ):
+                    stderr_content = "\n".join(exec.task_result.last_stderr_lines)
+                    error_text += f"\n\n```zsh\n{stderr_content}\n```"
+
+                all_errors.append(error_text)
+
+            # Timeout tasks
+            for task in timeout_tasks:
+                exec = task["rich_executable"]
+                tamarin_version_obj = batch.tamarin_versions.get(
+                    exec.task_config.tamarin_alias
+                )
+                version = (
+                    tamarin_version_obj.version
+                    if tamarin_version_obj and tamarin_version_obj.version
+                    else "Unknown"
+                )
+
+                error_text = f"**⏳ TIMED OUT:** Task: {task['task_name']}, "
+                error_text += f"on lemma: {exec.task_config.lemma}, with tamarin-prover: {exec.task_config.tamarin_alias} ({version})\n\n"
+
+                all_errors.append(error_text)
+
+            # Memory limit tasks
+            for task in memory_limit_tasks:
+                exec = task["rich_executable"]
+                tamarin_version_obj = batch.tamarin_versions.get(
+                    exec.task_config.tamarin_alias
+                )
+                version = (
+                    tamarin_version_obj.version
+                    if tamarin_version_obj and tamarin_version_obj.version
+                    else "Unknown"
+                )
+
+                error_text = f"**🧠 MEMORY LIMIT:** Task: {task['task_name']}, "
+                error_text += f"on lemma: {exec.task_config.lemma}, with tamarin-prover: {exec.task_config.tamarin_alias} ({version})\n\n"
+
+                all_errors.append(error_text)
+
+            # Join all errors with separators
+            if all_errors:
+                full_error_text = "\n---\n\n".join(all_errors)
+                error_components.append(Markdown(full_error_text))
+                rerun_file = (
+                    Path(batch.config.output_directory).absolute()
+                    / f"{batch.recipe.split('.')[0]}-rerun.json"
+                )
+                error_components.append(
                     Markdown(
-                        f"  • **{result.task_id}** -- {error_type} (code:{result.return_code}) :"
+                        f"\n\n\n---\n\n"
+                        f"\n\nℹ️  You can rerun failed tasks using the generated file: "
+                        f"[{rerun_file}]({rerun_file})"
                     )
                 )
-                components.append(Markdown(f"{last_stderr}"))
 
-        # Single comprehensive output
+            # Create error panel with red border
+            error_panel = Panel(
+                Group(*error_components),
+                title="🚨 Errors",
+                border_style="red",
+            )
+            components.append(error_panel)
+
+        # Build a proper file URI (with three slashes) so terminals recognize it as a local link
+        html_file = Path(batch.config.output_directory).absolute() / "summary.html"
+        file_uri = html_file.as_uri()
+
+        details_text = (
+            f"\nFor more details, see the HTML summary: "
+            f"[link={file_uri} blue]{html_file}[/link blue]"
+        )
+        components.append(details_text)
+
+        # Final panel with all components
         final_panel = Panel(
             Group(*components),
             title="📊 Task Execution Summary",
@@ -447,7 +611,6 @@ class NotificationManager:
             padding=(1, 2),
         )
 
-        # Use single console print call as requested
         self._console.print("")  # spacing
         self._console.print(final_panel)
 
@@ -622,7 +785,7 @@ class NotificationManager:
         # Create components list
         # Combine summary and version tables side by side
         overview_panel = Panel(
-            Columns([summary_table, version_table], equal=True, expand=True),
+            Columns([summary_table, version_table]),
             title="Overview",
             border_style="blue",
         )

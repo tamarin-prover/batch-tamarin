@@ -84,6 +84,9 @@ class BatchManager:
             # Generate HTML summary and rerun recipe
             await self._generate_html_summary_and_rerun_recipe(batch)
 
+            # Display execution summary with batch-level lemma results
+            notification_manager.task_execution_summary(batch)
+
         except Exception as e:
             notification_manager.error(
                 f"[BatchManager] Failed to generate execution report: {e}"

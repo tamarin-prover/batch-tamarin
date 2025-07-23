@@ -138,10 +138,6 @@ class TaskRunner:
             # Start main scheduling loop
             await self._execute_task_pool(tasks)
 
-            # Generate final execution summary
-            summary = self.task_manager.generate_execution_summary()
-            notification_manager.task_execution_summary(summary)
-
         except Exception as e:
             notification_manager.error(
                 f"[TaskRunner] Unexpected error during task execution: {e}"
@@ -237,7 +233,7 @@ class TaskRunner:
                 # Remove from pending tasks
                 self._pending_tasks.remove(task)
 
-                notification_manager.info(f"[TaskRunner] Started task: {task_id}")
+                notification_manager.info(f"[TaskRunner] Started subtask: {task_id}")
 
     async def _handle_completed_tasks(self, all_tasks: List[ExecutableTask]) -> None:
         """Check for and handle completed tasks."""

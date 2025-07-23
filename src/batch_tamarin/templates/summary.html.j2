@@ -40,11 +40,13 @@
 
         /* Lemma alternation within light gray tasks */
         .task-table tr.task-light-gray.lemma-alt { background-color: #edf7ff; } /* deeper blue accent */
-        .success { color: #28a745; }
-        .failed { color: #dc3545; }
-        .warning { color: #ffc107; }
-        .info { color: #116dd7; }
-        .memory { color: #640dde; }
+        .success { color: #28a745; }     /* green for verified */
+        .failed { color: #ec1026; }      /* red for failed */
+        .warning { color: #ea9400; }     /* orange with green for timeout */
+        .info { color: #116dd7; }        /* blue for info */
+        .memory { color: #8b5cf6; }      /* violet for memory limit */
+        .falsified { color: #e600ff; }   /* light violet for falsified */
+        .unterminated { color: #dbc100; } /* yellow-orange for unterminated */
         pre {
             background-color: #f8f9fa;
             padding: 15px;
@@ -222,8 +224,13 @@
                                 <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_data.lemma_name }}</td>
                             {% endif %}
                             <td>{{ rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[rich_executable.task_config.tamarin_alias].version or "Unknown" }})</td>
-                            <td class="{% if rich_executable.task_execution_metadata.status.value == 'completed' %}success{% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}warning{% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}memory{% else %}failed{% endif %}">
-                                {% if rich_executable.task_execution_metadata.status.value == 'completed' %}✅ Success
+                            <td class="{% if rich_executable.task_execution_metadata.status.value == 'completed' %}{% if rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'verified' %}success{% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'falsified' %}falsified{% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'unterminated' %}unterminated{% else %}success{% endif %}{% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}warning{% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}memory{% else %}failed{% endif %}">
+                                {% if rich_executable.task_execution_metadata.status.value == 'completed' %}
+                                    {% if rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'verified' %}✅ Verified
+                                    {% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'falsified' %}❗ Falsified
+                                    {% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'unterminated' %}🚧 Unterminated
+                                    {% else %}✅ Success
+                                    {% endif %}
                                 {% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}⏳ Timed Out
                                 {% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}🧠 Memory Limit
                                 {% else %}❌ Failed
