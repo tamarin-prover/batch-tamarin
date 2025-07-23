@@ -722,25 +722,102 @@ class NotificationManager:
 
         # Task details table
         details_table = Table(show_header=True, header_style="bold blue")
-        details_table.add_column("Task ID", style="cyan")
-        details_table.add_column("Theory File", style="blue")
+        details_table.add_column("Task", style="cyan")
+        details_table.add_column("Lemma", style="blue")
+        details_table.add_column("Tamarin Version", style="green")
         details_table.add_column("Cores", justify="right", style="#db9200")
         details_table.add_column("Memory", justify="right", style="violet")
         details_table.add_column("Timeout", justify="right")
+        details_table.add_column("Options", style="yellow")
+        details_table.add_column("Preprocessor flags", style="magenta")
 
+        # Group tasks by original task name and lemma for proper formatting
+        from collections import defaultdict
+
+        from ..model.executable_task import ExecutableTask
+
+        tasks_by_name: dict[str, list[ExecutableTask]] = {}
         for task in executable_tasks:
-            theory_file_display = task.theory_file.name
-            cores_display = f"{task.max_cores}c"
-            memory_display = f"{task.max_memory}GB"
-            timeout_display = f"{task.task_timeout}s"
+            if task.original_task_name not in tasks_by_name:
+                tasks_by_name[task.original_task_name] = []
+            tasks_by_name[task.original_task_name].append(task)
 
-            details_table.add_row(
-                task.task_name,
-                theory_file_display,
-                cores_display,
-                memory_display,
-                timeout_display,
-            )
+        prev_task_name: Optional[str] = None
+        task_groups = list(tasks_by_name.items())
+
+        for task_idx, (task_name, task_list) in enumerate(task_groups):
+            # Group tasks by lemma within each task
+            lemma_groups: dict[str, list[ExecutableTask]] = defaultdict(list)
+            for task in task_list:
+                lemma_key = task.lemma if task.lemma else "None"
+                lemma_groups[lemma_key].append(task)
+
+            lemma_items = list(lemma_groups.items())
+            for lemma_idx, (lemma_name, lemma_tasks) in enumerate(lemma_items):
+                # Format task name with theory file (same as execution summary)
+                display_task_name = (
+                    task_name + f"\n({lemma_tasks[0].theory_file})"
+                    if prev_task_name != task_name
+                    else "--"
+                )
+
+                # Display lemma name
+                lemma_display = lemma_name
+
+                # Collect all Tamarin version aliases for this lemma (comma-separated)
+                version_aliases = [task.tamarin_version_name for task in lemma_tasks]
+                version_display = ", ".join(version_aliases)
+
+                # Use first task's config for resource values (they should be the same for same lemma)
+                first_task = lemma_tasks[0]
+                cores_display = f"{first_task.max_cores}c"
+                memory_display = f"{first_task.max_memory}GB"
+                timeout_display = f"{first_task.task_timeout}s"
+
+                # Format options (display "None" if empty)
+                options_display = (
+                    ", ".join(first_task.tamarin_options)
+                    if first_task.tamarin_options
+                    else "None"
+                )
+
+                # Format preprocessor flags (display "None" if empty)
+                preprocessor_display = (
+                    ", ".join(first_task.preprocess_flags)
+                    if first_task.preprocess_flags
+                    else "None"
+                )
+
+                # Determine if we need separator after this row
+                end_section = False
+
+                # Check if this is the last lemma of the current task
+                is_last_lemma_in_task = lemma_idx == len(lemma_items) - 1
+                # Check if this is the last task overall
+                is_last_task = task_idx == len(task_groups) - 1
+
+                if is_last_lemma_in_task and not is_last_task:
+                    # End of task - add separator
+                    end_section = True
+
+                details_table.add_row(
+                    display_task_name,
+                    lemma_display,
+                    version_display,
+                    cores_display,
+                    memory_display,
+                    timeout_display,
+                    options_display,
+                    preprocessor_display,
+                    end_section=end_section,
+                )
+
+                # Add double separator for task changes (after the end_section=True row)
+                if is_last_lemma_in_task and not is_last_task:
+                    details_table.add_section()  # This adds the second separator line
+
+                # Update previous values
+                prev_task_name = task_name
 
         # Tamarin path panel
         tamarin_path: list[Markdown] = []
