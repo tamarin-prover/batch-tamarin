@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Tamarin Execution Report</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -127,7 +127,7 @@
             margin: 0;
         }
 
-        .mermaid {
+        .chart-div {
             margin: 20px 0;
             text-align: center;
         }
@@ -336,69 +336,15 @@
 
     <div class="chart-container">
         <div class="chart-item">
-            <div class="mermaid">
-                %%{init: {'theme': 'base', 'themeVariables': { 'pie1': '#534FBD', 'pie2': '#6C6ACF', 'pie3': '#8B8AE0',
-                'pie4': '#B3B2F2', 'pie5': '#D7D6FB', 'pie6': '#ECECFF'}}}%%
-                pie title Success Rate
-                {% if report_data.statistics.verified_percentage > 0 %}"Verified": {{ "%.1f"|format(report_data.statistics.verified_percentage) }}
-                {% endif %}{% if report_data.statistics.falsified_percentage > 0 %}"Falsified": {{ "%.1f"|format(report_data.statistics.falsified_percentage) }}
-                {% endif %}{% if report_data.statistics.unterminated_percentage > 0 %}"Unterminated": {{ "%.1f"|format(report_data.statistics.unterminated_percentage) }}
-                {% endif %}{% if report_data.statistics.failed_percentage > 0 %}"Failed": {{ "%.1f"|format(report_data.statistics.failed_percentage) }}
-                {% endif %}{% if report_data.statistics.timeout_percentage > 0 %}"Timeout": {{ "%.1f"|format(report_data.statistics.timeout_percentage) }}
-                {% endif %}{% if report_data.statistics.memory_limit_percentage > 0 %}"Memory Limit": {{ "%.1f"|format(report_data.statistics.memory_limit_percentage) }}
-                {% endif %}
-            </div>
+            <div id="success_rate_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
         <div class="chart-item">
-            <div class="mermaid">
-                %%{init: {'theme': 'base', 'themeVariables': { 'pie1': '#8B8AE0', 'pie2': '#ECECFF'}}}%%
-                pie title Cache Performance
-                "Cache Hit": {{ "%.1f"|format(report_data.statistics.cache_hit_percentage) }}
-                "Freshly Executed": {{ "%.1f"|format(report_data.statistics.fresh_percentage) }}
-            </div>
+            <div id="cache_performance_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
 
-    <div class="chart-container">
-        <div class="chart-item">
-            <div class="mermaid">
----
-config:
-    xyChart:
-        width: 600
-        height: 400
-        xAxis:
-            labelFontSize: 10
-        yAxis:
-            labelFontSize: 12
----
-xychart-beta horizontal
-    title "Runtime per Task"
-    x-axis [{% for task in report_data.tasks %}"{{ task.name[-30:] }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-    y-axis "seconds"
-    bar [{% for task in report_data.tasks %}{{ "%.1f"|format(task.total_runtime) }}{% if not loop.last %}, {% endif %}{% endfor %}]
-            </div>
-        </div>
-        <div class="chart-item">
-            <div class="mermaid">
----
-config:
-    xyChart:
-        width: 600
-        height: 400
-        xAxis:
-            labelFontSize: 10
-        yAxis:
-            labelFontSize: 12
----
-xychart-beta horizontal
-    title "Memory Usage per Task"
-    x-axis [{% for task in report_data.tasks %}"{{ task.name[-30:] }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-    y-axis "MB"
-    bar [{% for task in report_data.tasks %}{{ "%.1f"|format(task.peak_memory) }}{% if not loop.last %}, {% endif %}{% endfor %}]
-            </div>
-        </div>
-    </div>
+    <div id="runtime_per_task_chart" class="chart-div" style="width: 100%; height: 400px; margin: 20px 0;"></div>
+    <div id="memory_per_task_chart" class="chart-div" style="width: 100%; height: 400px; margin: 20px 0;"></div>
 
     <h3 id="global-results">Global Results</h3>
     <table class="task-table">
@@ -454,20 +400,7 @@ xychart-beta horizontal
     </table>
 
     <h3 id="global-timeline">Global Execution Timeline</h3>
-    <div class="mermaid">
-        gantt
-        title Global Execution Timeline
-        dateFormat X
-        axisFormat %H:%M:%S
-        {% for task in report_data.tasks %}
-        {% if task.execution_timeline %}
-        section {{ task.name }}
-        {% for item in task.execution_timeline %}
-        {{ item.label }} : {{ item.start }}, {{ item.end }}
-        {% endfor %}
-        {% endif %}
-        {% endfor %}
-    </div>
+    <div id="global_timeline_chart" class="chart-div" style="width: 100%; height: 600px;"></div>
 
     <h2 id="task-details">Task Details</h2>
 
@@ -522,61 +455,28 @@ xychart-beta horizontal
         </tbody>
     </table>
 
-    {% if task.has_version_comparisons %}
+    {% set task_versions = [] %}
+    {% for lemma_group in task.lemma_groups %}
+    {% for result in lemma_group.results %}
+    {% if result.tamarin_version not in task_versions %}
+    {% set _ = task_versions.append(result.tamarin_version) %}
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+    {% if task_versions|length > 1 %}
     <div class="chart-container">
         <div class="chart-item">
-            <div class="mermaid">
----
-config:
-    xyChart:
-        width: 600
-        height: 400
-        xAxis:
-            labelFontSize: 10
-        yAxis:
-            labelFontSize: 12
----
-xychart-beta horizontal
-    title "Runtime by Version for {{ task.name }}"
-    x-axis [{% for comparison in task.version_comparisons %}"{{ comparison.label[-30:] }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-    y-axis "Runtime (seconds)"
-    bar [{% for comparison in task.version_comparisons %}{{ "%.2f"|format(comparison.runtime) }}{% if not loop.last %}, {% endif %}{% endfor %}]
-            </div>
+            <div id="runtime_comparison_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
         <div class="chart-item">
-            <div class="mermaid">
----
-config:
-    xyChart:
-        width: 600
-        height: 400
-        xAxis:
-            labelFontSize: 10
-        yAxis:
-            labelFontSize: 12
----
-xychart-beta horizontal
-    title "Memory Usage by Version for {{ task.name }}"
-    x-axis [{% for comparison in task.version_comparisons %}"{{ comparison.label[-30:] }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-    y-axis "Memory (MB)"
-    bar [{% for comparison in task.version_comparisons %}{{ "%.2f"|format(comparison.memory) }}{% if not loop.last %}, {% endif %}{% endfor %}]
-            </div>
+            <div id="memory_comparison_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
     {% endif %}
 
     {% if task.execution_timeline %}
     <div class="chart-item">
-        <div class="mermaid">
-            gantt
-            title Execution Timeline for {{ task.name }}
-            dateFormat X
-            axisFormat %H:%M:%S
-            section {{ task.name }}
-            {% for execution in task.execution_timeline %}
-            {{ execution.label }} : {{ execution.start }}, {{ execution.end }}
-            {% endfor %}
-        </div>
+        <div id="task_timeline_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 200px;"></div>
     </div>
     {% endif %}
 
@@ -606,14 +506,7 @@ xychart-beta horizontal
 
     {% if report_data.has_errors %}
 
-    <div class="mermaid">
-        %%{init: {'theme': 'base', 'themeVariables': { 'pie1': '#6C6ACF', 'pie2': '#8B8AE0',
-        'pie3': '#B3B2F2', 'pie4': '#D7D6FB', 'pie5': '#ECECFF'}}}%%
-        pie title Error Types
-        {% for error_type in report_data.error_type_distribution %}
-        "{{ error_type.name }}": {{ "%.1f"|format(error_type.percentage) }}
-        {% endfor %}
-    </div>
+    <div id="error_types_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
 
     <h3>Error Summary</h3>
     <table class="task-table">
@@ -661,7 +554,7 @@ xychart-beta horizontal
                             </td>
                             <td>{{ "%.2f"|format(result.runtime) }}s</td>
                             <td>{{ "%.2f"|format(result.peak_memory) }}MB</td>
-                            <td>{{ result.description }}</td>
+                            <td>{{ result.error_description or "No description available" }}</td>
                         </tr>
                     {% endfor %}
                 {% endfor %}
@@ -700,11 +593,338 @@ xychart-beta horizontal
     </footer>
 
     <script>
-        mermaid.initialize({
-            startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose'
+        // Load Google Charts
+        google.charts.load('current', {
+            'packages': ['corechart', 'bar', 'timeline']
         });
+        google.charts.setOnLoadCallback(drawCharts);
+
+        function drawCharts() {
+            drawSuccessRateChart();
+            drawCachePerformanceChart();
+            drawRuntimePerTaskChart();
+            drawMemoryPerTaskChart();
+            drawGlobalTimelineChart();
+            {% if report_data.has_errors %}
+            drawErrorTypesChart();
+            {% endif %}
+
+            // Draw task-specific charts
+            {% for task in report_data.tasks %}
+            {% set task_versions = [] %}
+            {% for lemma_group in task.lemma_groups %}
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version not in task_versions %}
+            {% set _ = task_versions.append(result.tamarin_version) %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% if task_versions|length > 1 %}
+            drawRuntimeComparisonChart_{{ task.name|replace(' ', '_')|lower }}();
+            drawMemoryComparisonChart_{{ task.name|replace(' ', '_')|lower }}();
+            {% endif %}
+            {% if task.execution_timeline %}
+            drawTaskTimelineChart_{{ task.name|replace(' ', '_')|lower }}();
+            {% endif %}
+            {% endfor %}
+        }
+
+        // Success Rate Pie Chart
+        function drawSuccessRateChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Status', 'Percentage'],
+                {% if report_data.statistics.verified_percentage > 0 %}['Verified', {{ report_data.statistics.verified_percentage }}],{% endif %}
+                {% if report_data.statistics.falsified_percentage > 0 %}['Falsified', {{ report_data.statistics.falsified_percentage }}],{% endif %}
+                {% if report_data.statistics.unterminated_percentage > 0 %}['Unterminated', {{ report_data.statistics.unterminated_percentage }}],{% endif %}
+                {% if report_data.statistics.failed_percentage > 0 %}['Failed', {{ report_data.statistics.failed_percentage }}],{% endif %}
+                {% if report_data.statistics.timeout_percentage > 0 %}['Timeout', {{ report_data.statistics.timeout_percentage }}],{% endif %}
+                {% if report_data.statistics.memory_limit_percentage > 0 %}['Memory Limit', {{ report_data.statistics.memory_limit_percentage }}]{% endif %}
+            ]);
+
+            var options = {
+                title: 'Success Rate',
+                colors: ['#28a745', '#e600ff', '#dbc100', '#ec1026', '#ea9400', '#8b5cf6'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('success_rate_chart'));
+            chart.draw(data, options);
+        }
+
+        // Cache Performance Pie Chart
+        function drawCachePerformanceChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Type', 'Percentage'],
+                ['Cache Hit', {{ report_data.statistics.cache_hit_percentage }}],
+                ['Freshly Executed', {{ report_data.statistics.fresh_percentage }}]
+            ]);
+
+            var options = {
+                title: 'Cache Performance',
+                colors: ['#116dd7', '#1200b9'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('cache_performance_chart'));
+            chart.draw(data, options);
+        }
+
+        // Runtime per Task Horizontal Bar Chart
+        function drawRuntimePerTaskChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Task', 'Runtime (seconds)'],
+                {% for task in report_data.tasks %}
+                ['{{ task.name[-30:] }}', {{ "%.1f"|format(task.total_runtime) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                chart: {
+                    title: 'Runtime per Task',
+                    subtitle: 'Total execution time in seconds'
+                },
+                bars: 'horizontal',
+                hAxis: { title: 'Runtime (seconds)' },
+                vAxis: { title: 'Tasks' },
+                colors: ['#1f77b4'],
+                chartArea: { width: '70%', height: '80%' }
+            };
+
+            var chart = new google.charts.Bar(document.getElementById('runtime_per_task_chart'));
+            chart.draw(data, google.charts.Bar.convertOptions(options));
+        }
+
+        // Memory per Task Horizontal Bar Chart
+        function drawMemoryPerTaskChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Task', 'Memory (MB)'],
+                {% for task in report_data.tasks %}
+                ['{{ task.name[-30:] }}', {{ "%.1f"|format(task.peak_memory) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                chart: {
+                    title: 'Memory Usage per Task',
+                    subtitle: 'Peak memory usage in MB'
+                },
+                bars: 'horizontal',
+                hAxis: { title: 'Memory (MB)' },
+                vAxis: { title: 'Tasks' },
+                colors: ['#ff7f0e'],
+                chartArea: { width: '70%', height: '80%' }
+            };
+
+            var chart = new google.charts.Bar(document.getElementById('memory_per_task_chart'));
+            chart.draw(data, google.charts.Bar.convertOptions(options));
+        }
+
+        // Global Timeline Chart
+        function drawGlobalTimelineChart() {
+            var container = document.getElementById('global_timeline_chart');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Task' });
+            dataTable.addColumn({ type: 'string', id: 'Label' });
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+
+            // Use current time as base for timeline
+            var baseTime = new Date().getTime();
+            var timelineData = [];
+            {% for task in report_data.tasks %}
+            {% if task.execution_timeline %}
+            {% for item in task.execution_timeline %}
+            timelineData.push(['{{ task.name }}', '{{ item.label }}', new Date(baseTime + {{ "%.3f"|format(item.start * 1000) }}), new Date(baseTime + {{ "%.3f"|format(item.end * 1000) }})]);
+            {% endfor %}
+            {% endif %}
+            {% endfor %}
+
+            dataTable.addRows(timelineData);
+
+            var options = {
+                title: 'Global Execution Timeline',
+                timeline: {
+                    groupByRowLabel: true,
+                    showRowLabels: true
+                },
+                backgroundColor: '#fafafa'
+            };
+
+            chart.draw(dataTable, options);
+        }
+
+        {% if report_data.has_errors %}
+        // Error Types Pie Chart
+        function drawErrorTypesChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Error Type', 'Percentage'],
+                {% for error_type in report_data.error_type_distribution %}
+                ['{{ error_type.name }}', {{ "%.1f"|format(error_type.percentage) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                title: 'Error Types',
+                colors: ['#ec1026', '#ea9400', '#8b5cf6', '#d95f02', '#7570b3'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('error_types_chart'));
+            chart.draw(data, options);
+        }
+        {% endif %}
+
+        {% for task in report_data.tasks %}
+        {% set task_versions = [] %}
+        {% for lemma_group in task.lemma_groups %}
+        {% for result in lemma_group.results %}
+        {% if result.tamarin_version not in task_versions %}
+        {% set _ = task_versions.append(result.tamarin_version) %}
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+        {% if task_versions|length > 1 %}
+        // Runtime Comparison Chart for {{ task.name }}
+        function drawRuntimeComparisonChart_{{ task.name|replace(' ', '_')|lower }}() {
+            // Build versions list from actual data
+            var versions = [{% for version in task_versions %}'{{ version }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+
+            // Build chart data directly from lemma_groups
+            var chartData = [
+                ['Lemma'].concat(versions)
+            ];
+
+            {% for lemma_group in task.lemma_groups %}
+            var lemmaData = ['{{ lemma_group.lemma }}'];
+            // For each version, find the matching result
+            {% for target_version in task_versions %}
+            var foundValue = 0;
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version == target_version %}
+            foundValue = {{ result.runtime }};
+            {% endif %}
+            {% endfor %}
+            lemmaData.push(foundValue);
+            {% endfor %}
+            chartData.push(lemmaData);
+            {% endfor %}
+
+
+            var data = google.visualization.arrayToDataTable(chartData);
+
+            var options = {
+                chart: {
+                    title: 'Runtime by Version for {{ task.name }}',
+                    subtitle: 'Comparison across Tamarin versions'
+                },
+                bars: 'horizontal',
+                hAxis: {
+                    title: 'Runtime (seconds)',
+                    minValue: 0
+                },
+                vAxis: { title: 'Lemmas' },
+                colors: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            };
+
+            var chartElement = document.getElementById('runtime_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            if (chartElement) {
+                var chart = new google.charts.Bar(chartElement);
+                chart.draw(data, google.charts.Bar.convertOptions(options));
+            } else {
+                console.error('Chart element not found: runtime_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            }
+        }
+
+        // Memory Comparison Chart for {{ task.name }}
+        function drawMemoryComparisonChart_{{ task.name|replace(' ', '_')|lower }}() {
+            // Build versions list from actual data
+            var versions = [{% for version in task_versions %}'{{ version }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+
+            // Build chart data directly from lemma_groups
+            var chartData = [
+                ['Lemma'].concat(versions)
+            ];
+
+            {% for lemma_group in task.lemma_groups %}
+            var lemmaData = ['{{ lemma_group.lemma }}'];
+            // For each version, find the matching result
+            {% for target_version in task_versions %}
+            var foundValue = 0;
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version == target_version %}
+            foundValue = {{ result.peak_memory }};
+            {% endif %}
+            {% endfor %}
+            lemmaData.push(foundValue);
+            {% endfor %}
+            chartData.push(lemmaData);
+            {% endfor %}
+
+
+            var data = google.visualization.arrayToDataTable(chartData);
+
+            var options = {
+                chart: {
+                    title: 'Memory Usage by Version for {{ task.name }}',
+                    subtitle: 'Comparison across Tamarin versions'
+                },
+                bars: 'horizontal',
+                hAxis: {
+                    title: 'Memory (MB)',
+                    minValue: 0
+                },
+                vAxis: { title: 'Lemmas' },
+                colors: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            };
+
+            var chartElement = document.getElementById('memory_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            if (chartElement) {
+                var chart = new google.charts.Bar(chartElement);
+                chart.draw(data, google.charts.Bar.convertOptions(options));
+            } else {
+                console.error('Chart element not found: memory_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            }
+        }
+        {% endif %}
+
+        {% if task.execution_timeline %}
+        // Task Timeline Chart for {{ task.name }}
+        function drawTaskTimelineChart_{{ task.name|replace(' ', '_')|lower }}() {
+            var container = document.getElementById('task_timeline_{{ task.name|replace(" ", "_")|lower }}');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Task' });
+            dataTable.addColumn({ type: 'string', id: 'Label' });
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+
+            // Use current time as base for timeline
+            var baseTime = new Date().getTime();
+            dataTable.addRows([
+                {% for execution in task.execution_timeline %}
+                ['{{ task.name }}', '{{ execution.label }}', new Date(baseTime + {{ "%.3f"|format(execution.start * 1000) }}), new Date(baseTime + {{ "%.3f"|format(execution.end * 1000) }})]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                title: 'Execution Timeline for {{ task.name }}',
+                timeline: {
+                    groupByRowLabel: false,
+                    showRowLabels: false
+                },
+                backgroundColor: '#fafafa'
+            };
+
+            chart.draw(dataTable, options);
+        }
+        {% endif %}
+        {% endfor %}
     </script>
 </body>
 
