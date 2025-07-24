@@ -458,6 +458,11 @@ class BatchManager:
         timeout_tasks: List[Dict[str, Any]] = []
         memory_limit_tasks: List[Dict[str, Any]] = []
 
+        # Count lemma results for statistics
+        verified_count = 0
+        falsified_count = 0
+        unterminated_count = 0
+
         # Prepare structured table data with lemma grouping
         task_table_data = self._prepare_task_table_data(batch)
 
@@ -480,6 +485,29 @@ class BatchManager:
                     == TaskStatus.MEMORY_LIMIT_EXCEEDED
                 ):
                     memory_limit_tasks.append(task_info)
+                elif (
+                    rich_executable.task_execution_metadata.status
+                    == TaskStatus.COMPLETED
+                ):
+                    # Count lemma results for completed tasks
+                    if rich_executable.task_result and isinstance(
+                        rich_executable.task_result, TaskSucceedResult
+                    ):
+                        if (
+                            rich_executable.task_result.lemma_result
+                            == LemmaResult.VERIFIED
+                        ):
+                            verified_count += 1
+                        elif (
+                            rich_executable.task_result.lemma_result
+                            == LemmaResult.FALSIFIED
+                        ):
+                            falsified_count += 1
+                        elif (
+                            rich_executable.task_result.lemma_result
+                            == LemmaResult.UNTERMINATED
+                        ):
+                            unterminated_count += 1
 
         # Get recipe name without extension
         recipe_name = (
@@ -499,6 +527,9 @@ class BatchManager:
             ),
             "recipe_name": recipe_name,
             "task_table_data": task_table_data,
+            "verified_count": verified_count,
+            "falsified_count": falsified_count,
+            "unterminated_count": unterminated_count,
         }
 
     def _prepare_task_table_data(self, batch: Batch) -> List[Dict[str, Any]]:
