@@ -480,9 +480,10 @@
     </div>
     {% endif %}
 
-    {% if task.traces %}
+    {% set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list %}
+    {% if task_traces %}
     <h4>Traces</h4>
-    {% for trace in task.traces %}
+    {% for trace in task_traces %}
     <div class="trace-visualization">
         <h5>{{ trace.lemma }} ({{ trace.tamarin_version }})</h5>
         <p>
@@ -491,9 +492,9 @@
             <br><strong>DOT File:</strong> <a href="{{ trace.dot_file }}">{{ trace.dot_file }}</a>
             {% endif %}
         </p>
-        {% if trace.svg_content %}
+        {% if trace.dot_file %}
         <div class="trace-svg-container">
-            {{ trace.svg_content|safe }}
+            <img src="{{ trace.dot_file|replace('.dot', '.svg') }}" alt="{{ trace.lemma }} trace visualization" style="max-width: 100%; height: auto;">
         </div>
         {% endif %}
     </div>

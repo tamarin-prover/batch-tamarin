@@ -190,15 +190,17 @@ section {{ task.name }}
 ```
 {% endif %}
 
-{% if task.traces %}
+{% set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list %}
+{% if task_traces %}
 #### Traces
-{% for trace in task.traces %}
+{% for trace in task_traces %}
 **{{ trace.lemma }}** ({{ trace.tamarin_version }}):
 - **JSON File**: [{{ trace.json_file }}]({{ trace.json_file }})
 {% if trace.dot_file %}- **DOT File**: [{{ trace.dot_file }}]({{ trace.dot_file }})
-{% endif %}{% if trace.svg_content %}
+{% endif %}
+{% if trace.dot_file %}
 **Trace Visualization**:
-![{{ trace.lemma }}_trace](data:image/svg+xml;base64,{{ trace.svg_content|b64encode }})
+![{{ trace.lemma }}_trace]({{ trace.dot_file|replace('.dot', '.svg') }})
 {% endif %}
 {% endfor %}
 {% endif %}
