@@ -488,7 +488,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \BLOCK{endif}
 
 \#{ Traces section }
-\BLOCK{set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list}
+\BLOCK{set task_traces = report_data.traces|filter_traces_by_task(task)|list}
 \BLOCK{if task_traces|length > 0}
 \subsubsection{Traces}
 
@@ -516,9 +516,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \BLOCK{endfor}
 
-\section{Errors}
-
 \BLOCK{if report_data.has_errors}
+\section{Errors}
 
 \#{ Error Types Pie Chart }
 \BLOCK{if report_data.error_type_distribution|length > 0}
@@ -602,8 +601,10 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \textbf{Rerun file:} \texttt{\VAR{report_data.rerun_file|latex_escape}}
 
 \BLOCK{else}
+\section{Execution Summary}
+
 \begin{center}
-\infotext{\textbf{No errors encountered in this run}}
+\successtext{\textbf{No errors occurred during this run}}
 
 All tasks completed successfully without any failures, timeouts, or memory limit issues.
 \end{center}

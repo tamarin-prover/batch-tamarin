@@ -241,6 +241,9 @@ class TaskSummary(BaseModel):
 
     name: str = Field(..., description="Task name")
     theory_file: str = Field(..., description="Theory file path")
+    output_prefix: Optional[str] = Field(
+        None, description="Output file prefix from recipe"
+    )
     results: List[TaskResult] = Field(  # type: ignore
         default_factory=list, description="Task results"
     )
@@ -311,6 +314,7 @@ class TraceInfo(BaseModel):
     png_file: Optional[Path] = Field(
         None, description="PNG trace file path (for LaTeX)"
     )
+    output_prefix: Optional[str] = Field(None, description="Output prefix for the task")
 
 
 class ErrorDetail(BaseModel):
@@ -795,9 +799,18 @@ class ReportData(BaseModel):
             for lemma, results in lemma_groups.items():
                 lemma_group_objects.append(LemmaGroup(lemma=lemma, results=results))
 
+            # Extract output_prefix from subtask names (format: {output_prefix}--{lemma}--{version})
+            output_prefix = None
+            if rich_task.subtasks:
+                # Get the first subtask name and extract prefix
+                first_subtask_name = next(iter(rich_task.subtasks.keys()))
+                if "--" in first_subtask_name:
+                    output_prefix = first_subtask_name.split("--")[0]
+
             task_summary = TaskSummary(
                 name=task_name,
                 theory_file=rich_task.theory_file,
+                output_prefix=output_prefix,
                 results=task_results,
                 lemma_groups=lemma_group_objects,
                 total_runtime=task_total_runtime,
@@ -826,6 +839,11 @@ class ReportData(BaseModel):
                     lemma: str
                     version: str
                     lemma, version = subtask_mapping[filename]
+
+                    # Extract output_prefix from filename (format: {output_prefix}--{lemma}--{version})
+                    output_prefix = None
+                    if "--" in filename:
+                        output_prefix = filename.split("--")[0]
                 else:
                     # Skip files that don't match any subtask
                     continue
@@ -856,6 +874,7 @@ class ReportData(BaseModel):
                     dot_file=dot_file_path,
                     svg_content=svg_content,
                     png_file=png_file if png_file is not None else None,
+                    output_prefix=output_prefix,
                 )
                 traces.append(trace_info)
 

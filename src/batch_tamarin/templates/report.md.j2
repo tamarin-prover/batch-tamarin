@@ -190,7 +190,7 @@ section {{ task.name }}
 ```
 {% endif %}
 
-{% set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list %}
+{% set task_traces = report_data.traces|filter_traces_by_task(task)|list %}
 {% if task_traces %}
 #### Traces
 {% for trace in task_traces %}

@@ -57,9 +57,11 @@ class ReportGenerator:
         # Add custom filters to both environments
         filters: Dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore
         filters["latex_escape"] = self._latex_escape
+        filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
 
         latex_filters: Dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
         latex_filters["latex_escape"] = self._latex_escape
+        latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -88,6 +90,51 @@ class ReportGenerator:
                 result.append(char)
 
         return "".join(result)
+
+    def _filter_traces_by_task(self, traces: List[Any], task: Any) -> List[Any]:
+        """Filter traces by task's lemmas and output_prefix."""
+        if not traces or not task:
+            return []
+
+        # Get task's lemmas
+        task_lemmas = (  # type: ignore
+            set(task.lemmas) if hasattr(task, "lemmas") else set()
+        )
+
+        # Filter traces by lemma first
+        lemma_filtered_traces = [
+            trace
+            for trace in traces
+            if hasattr(trace, "lemma") and trace.lemma in task_lemmas
+        ]
+
+        # Filter by output_prefix if available
+        if (
+            hasattr(task, "output_prefix")
+            and task.output_prefix
+            and lemma_filtered_traces
+        ):
+            # Check if any traces have output_prefix information
+            traces_with_prefix = [
+                trace
+                for trace in lemma_filtered_traces
+                if hasattr(trace, "output_prefix") and trace.output_prefix
+            ]
+
+            if traces_with_prefix:
+                # Filter traces where output_prefix matches the task's output_prefix
+                prefix_filtered_traces = [
+                    trace
+                    for trace in traces_with_prefix
+                    if trace.output_prefix == task.output_prefix
+                ]
+
+                # If we found matches with prefix filtering, return those
+                if prefix_filtered_traces:
+                    return prefix_filtered_traces
+
+        # If no output_prefix filtering was possible or successful, return lemma-filtered traces
+        return lemma_filtered_traces
 
     def generate_report(
         self,

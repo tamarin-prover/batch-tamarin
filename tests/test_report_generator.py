@@ -310,7 +310,7 @@ class TestReportGenerator:
         assert report_data.tasks[0].name == "test_task"
         assert len(report_data.tasks[0].results) == 1
         assert report_data.tasks[0].results[0].lemma == "test_lemma"
-        assert report_data.tasks[0].results[0].status == "success"
+        assert report_data.tasks[0].results[0].status == "verified"
 
     def test_report_data_from_execution_report(self):
         """Test ReportData creation from execution_report.json."""
@@ -514,3 +514,104 @@ digraph test {
         assert context["charts"] is not None
         assert context["charts"].success_rate is None
         assert context["charts"].error_types is None
+
+    def test_filter_traces_by_task(self):
+        """Test trace filtering by task lemmas and output prefix."""
+        from batch_tamarin.model.report_data import TaskResult, TaskSummary, TraceInfo
+
+        generator = ReportGenerator()
+
+        # Create TaskResult objects for the lemmas
+        result1 = TaskResult(
+            lemma="lemma1",
+            tamarin_version="stable",
+            status="verified",
+        )  # type: ignore
+        result2 = TaskResult(
+            lemma="lemma2",
+            tamarin_version="dev",
+            status="verified",
+        )  # type: ignore
+
+        # Create a mock task with specific lemmas and output_prefix
+        mock_task = TaskSummary(
+            name="test_task",
+            theory_file="test.spthy",
+            output_prefix="task_prefix",
+            results=[result1, result2],
+            lemma_groups=[],
+            total_runtime=0.0,
+            peak_memory=0.0,
+            execution_timeline_data=[],
+        )
+
+        # Create trace objects with different combinations
+        traces = [
+            TraceInfo(
+                lemma="lemma1",
+                tamarin_version="stable",
+                json_file="task_prefix--lemma1--stable.json",
+                output_prefix="task_prefix",
+            ),  # type: ignore
+            TraceInfo(
+                lemma="lemma2",
+                tamarin_version="dev",
+                json_file="task_prefix--lemma2--dev.json",
+                output_prefix="task_prefix",
+            ),  # type: ignore
+            TraceInfo(
+                lemma="lemma1",
+                tamarin_version="stable",
+                json_file="other_prefix--lemma1--stable.json",
+                output_prefix="other_prefix",
+            ),  # type: ignore
+            TraceInfo(
+                lemma="lemma3",
+                tamarin_version="stable",
+                json_file="task_prefix--lemma3--stable.json",
+                output_prefix="task_prefix",
+            ),  # type: ignore
+        ]
+
+        # Filter traces
+        filtered_traces = generator._filter_traces_by_task(  # type: ignore
+            traces, mock_task
+        )
+
+        # Should return only traces that match both lemmas (lemma1, lemma2) and output_prefix (task_prefix)
+        assert len(filtered_traces) == 2
+        assert all(trace.output_prefix == "task_prefix" for trace in filtered_traces)
+        assert all(trace.lemma in ["lemma1", "lemma2"] for trace in filtered_traces)
+
+        # Test with task that has no output_prefix - should fall back to lemma filtering only
+        result3 = TaskResult(
+            lemma="lemma1",
+            tamarin_version="stable",
+            status="verified",
+        )  # type: ignore
+        result4 = TaskResult(
+            lemma="lemma3",
+            tamarin_version="stable",
+            status="verified",
+        )  # type: ignore
+
+        mock_task_no_prefix = TaskSummary(
+            name="test_task_no_prefix",
+            theory_file="test.spthy",
+            output_prefix=None,
+            results=[result3, result4],
+            lemma_groups=[],
+            total_runtime=0.0,
+            peak_memory=0.0,
+            execution_timeline_data=[],
+        )
+
+        filtered_traces_no_prefix = generator._filter_traces_by_task(  # type: ignore
+            traces, mock_task_no_prefix
+        )
+
+        # Should return traces matching lemmas regardless of output_prefix
+        assert len(filtered_traces_no_prefix) == 3
+        lemma_names = [trace.lemma for trace in filtered_traces_no_prefix]
+        assert "lemma1" in lemma_names
+        assert "lemma3" in lemma_names
