@@ -6,6 +6,7 @@ in a non-blocking manner, with support for timeouts and proper termination.
 """
 
 import asyncio
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -85,7 +86,7 @@ class ProcessManager:
                 task=task,
                 path=executable,
                 command=command,
-                start_time=asyncio.get_event_loop().time(),
+                start_time=time.time(),
             )
             self._active_processes[process_id] = process_info
             self._memory_exceeded_processes[process_id] = False

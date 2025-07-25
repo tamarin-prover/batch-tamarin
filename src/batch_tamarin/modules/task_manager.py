@@ -5,7 +5,7 @@ This module provides task execution with progress reporting capabilities,
 built on top of the ProcessManager for actual process execution.
 """
 
-import asyncio
+import time
 from typing import Dict, Set
 
 from ..model.executable_task import (
@@ -86,7 +86,7 @@ class TaskManager:
             )
 
         # Initialize task tracking
-        start_time = asyncio.get_event_loop().time()
+        start_time = time.time()
         self._task_start_times[task_id] = start_time
         self.update_task_status(task_id, TaskStatus.PENDING)
 
@@ -115,7 +115,7 @@ class TaskManager:
             )
 
             # Determine final status based on return code
-            end_time = asyncio.get_event_loop().time()
+            end_time = time.time()
             duration = end_time - start_time
 
             if return_code == 0:
@@ -174,7 +174,7 @@ class TaskManager:
 
         except Exception as e:
             # Handle unexpected errors
-            end_time = asyncio.get_event_loop().time()
+            end_time = time.time()
             duration = end_time - start_time
 
             notification_manager.error(
@@ -218,7 +218,7 @@ class TaskManager:
         Returns:
             ProgressReport with current progress status
         """
-        current_time = asyncio.get_event_loop().time()
+        current_time = time.time()
 
         # Count tasks by status
         pending_tasks = sum(
@@ -267,7 +267,7 @@ class TaskManager:
 
         # Update start time if transitioning to RUNNING
         if status == TaskStatus.RUNNING and task_id not in self._task_start_times:
-            self._task_start_times[task_id] = asyncio.get_event_loop().time()
+            self._task_start_times[task_id] = time.time()
 
         # Notify status change
         notification_manager.debug(
