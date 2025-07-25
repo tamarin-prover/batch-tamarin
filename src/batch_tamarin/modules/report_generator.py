@@ -31,6 +31,7 @@ class ReportGenerator:
             template_dir = Path(__file__).parent.parent / "templates"
 
         self.template_dir = template_dir
+        # Create standard environment for HTML/MD templates
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(["html", "xml"]),
@@ -38,9 +39,27 @@ class ReportGenerator:
             lstrip_blocks=True,
         )
 
-        # Add custom filters
+        # Create LaTeX-specific environment with custom delimiters
+        self.latex_env = Environment(
+            loader=FileSystemLoader(str(template_dir)),
+            block_start_string="\\BLOCK{",
+            block_end_string="}",
+            variable_start_string="\\VAR{",
+            variable_end_string="}",
+            comment_start_string="\\#{",
+            comment_end_string="}",
+            line_statement_prefix="%%",
+            line_comment_prefix="%#",
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+
+        # Add custom filters to both environments
         filters: Dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore
         filters["latex_escape"] = self._latex_escape
+
+        latex_filters: Dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
+        latex_filters["latex_escape"] = self._latex_escape
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -110,10 +129,14 @@ class ReportGenerator:
             report_data, charts, results_directory, version
         )
 
-        # Render template
+        # Render template using appropriate environment
         template_name = f"report.{format_type}.j2"
         try:
-            template = self.env.get_template(template_name)
+            # Use LaTeX environment for .tex format
+            if format_type == "tex":
+                template = self.latex_env.get_template(template_name)
+            else:
+                template = self.env.get_template(template_name)
         except Exception as e:
             raise ValueError(f"Template {template_name} not found or invalid: {e}")
 

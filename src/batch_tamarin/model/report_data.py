@@ -843,9 +843,11 @@ class ReportData(BaseModel):
                     # Try to process DOT file to generate SVG
                     svg_content = process_dot_file(dot_file, format_type)
 
-                if svg_content is None and format_type == "tex":
-                    # Check if PNG file exists (for LaTeX compatibility)
-                    png_file = trace_file.with_suffix(".png")
+                if format_type == "tex":
+                    # For LaTeX format, check if PNG file was created by process_dot_file
+                    potential_png_file = trace_file.with_suffix(".png")
+                    if potential_png_file.exists():
+                        png_file = potential_png_file
 
                 trace_info = TraceInfo(
                     lemma=lemma,
