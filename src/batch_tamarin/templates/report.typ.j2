@@ -201,13 +201,13 @@
 {% for trace in task_traces %}
 *{{ trace.lemma }}* ({{ trace.tamarin_version }}):
 
-- *JSON File:* `{{ trace.json_file }}`
+- *JSON File:* `{{ trace.json_file|relative_from_report }}`
 {% if trace.dot_file %}
-- *DOT File:* `{{ trace.dot_file }}`
+- *DOT File:* `{{ trace.dot_file|relative_from_report }}`
 {% endif %}
 
 {% if trace.dot_file %}
-{% set svg_file = trace.dot_file.replace('.dot', '.svg') %}
+{% set svg_file = trace.dot_file|replace('.dot', '.svg')|relative_from_report %}
 #figure(
   image("{{ svg_file }}", width: 80%, height: 400pt, fit: "contain"),
   caption: [Trace visualization for {{ trace.lemma }}]

@@ -487,14 +487,14 @@
     <div class="trace-visualization">
         <h5>{{ trace.lemma }} ({{ trace.tamarin_version }})</h5>
         <p>
-            <strong>JSON File:</strong> <a href="{{ trace.json_file }}">{{ trace.json_file }}</a>
+            <strong>JSON File:</strong> <a href="{{ trace.json_file|relative_from_report }}">{{ trace.json_file|relative_from_report }}</a>
             {% if trace.dot_file %}
-            <br><strong>DOT File:</strong> <a href="{{ trace.dot_file }}">{{ trace.dot_file }}</a>
+            <br><strong>DOT File:</strong> <a href="{{ trace.dot_file|relative_from_report }}">{{ trace.dot_file|relative_from_report }}</a>
             {% endif %}
         </p>
         {% if trace.dot_file %}
         <div class="trace-svg-container">
-            <img src="{{ trace.dot_file|replace('.dot', '.svg') }}" alt="{{ trace.lemma }} trace visualization" style="max-width: 100%; height: auto;">
+            <img src="{{ trace.dot_file|replace('.dot', '.svg')|relative_from_report }}" alt="{{ trace.lemma }} trace visualization" style="max-width: 100%; height: auto;">
         </div>
         {% endif %}
     </div>
@@ -580,7 +580,7 @@
     </div>
     {% endfor %}
 
-    <h4>Rerun file : <a href="./{{ report_data.rerun_file }}">{{ report_data.rerun_file }}</a></h4>
+    <h4>Rerun file : <a href="{{ report_data.rerun_file|relative_from_report }}">{{ report_data.rerun_file|relative_from_report }}</a></h4>
     {% else %}
     <div class="info">
         <p><strong>✅ No errors encountered in this run</strong></p>

@@ -5,6 +5,7 @@ This module provides the main service for generating reports from execution
 results using Jinja2 templates and various output formats.
 """
 
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -58,10 +59,12 @@ class ReportGenerator:
         filters: Dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore
         filters["latex_escape"] = self._latex_escape
         filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
+        filters["relative_from_report"] = self._relative_from_report  # type: ignore
 
         latex_filters: Dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
         latex_filters["latex_escape"] = self._latex_escape
         latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
+        latex_filters["relative_from_report"] = self._relative_from_report  # type: ignore
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -90,6 +93,24 @@ class ReportGenerator:
                 result.append(char)
 
         return "".join(result)
+
+    def _relative_from_report(self, file_path: str) -> str:
+        """Convert absolute file path to relative path from report output location."""
+        if not file_path or not hasattr(self, "_current_output_path"):
+            return file_path
+
+        try:
+            abs_file_path = str(Path(file_path).absolute())
+            abs_output_dir = str(Path(self._current_output_path).parent.absolute())
+
+            # Calculate relative path from report output directory to file
+            relative_path = os.path.relpath(abs_file_path, abs_output_dir)
+
+            # Convert to forward slashes for web compatibility
+            return relative_path.replace("\\", "/")
+        except (ValueError, OSError):
+            # If we can't make it relative, return the original path
+            return file_path
 
     def _filter_traces_by_task(self, traces: List[Any], task: Any) -> List[Any]:
         """Filter traces by task's lemmas and output_prefix."""
@@ -152,6 +173,9 @@ class ReportGenerator:
             format_type: Output format (md, html, tex, typ)
             version: Version string for the report footer
         """
+        # Store output path for relative path filter
+        self._current_output_path = str(output_path.absolute())
+
         # Load execution report
         execution_report_path = results_directory / "execution_report.json"
         if not execution_report_path.exists():

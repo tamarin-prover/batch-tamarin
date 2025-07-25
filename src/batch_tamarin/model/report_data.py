@@ -870,16 +870,25 @@ class ReportData(BaseModel):
                 trace_info = TraceInfo(
                     lemma=lemma,
                     tamarin_version=version,
-                    json_file=str(trace_file),
-                    dot_file=dot_file_path,
+                    json_file=str(trace_file.absolute()),
+                    dot_file=(
+                        str(Path(dot_file_path).absolute()) if dot_file_path else None
+                    ),
                     svg_content=svg_content,
-                    png_file=png_file if png_file is not None else None,
+                    png_file=str(png_file.absolute()) if png_file is not None else None,
                     output_prefix=output_prefix,
                 )
                 traces.append(trace_info)
 
-        # Determine rerun file name
-        rerun_file = f"{batch.recipe}-rerun.json"
+        # Determine rerun file name with absolute path
+        recipe_name = (
+            Path(batch.recipe).stem
+            if hasattr(Path(batch.recipe), "stem")
+            else str(batch.recipe)
+        )
+        rerun_file = str(
+            (Path(results_directory) / f"{recipe_name}-rerun.json").absolute()
+        )
 
         return cls(
             results_directory=results_directory,

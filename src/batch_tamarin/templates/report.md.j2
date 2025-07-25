@@ -195,12 +195,12 @@ section {{ task.name }}
 #### Traces
 {% for trace in task_traces %}
 **{{ trace.lemma }}** ({{ trace.tamarin_version }}):
-- **JSON File**: [{{ trace.json_file }}]({{ trace.json_file }})
-{% if trace.dot_file %}- **DOT File**: [{{ trace.dot_file }}]({{ trace.dot_file }})
+- **JSON File**: [{{ trace.json_file|relative_from_report }}]({{ trace.json_file|relative_from_report }})
+{% if trace.dot_file %}- **DOT File**: [{{ trace.dot_file|relative_from_report }}]({{ trace.dot_file|relative_from_report }})
 {% endif %}
 {% if trace.dot_file %}
 **Trace Visualization**:
-![{{ trace.lemma }}_trace]({{ trace.dot_file|replace('.dot', '.svg') }})
+![{{ trace.lemma }}_trace]({{ trace.dot_file|replace('.dot', '.svg')|relative_from_report }})
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -242,7 +242,7 @@ pie title Error Types
 ---
 {% endfor %}
 
-**Rerun file**: [{{ report_data.rerun_file }}](./{{ report_data.rerun_file }})
+**Rerun file**: [{{ report_data.rerun_file|relative_from_report }}]({{ report_data.rerun_file|relative_from_report }})
 {% else %}
 **✅ No errors encountered in this run**
 
