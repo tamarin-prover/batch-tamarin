@@ -287,16 +287,16 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
         \JBLOCK{set middle_loop = loop}
         \JBLOCK{for result in lemma_group.results}
             \JBLOCK{if loop.first and middle_loop.first}
-                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{task.name|latex_escape}}} &
+                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{task.name|latex_escape|hyphenate(20)}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
             \JBLOCK{if loop.first}
-                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape}}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape|hyphenate(20)}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
-            \tiny{\VAR{result.tamarin_version}} &
+            \tiny{\VAR{result.tamarin_version|hyphenate(20)}} &
             \JBLOCK{if result.status == 'verified'}\successtext{\tiny{Verified}}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{\tiny{Falsified}}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{\tiny{Unterminated}}\JBLOCK{elif result.status == 'timeout'}\warningtext{\tiny{Timeout}}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{\tiny{Memory limit}}\JBLOCK{else}\failedtext{\tiny{Error}}\JBLOCK{endif} &
             \tiny{\VAR{"%.1f"|format(result.runtime)}s} &
             \tiny{\VAR{"%.1f"|format(result.peak_memory)}MB} &
@@ -354,7 +354,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \section{Task Details}
 
 \JBLOCK{for task in report_data.tasks}
-\subsection{Task: \VAR{task.name|latex_escape}}\label{task:\VAR{task.name|replace(' ', '-')|lower}}
+\subsection{Task: \VAR{task.name|latex_escape|hyphenate(20)}}\label{task:\VAR{task.name|replace(' ', '-')|lower}}
 
 \subsubsection{Execution Summary}
 
@@ -367,10 +367,10 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     \JBLOCK{set outer_loop = loop}
     \JBLOCK{for result in lemma_group.results}
         \JBLOCK{if loop.first}
-            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape}}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape|hyphenate(20)}}} &
             \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s}} &
-            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.options or "None"}}} &
-            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.preprocessor or "None"}}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.options or "None"|hyphenate(20)}}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.preprocessor or "None"|hyphenate(20)}}} &
         \JBLOCK{else}
              &  &  &  &
         \JBLOCK{endif}
@@ -511,7 +511,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \subsubsection{Traces}
 
 \JBLOCK{for trace in task_traces}
-\paragraph{\VAR{trace.lemma|latex_escape} (\VAR{trace.tamarin_version})}
+\paragraph{\VAR{trace.lemma|latex_escape|hyphenate(20)} (\VAR{trace.tamarin_version|hyphenate(20)})}
 
 \textbf{JSON File:} \texttt{\VAR{trace.json_file|relative_from_report|latex_escape}}
 \JBLOCK{if trace.dot_file}
@@ -572,23 +572,23 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
         \JBLOCK{set middle_loop = loop}
         \JBLOCK{for result in lemma_error.results}
             \JBLOCK{if loop.first and middle_loop.first}
-                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{error.task_name|latex_escape}}} &
+                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{error.task_name|latex_escape|hyphenate(9)}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
             \JBLOCK{if loop.first}
-                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_error.lemma|latex_escape}}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_error.lemma|latex_escape|hyphenate(9)}}} &
                 \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s}} &
                 \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.options or "None"}}} &
                 \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.preprocessor or "None"}}} &
             \JBLOCK{else}
                  &  &  &  &
             \JBLOCK{endif}
-            \tiny{\VAR{result.tamarin_version}} &
+            \tiny{\VAR{result.tamarin_version|hyphenate(10)}} &
             \JBLOCK{if result.error_type == 'tamarin_error'}\failedtext{\tiny{Tamarin Error}}\JBLOCK{elif result.error_type == 'timeout'}\warningtext{\tiny{Timeout}}\JBLOCK{elif result.error_type == 'memory_limit'}\memorytext{\tiny{Memory Limit}}\JBLOCK{else}\failedtext{\tiny{Unexpected Error}}\JBLOCK{endif} &
             \tiny{\VAR{"%.2f"|format(result.runtime)}s} &
             \tiny{\VAR{"%.2f"|format(result.peak_memory)}MB} &
-            \tiny{\VAR{result.error_description or "No description available"|latex_escape}} \\
+            \tiny{\VAR{result.error_description or "No description available"|latex_escape|hyphenate(15)}} \\
             \JBLOCK{if not loop.last}\JBLOCK{endif}
         \JBLOCK{endfor}
         \JBLOCK{if not middle_loop.last}\JBLOCK{endif}
@@ -603,12 +603,12 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \JBLOCK{for error in report_data.detailed_errors}
 \subsubsection*{
 \JBLOCK{if error.type == 'tamarin_error'}\failedtext{FAILED}\JBLOCK{elif error.type == 'timeout'}\warningtext{TIMED OUT}\JBLOCK{elif error.type == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{ERROR}\JBLOCK{endif}:
-\VAR{error.task_name|latex_escape}
+\VAR{error.task_name|latex_escape|hyphenate(20)}
 }
 
-\textbf{On lemma:} \VAR{error.lemma|latex_escape}, \textbf{with tamarin-prover:} \VAR{error.tamarin_version}
+\textbf{On lemma:} \VAR{error.lemma|latex_escape|hyphenate(20)}, \textbf{with tamarin-prover:} \VAR{error.tamarin_version|hyphenate(20)}
 
-\VAR{error.description|latex_escape}
+\VAR{error.description|latex_escape|hyphenate(20)}
 
 \JBLOCK{if error.stderr_output}
 \begin{lstlisting}[style=shellstyle, language=bash, caption=Error Output]

@@ -65,6 +65,7 @@ class ReportGenerator:
         latex_filters["latex_escape"] = self._latex_escape
         latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
         latex_filters["relative_from_report"] = self._relative_from_report  # type: ignore
+        latex_filters["hyphenate"] = self._hyphenate  # type: ignore
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -93,6 +94,30 @@ class ReportGenerator:
                 result.append(char)
 
         return "".join(result)
+
+    def _hyphenate(self, text: str, max_length: int = 20) -> str:
+        """
+        Add hyphens to break long strings at the specified character limit.
+
+        Args:
+            text: The text to potentially hyphenate
+            max_length: Maximum length before adding hyphen (default: 20)
+
+        Returns:
+            String with hyphens added if it exceeds max_length
+        """
+        text = str(text)
+
+        if len(text) <= max_length:
+            return text
+
+        # Add hyphen every max_length characters
+        result: List[str] = []
+        for i in range(0, len(text), max_length):
+            chunk = text[i : i + max_length]
+            result.append(chunk)
+
+        return "-".join(result)
 
     def _relative_from_report(self, file_path: str) -> str:
         """Convert absolute file path to relative path from report output location."""
