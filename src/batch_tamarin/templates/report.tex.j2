@@ -5,13 +5,6 @@
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
 \usepackage{geometry}
-\usepackage{nicematrix}
-\NiceMatrixOptions{
-  cell-space-top-limit = 3pt,
-  cell-space-bottom-limit = 3pt,
-  code-for-first-col = \color{blue},
-  code-for-first-row = \color{blue}
-}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{float}
@@ -25,6 +18,14 @@
 \usepackage{caption}
 \usepackage{listings}
 \usepackage{textcomp}
+\usepackage[strings]{underscore}
+\usepackage{nicematrix}
+\NiceMatrixOptions{
+  cell-space-top-limit = 3pt,
+  cell-space-bottom-limit = 3pt,
+  code-for-first-col = \color{blue},
+  code-for-first-row = \color{blue}
+}
 
 % Page setup
 \geometry{margin=2.5cm}
@@ -33,10 +34,6 @@
 \fancyhead[C]{Batch Tamarin Execution Report}
 \fancyfoot[C]{\thepage}
 
-% Better text wrapping and hyphenation
-\hyphenpenalty=10000
-\exhyphenpenalty=10000
-\sloppy
 
 % Colors for different status types
 \definecolor{successcolor}{RGB}{40,167,69}
@@ -94,6 +91,7 @@
 \noindent\textbf{Execution results from:} \VAR{results_directory} \\
 \textbf{Executed:} \VAR{batch_execution_date.strftime('%Y-%m-%d %H:%M:%S')}
 
+\newpage
 \tableofcontents
 \newpage
 
@@ -219,15 +217,14 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{tikzpicture}
 \begin{axis}[
     xbar,
-    width=0.8\textwidth,
+    width=0.6\textwidth,
     height=0.4\textheight,
     xlabel={Runtime (seconds)},
     ylabel={Tasks},
-    yticklabel style={font=\small},
     ytick=data,
     yticklabels={
     \JBLOCK{for task in report_data.tasks}
-    \VAR{task.name[-30:]|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \tiny{\VAR{task.name|latex_escape}} \JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
     nodes near coords,
@@ -251,15 +248,14 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{tikzpicture}
 \begin{axis}[
     xbar,
-    width=0.8\textwidth,
+    width=0.6\textwidth,
     height=0.4\textheight,
     xlabel={Memory (MB)},
     ylabel={Tasks},
-    yticklabel style={font=\small},
     ytick=data,
     yticklabels={
     \JBLOCK{for task in report_data.tasks}
-    \VAR{task.name[-30:]|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \tiny{\VAR{task.name|latex_escape}}\JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
     nodes near coords,
@@ -291,23 +287,23 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
         \JBLOCK{set middle_loop = loop}
         \JBLOCK{for result in lemma_group.results}
             \JBLOCK{if loop.first and middle_loop.first}
-                \Block{\VAR{task_rowspan}-1}{\VAR{task.name|latex_escape}} &
+                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{task.name|latex_escape}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
             \JBLOCK{if loop.first}
-                \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_group.lemma|latex_escape}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
-            \VAR{result.tamarin_version} &
-            \JBLOCK{if result.status == 'verified'}\successtext{VERIFIED}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\JBLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{FAILED}\JBLOCK{endif} &
-            \VAR{"%.1f"|format(result.runtime)}s &
-            \VAR{"%.1f"|format(result.peak_memory)}MB &
-            \infotext{\JBLOCK{if result.cache_hit}CACHED\JBLOCK{else}FRESH\JBLOCK{endif}} \\
-            \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+            \tiny{\VAR{result.tamarin_version}} &
+            \JBLOCK{if result.status == 'verified'}\successtext{\tiny{Verified}}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{\tiny{Falsified}}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{\tiny{Unterminated}}\JBLOCK{elif result.status == 'timeout'}\warningtext{\tiny{Timeout}}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{\tiny{Memory limit}}\JBLOCK{else}\failedtext{\tiny{Error}}\JBLOCK{endif} &
+            \tiny{\VAR{"%.1f"|format(result.runtime)}s} &
+            \tiny{\VAR{"%.1f"|format(result.peak_memory)}MB} &
+            \infotext{\JBLOCK{if result.cache_hit}\tiny{CACHED}\JBLOCK{else}\tiny{FRESH}\JBLOCK{endif}} \\
+            \JBLOCK{if not loop.last}\JBLOCK{endif}
         \JBLOCK{endfor}
-        \JBLOCK{if not middle_loop.last}\hline\JBLOCK{endif}
+        \JBLOCK{if not middle_loop.last}\JBLOCK{endif}
     \JBLOCK{endfor}
     \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
 \JBLOCK{endfor}
@@ -322,16 +318,17 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{ganttchart}[
     hgrid,
     vgrid,
-    x unit=2mm,
-    y unit title=7mm,
-    y unit chart=5mm,
+    x unit=3mm,
+    y unit title=6mm,
+    y unit chart=6mm,
     title/.append style={fill=gray!50},
     title label font=\footnotesize,
     bar label font=\tiny,
     group label font=\tiny,
     bar/.append style={fill=blue!50},
     bar height=0.6,
-    chart element start border=left
+    chart element start border=left,
+    expand chart=\textwidth,
 ]{0}{\VAR{report_data.statistics.total_runtime|int + 5}}
 
 \gantttitle{Global Execution Timeline}{\VAR{report_data.statistics.total_runtime|int + 5}} \\
@@ -344,7 +341,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
             \JBLOCK{set current_task = task.name}
         \JBLOCK{endif}
         \JBLOCK{for item in task.execution_timeline}
-\ganttbar{\VAR{item.label[-20:]|latex_escape}}{\VAR{item.start}}{\VAR{item.end}} \\
+\ganttbar{\VAR{item.label|latex_escape}}{\VAR{item.start}}{\VAR{item.end}} \\
         \JBLOCK{endfor}
     \JBLOCK{endif}
 \JBLOCK{endfor}
@@ -363,26 +360,26 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \begin{NiceTabular}[width=\textwidth]{X[l,2]X[l,1]X[l,1]X[l,1]X[c,1]X[c,1]X[c,1]X[c,1]X[c,1]}
 \hline
-\textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Cache Hit} \\
+\textbf{Lemma} & \textbf{Resour-ces config} & \textbf{Options} & \textbf{Prepro-cessor} & \textbf{Tamarin Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Memory Used} & \textbf{Cache Hit} \\
 \hline
 \JBLOCK{for lemma_group in task.lemma_groups}
     \JBLOCK{set lemma_rowspan = lemma_group.results|length}
     \JBLOCK{set outer_loop = loop}
     \JBLOCK{for result in lemma_group.results}
         \JBLOCK{if loop.first}
-            \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_group.lemma|latex_escape}} &
-            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s} &
-            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.options or "None"}} &
-            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.preprocessor or "None"}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_group.lemma|latex_escape}}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.options or "None"}}} &
+            \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.preprocessor or "None"}}} &
         \JBLOCK{else}
              &  &  &  &
         \JBLOCK{endif}
-        \VAR{result.tamarin_version} &
-        \JBLOCK{if result.status == 'verified'}\successtext{VERIFIED}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\JBLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{FAILED}\JBLOCK{endif} &
-        \VAR{"%.2f"|format(result.runtime)}s &
-        \VAR{"%.2f"|format(result.peak_memory)}MB &
-        \infotext{\JBLOCK{if result.cache_hit}CACHED\JBLOCK{else}FRESH\JBLOCK{endif}} \\
-        \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+        \tiny{\VAR{result.tamarin_version}} &
+        \JBLOCK{if result.status == 'verified'}\successtext{\tiny{Verified}}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{\tiny{Falsified}}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{\tiny{Unterminated}}\JBLOCK{elif result.status == 'timeout'}\warningtext{\tiny{Timeout}}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{\tiny{Memory limit}}\JBLOCK{else}\failedtext{\tiny{Error}}\JBLOCK{endif} &
+        \tiny{\VAR{"%.2f"|format(result.runtime)}s} &
+        \tiny{\VAR{"%.2f"|format(result.peak_memory)}MB} &
+        \infotext{\JBLOCK{if result.cache_hit}\tiny{CACHED}\JBLOCK{else}\tiny{FRESH}\JBLOCK{endif}} \\
+        \JBLOCK{if not loop.last}\JBLOCK{endif}
     \JBLOCK{endfor}
     \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
 \JBLOCK{endfor}
@@ -408,18 +405,20 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{tikzpicture}
 \begin{axis}[
     xbar,
-    width=0.9\textwidth,
-    height=0.6\textheight,
+    width=0.6\textwidth,
+    height=0.4\textheight,
     xlabel={Runtime (seconds)},
     ylabel={Lemmas},
-    legend style={at={(0.5,-0.1)},anchor=north,legend columns=\VAR{task_versions|length}},
-    yticklabel style={font=\footnotesize},
+    legend style={at={(0.5,-0.15)},anchor=north,legend columns=\VAR{task_versions|length}},
+    yticklabel style={font=\tiny},
     ytick=data,
     yticklabels={
     \JBLOCK{for lemma_group in task.lemma_groups}
     \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
+    nodes near coords,
+    nodes near coords align={horizontal},
 ]
 
 \JBLOCK{for version in task_versions}
@@ -444,18 +443,20 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{tikzpicture}
 \begin{axis}[
     xbar,
-    width=0.9\textwidth,
-    height=0.6\textheight,
+    width=0.6\textwidth,
+    height=0.4\textheight,
     xlabel={Memory (MB)},
     ylabel={Lemmas},
-    legend style={at={(0.5,-0.1)},anchor=north,legend columns=\VAR{task_versions|length}},
-    yticklabel style={font=\footnotesize},
+    legend style={at={(0.5,-0.15)},anchor=north,legend columns=\VAR{task_versions|length}},
+    yticklabel style={font=\tiny},
     ytick=data,
     yticklabels={
     \JBLOCK{for lemma_group in task.lemma_groups}
     \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
+    nodes near coords,
+    nodes near coords align={horizontal},
 ]
 
 \JBLOCK{for version in task_versions}
@@ -484,20 +485,19 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{ganttchart}[
     hgrid,
     vgrid,
-    x unit=5mm,
+    x unit=3mm,
     y unit title=6mm,
-    y unit chart=4mm,
+    y unit chart=6mm,
     title/.append style={fill=gray!30},
     title label font=\small,
     bar label font=\scriptsize,
     bar/.append style={fill=green!40},
-    bar height=0.7
-]{0}{\VAR{task.total_runtime|int + 2}}
-
-\gantttitle{\VAR{task.name|latex_escape}}{\VAR{task.total_runtime|int + 2}} \\
+    bar height=0.6,
+    expand chart=\textwidth
+]{0}{\VAR{report_data.statistics.total_runtime|int + 5}}
 
 \JBLOCK{for execution in task.execution_timeline}
-\ganttbar{\VAR{execution.label[-15:]|latex_escape}}{\VAR{execution.start}}{\VAR{execution.end}} \\
+\ganttbar{\VAR{execution.label|latex_escape}}{\VAR{execution.start}}{\VAR{execution.end}} \\
 \JBLOCK{endfor}
 
 \end{ganttchart}
@@ -521,7 +521,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \JBLOCK{if trace.png_file}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{\VAR{trace.png_file|relative_from_report}}
+\includegraphics[width=\textwidth]{\VAR{trace.png_file|relative_from_report}}
 \caption{Trace visualization for \VAR{trace.lemma|latex_escape}}
 \end{figure}
 \JBLOCK{elif trace.svg_content}
@@ -562,7 +562,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \begin{NiceTabular}[width=\textwidth]{X[l,1]X[l,1]X[l,1]X[l,1]X[l,1]X[c,1]X[l,1]X[c,1]X[c,1]X[l,2]}
 \hline
-\textbf{Task} & \textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Error} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Description} \\
+\textbf{\small{Task}} & \textbf{\small{Lemma}} & \textbf{\small{Resour-ces config}} & \textbf{\small{Options}} & \textbf{\small{Prepro-cessor}} & \textbf{\small{Ta–marin Version}} & \textbf{\small{Error Type}} & \textbf{\small{Runtime}} & \textbf{\small{Me-mory Used}} & \textbf{\small{Description}} \\
 \hline
 \JBLOCK{for error in report_data.error_summary}
     \JBLOCK{set task_rowspan = error.total_errors}
@@ -572,26 +572,26 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
         \JBLOCK{set middle_loop = loop}
         \JBLOCK{for result in lemma_error.results}
             \JBLOCK{if loop.first and middle_loop.first}
-                \Block{\VAR{task_rowspan}-1}{\VAR{error.task_name|latex_escape}} &
+                \Block{\VAR{task_rowspan}-1}{\tiny{\VAR{error.task_name|latex_escape}}} &
             \JBLOCK{else}
                  &
             \JBLOCK{endif}
             \JBLOCK{if loop.first}
-                \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_error.lemma|latex_escape}} &
-                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s} &
-                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.options or "None"}} &
-                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.preprocessor or "None"}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{lemma_error.lemma|latex_escape}}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.options or "None"}}} &
+                \Block{\VAR{lemma_rowspan}-1}{\tiny{\VAR{result.preprocessor or "None"}}} &
             \JBLOCK{else}
                  &  &  &  &
             \JBLOCK{endif}
-            \VAR{result.tamarin_version} &
-            \JBLOCK{if result.error_type == 'tamarin_error'}\failedtext{TAMARIN ERROR}\JBLOCK{elif result.error_type == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.error_type == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{ERROR}\JBLOCK{endif} &
-            \VAR{"%.2f"|format(result.runtime)}s &
-            \VAR{"%.2f"|format(result.peak_memory)}MB &
-            \VAR{result.error_description or "No description available"|latex_escape} \\
-            \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+            \tiny{\VAR{result.tamarin_version}} &
+            \JBLOCK{if result.error_type == 'tamarin_error'}\failedtext{\tiny{Tamarin Error}}\JBLOCK{elif result.error_type == 'timeout'}\warningtext{\tiny{Timeout}}\JBLOCK{elif result.error_type == 'memory_limit'}\memorytext{\tiny{Memory Limit}}\JBLOCK{else}\failedtext{\tiny{Unexpected Error}}\JBLOCK{endif} &
+            \tiny{\VAR{"%.2f"|format(result.runtime)}s} &
+            \tiny{\VAR{"%.2f"|format(result.peak_memory)}MB} &
+            \tiny{\VAR{result.error_description or "No description available"|latex_escape}} \\
+            \JBLOCK{if not loop.last}\JBLOCK{endif}
         \JBLOCK{endfor}
-        \JBLOCK{if not middle_loop.last}\hline\JBLOCK{endif}
+        \JBLOCK{if not middle_loop.last}\JBLOCK{endif}
     \JBLOCK{endfor}
     \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
 \JBLOCK{endfor}
