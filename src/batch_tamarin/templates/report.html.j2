@@ -386,7 +386,7 @@
                                 {% elif result.status == 'unterminated' %} 🚧 Unterminated
                                 {% elif result.status == 'timeout' %} ⏳ Timed Out
                                 {% elif result.status == 'memory_limit' %} 🧠 Memory Limit
-                                {% else %} ❌ Failed
+                                {% else %} ❌ Error
                                 {% endif %}
                             </td>
                             <td>{{ "%.1f"|format(result.runtime) }}s</td>
@@ -443,7 +443,7 @@
                             {% elif result.status == 'unterminated' %}🚧 Unterminated
                             {% elif result.status == 'timeout' %}⏳ Timed Out
                             {% elif result.status == 'memory_limit' %}🧠 Memory Limit
-                            {% else %}❌ Failed
+                            {% else %}❌ Error
                             {% endif %}
                         </td>
                         <td>{{ "%.2f"|format(result.runtime) }}s</td>
@@ -567,10 +567,10 @@
     {% for error in report_data.detailed_errors %}
     <div class="error-details">
         <h3><span class="{% if error.type == 'tamarin_error' %}failed{% elif error.type == 'timeout' %}warning{% elif error.type == 'memory_limit' %}memory{% else %}failed{% endif %}">
-            {% if error.type == 'tamarin_error' %}❌ FAILED :
+            {% if error.type == 'tamarin_error' %}❌ TAMARIN ERROR :
             {% elif error.type == 'timeout' %}⏳ TIMED OUT :
             {% elif error.type == 'memory_limit' %}🧠 MEMORY LIMIT :
-            {% else %}❌ ERROR :
+            {% else %}❌ UNEXPECTED ERROR :
             {% endif %}</span> {{ error.task_name }}</h3>
         <h4>On lemma : {{ error.lemma }}, with tamarin-prover : {{ error.tamarin_version }}</h4>
         <p>{{ error.description }}</p>

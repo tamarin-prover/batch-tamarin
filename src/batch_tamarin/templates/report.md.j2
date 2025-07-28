@@ -112,7 +112,7 @@ xychart-beta horizontal
 ### Global Results
 | Task | Extracted lemma | Tamarin Version | Status | Runtime | Peak Memory Used | Cache Hit |
 |------|-----------------|-----------------|--------|---------|------------------|-----------|
-{% for task in report_data.tasks %}{% for lemma_group in task.lemma_groups %}{% for result in lemma_group.results %}| **{{ task.name }}**<br><small style="color: #6c757d;">{{ task.theory_file }}</small> | {{ lemma_group.lemma }} | {{ result.tamarin_version }} | {% if result.status == 'verified' %}✅ Verified{% elif result.status == 'falsified' %}❗ Falsified{% elif result.status == 'unterminated' %}🚧 Unterminated{% elif result.status == 'timeout' %}⏳ Timed Out{% elif result.status == 'memory_limit' %}🧠 Memory Limit{% else %}❌ Failed{% endif %} | {{ "%.1f"|format(result.runtime) }}s | {{ "%.1f"|format(result.peak_memory) }}MB | {% if result.cache_hit %}💾 Yes{% else %}💾 No{% endif %} |
+{% for task in report_data.tasks %}{% for lemma_group in task.lemma_groups %}{% for result in lemma_group.results %}| **{{ task.name }}**<br><small style="color: #6c757d;">{{ task.theory_file }}</small> | {{ lemma_group.lemma }} | {{ result.tamarin_version }} | {% if result.status == 'verified' %}✅ Verified{% elif result.status == 'falsified' %}❗ Falsified{% elif result.status == 'unterminated' %}🚧 Unterminated{% elif result.status == 'timeout' %}⏳ Timed Out{% elif result.status == 'memory_limit' %}🧠 Memory Limit{% else %}❌ Error{% endif %} | {{ "%.1f"|format(result.runtime) }}s | {{ "%.1f"|format(result.peak_memory) }}MB | {% if result.cache_hit %}💾 Yes{% else %}💾 No{% endif %} |
 {% endfor %}{% endfor %}{% endfor %}
 
 ### Global Timeline
@@ -134,7 +134,7 @@ axisFormat %H:%M:%S
 #### Execution Summary
 | Lemma | Resources config | Options | Preprocessor | Tamarin Version | Status | Runtime | Peak Memory Used | Cache Hit |
 |-------|------------------|---------|--------------|-----------------|--------|---------|------------------|-----------|
-{% for lemma_group in task.lemma_groups %}{% for result in lemma_group.results %}| {{ lemma_group.lemma }} | {{ result.cores }}c / {{ result.memory }}GB / {{ result.timeout }}s | {{ result.options or "None" }} | {{ result.preprocessor or "None" }} | {{ result.tamarin_version }} | {% if result.status == 'verified' %}✅ Verified{% elif result.status == 'falsified' %}❗ Falsified{% elif result.status == 'unterminated' %}🚧 Unterminated{% elif result.status == 'timeout' %}⏳ Timed Out{% elif result.status == 'memory_limit' %}🧠 Memory Limit{% else %}❌ Failed{% endif %} | {{ "%.2f"|format(result.runtime) }}s | {{ "%.2f"|format(result.peak_memory) }}MB | {% if result.cache_hit %}💾 Yes{% else %}💻 No{% endif %} |
+{% for lemma_group in task.lemma_groups %}{% for result in lemma_group.results %}| {{ lemma_group.lemma }} | {{ result.cores }}c / {{ result.memory }}GB / {{ result.timeout }}s | {{ result.options or "None" }} | {{ result.preprocessor or "None" }} | {{ result.tamarin_version }} | {% if result.status == 'verified' %}✅ Verified{% elif result.status == 'falsified' %}❗ Falsified{% elif result.status == 'unterminated' %}🚧 Unterminated{% elif result.status == 'timeout' %}⏳ Timed Out{% elif result.status == 'memory_limit' %}🧠 Memory Limit{% else %}❌ Error{% endif %} | {{ "%.2f"|format(result.runtime) }}s | {{ "%.2f"|format(result.peak_memory) }}MB | {% if result.cache_hit %}💾 Yes{% else %}💻 No{% endif %} |
 {% endfor %}{% endfor %}
 
 {% if task.has_version_comparisons %}
@@ -227,7 +227,7 @@ pie title Error Types
 
 ### Detailed Error Information
 {% for error in report_data.detailed_errors %}
-**{% if error.type == 'tamarin_error' %}❌ FAILED{% elif error.type == 'timeout' %}⏳ TIMED OUT{% elif error.type == 'memory_limit' %}🧠 MEMORY LIMIT{% else %}❌ ERROR{% endif %}: {{ error.task_name }}**
+**{% if error.type == 'tamarin_error' %}❌ TAMARIN ERROR{% elif error.type == 'timeout' %}⏳ TIMED OUT{% elif error.type == 'memory_limit' %}🧠 MEMORY LIMIT{% else %}❌ UNEXPECTED ERROR{% endif %}: {{ error.task_name }}**
 
 **On lemma**: {{ error.lemma }}, **with tamarin-prover**: {{ error.tamarin_version }}
 
