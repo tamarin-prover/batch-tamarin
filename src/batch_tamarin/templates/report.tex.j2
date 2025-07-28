@@ -3,10 +3,15 @@
 % Required packages
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage[english]{babel}
 \usepackage{geometry}
-\usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{array}
+\usepackage{nicematrix}
+\NiceMatrixOptions{
+  cell-space-top-limit = 3pt,
+  cell-space-bottom-limit = 3pt,
+  code-for-first-col = \color{blue},
+  code-for-first-row = \color{blue}
+}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{float}
@@ -27,6 +32,11 @@
 \fancyhf{}
 \fancyhead[C]{Batch Tamarin Execution Report}
 \fancyfoot[C]{\thepage}
+
+% Better text wrapping and hyphenation
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\sloppy
 
 % Colors for different status types
 \definecolor{successcolor}{RGB}{40,167,69}
@@ -94,30 +104,30 @@
 \subsubsection{Global Settings}
 \begin{table}[H]
 \centering
-\begin{tabular}{ll}
-\toprule
+\begin{NiceTabular}{ll}
+\hline
 \textbf{Setting} & \textbf{Value} \\
-\midrule
+\hline
 Max cores & \VAR{report_data.config.global_max_cores or 'Not specified'} \\
 Max memory & \VAR{report_data.config.global_max_memory or 'Not specified'}GB \\
 Default timeout & \VAR{report_data.config.default_timeout or 'Not specified'}s \\
-\bottomrule
-\end{tabular}
+\hline
+\end{NiceTabular}
 \caption{Global Settings}
 \end{table}
 
 \subsubsection{Tamarin Versions}
 \begin{table}[H]
 \centering
-\begin{tabular}{lll}
-\toprule
+\begin{NiceTabular}{lll}
+\hline
 \textbf{Alias} & \textbf{Path} & \textbf{Version} \\
-\midrule
-\BLOCK{for alias, info in report_data.config.tamarin_versions.items()}
+\hline
+\JBLOCK{for alias, info in report_data.config.tamarin_versions.items()}
 \VAR{alias} & \texttt{\VAR{info.path|latex_escape}} & \VAR{info.version} \\
-\BLOCK{endfor}
-\bottomrule
-\end{tabular}
+\JBLOCK{endfor}
+\hline
+\end{NiceTabular}
 \caption{Tamarin Versions}
 \end{table}
 
@@ -126,10 +136,10 @@ Default timeout & \VAR{report_data.config.default_timeout or 'Not specified'}s \
 \subsubsection{Global Statistics}
 \begin{table}[H]
 \centering
-\begin{tabular}{ll}
-\toprule
+\begin{NiceTabular}{ll}
+\hline
 \textbf{Metric} & \textbf{Value} \\
-\midrule
+\hline
 Total Executed Lemmas & \VAR{report_data.statistics.total_lemmas} \\
 Verified Lemmas & \successtext{\VAR{report_data.statistics.verified_lemmas} (\VAR{"%.1f"|format(report_data.statistics.verified_percentage)}\%)} \\
 Falsified Lemmas & \falsifiedtext{\VAR{report_data.statistics.falsified_lemmas} (\VAR{"%.1f"|format(report_data.statistics.falsified_percentage)}\%)} \\
@@ -137,43 +147,43 @@ Unterminated Lemmas & \unterminatedtext{\VAR{report_data.statistics.unterminated
 Failed Executions & \failedtext{\VAR{report_data.statistics.failed_lemmas} (\VAR{"%.1f"|format(report_data.statistics.failed_percentage)}\%)} \\
 Lemmas killed by timeout & \warningtext{\VAR{report_data.statistics.timeout_lemmas} (\VAR{"%.1f"|format(report_data.statistics.timeout_percentage)}\%)} \\
 Lemmas killed for memory limit & \memorytext{\VAR{report_data.statistics.memory_limit_lemmas} (\VAR{"%.1f"|format(report_data.statistics.memory_limit_percentage)}\%)} \\
-\midrule
+\hline
 Total runtime & \VAR{"%.1f"|format(report_data.statistics.total_runtime)}s \\
 Total peak memory used & \VAR{"%.1f"|format(report_data.statistics.total_memory_usage / 1024)}GB \\
 Max peak memory used & \VAR{"%.1f"|format(report_data.statistics.max_memory_usage / 1024)}GB \\
 Freshly executed tasks & \darkinfotext{\VAR{report_data.statistics.fresh_executions} (\VAR{"%.1f"|format(report_data.statistics.fresh_percentage)}\%)} \\
 Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|format(report_data.statistics.cache_hit_percentage)}\%)} \\
-\bottomrule
-\end{tabular}
+\hline
+\end{NiceTabular}
 \caption{Global Statistics}
 \end{table}
 
 \subsubsection{Charts}
 
 \#{ Success Rate Pie Chart }
-\BLOCK{if report_data.statistics.total_lemmas > 0}
+\JBLOCK{if report_data.statistics.total_lemmas > 0}
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
-\BLOCK{set pie_data = []}
-\BLOCK{if report_data.statistics.verified_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.verified_percentage) + "/Verified")}
-\BLOCK{endif}
-\BLOCK{if report_data.statistics.falsified_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.falsified_percentage) + "/Falsified")}
-\BLOCK{endif}
-\BLOCK{if report_data.statistics.unterminated_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.unterminated_percentage) + "/Unterminated")}
-\BLOCK{endif}
-\BLOCK{if report_data.statistics.failed_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.failed_percentage) + "/Failed")}
-\BLOCK{endif}
-\BLOCK{if report_data.statistics.timeout_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.timeout_percentage) + "/Timeout")}
-\BLOCK{endif}
-\BLOCK{if report_data.statistics.memory_limit_percentage > 0}
-\BLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.memory_limit_percentage) + "/Memory Limit")}
-\BLOCK{endif}
+\JBLOCK{set pie_data = []}
+\JBLOCK{if report_data.statistics.verified_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.verified_percentage) + "/Verified")}
+\JBLOCK{endif}
+\JBLOCK{if report_data.statistics.falsified_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.falsified_percentage) + "/Falsified")}
+\JBLOCK{endif}
+\JBLOCK{if report_data.statistics.unterminated_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.unterminated_percentage) + "/Unterminated")}
+\JBLOCK{endif}
+\JBLOCK{if report_data.statistics.failed_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.failed_percentage) + "/Failed")}
+\JBLOCK{endif}
+\JBLOCK{if report_data.statistics.timeout_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.timeout_percentage) + "/Timeout")}
+\JBLOCK{endif}
+\JBLOCK{if report_data.statistics.memory_limit_percentage > 0}
+\JBLOCK{set _ = pie_data.append("%.1f"|format(report_data.statistics.memory_limit_percentage) + "/Memory Limit")}
+\JBLOCK{endif}
 \pie[
     text=legend,
     radius=3,
@@ -184,7 +194,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \end{tikzpicture}
 \caption{Success Rate}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \#{ Cache Performance Pie Chart }
 \begin{figure}[H]
@@ -203,7 +213,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \end{figure}
 
 \#{ Runtime per Task Bar Chart }
-\BLOCK{if report_data.tasks|length > 0}
+\JBLOCK{if report_data.tasks|length > 0}
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
@@ -216,26 +226,26 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     yticklabel style={font=\small},
     ytick=data,
     yticklabels={
-    \BLOCK{for task in report_data.tasks}
-    \VAR{task.name[-30:]|latex_escape}\BLOCK{if not loop.last},\BLOCK{endif}
-    \BLOCK{endfor}
+    \JBLOCK{for task in report_data.tasks}
+    \VAR{task.name[-30:]|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \JBLOCK{endfor}
     },
     nodes near coords,
     nodes near coords align={horizontal},
 ]
 \addplot[fill=blue!70] coordinates {
-\BLOCK{for task in report_data.tasks}
+\JBLOCK{for task in report_data.tasks}
     (\VAR{"%.1f"|format(task.total_runtime)}, \VAR{loop.index0})
-\BLOCK{endfor}
+\JBLOCK{endfor}
 };
 \end{axis}
 \end{tikzpicture}
 \caption{Runtime per Task}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \#{ Memory per Task Bar Chart }
-\BLOCK{if report_data.tasks|length > 0}
+\JBLOCK{if report_data.tasks|length > 0}
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
@@ -248,55 +258,65 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     yticklabel style={font=\small},
     ytick=data,
     yticklabels={
-    \BLOCK{for task in report_data.tasks}
-    \VAR{task.name[-30:]|latex_escape}\BLOCK{if not loop.last},\BLOCK{endif}
-    \BLOCK{endfor}
+    \JBLOCK{for task in report_data.tasks}
+    \VAR{task.name[-30:]|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \JBLOCK{endfor}
     },
     nodes near coords,
     nodes near coords align={horizontal},
 ]
 \addplot[fill=orange!70] coordinates {
-\BLOCK{for task in report_data.tasks}
+\JBLOCK{for task in report_data.tasks}
     (\VAR{"%.1f"|format(task.peak_memory)}, \VAR{loop.index0})
-\BLOCK{endfor}
+\JBLOCK{endfor}
 };
 \end{axis}
 \end{tikzpicture}
 \caption{Memory Usage per Task}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \subsection{Global Results}
 
-\begin{longtable}{p{2.5cm}p{2cm}p{1.8cm}p{1.5cm}p{1.5cm}p{1.8cm}p{1.5cm}}
-\toprule
+\begin{NiceTabular}[width=\textwidth]{X[l,2]X[l,2]X[c,1]X[c,1]X[c,1]X[c,1]X[c,1]}
+\hline
 \textbf{Task} & \textbf{Lemma} & \textbf{Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Memory} & \textbf{Cache} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Task} & \textbf{Lemma} & \textbf{Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Memory} & \textbf{Cache} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
-\BLOCK{for task in report_data.tasks}
-    \BLOCK{for lemma_group in task.lemma_groups}
-        \BLOCK{for result in lemma_group.results}
-            \textbf{\VAR{task.name|latex_escape}} &
-            \VAR{lemma_group.lemma|latex_escape} &
+\hline
+
+\JBLOCK{for task in report_data.tasks}
+    \JBLOCK{set task_rowspan = task.total_results}
+    \JBLOCK{set outer_loop = loop}
+    \JBLOCK{for lemma_group in task.lemma_groups}
+        \JBLOCK{set lemma_rowspan = lemma_group.results|length}
+        \JBLOCK{set middle_loop = loop}
+        \JBLOCK{for result in lemma_group.results}
+            \JBLOCK{if loop.first and middle_loop.first}
+                \Block{\VAR{task_rowspan}-1}{\VAR{task.name|latex_escape}} &
+            \JBLOCK{else}
+                 &
+            \JBLOCK{endif}
+            \JBLOCK{if loop.first}
+                \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_group.lemma|latex_escape}} &
+            \JBLOCK{else}
+                 &
+            \JBLOCK{endif}
             \VAR{result.tamarin_version} &
-            \BLOCK{if result.status == 'verified'}\successtext{VERIFIED}\BLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\BLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\BLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\BLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\BLOCK{else}\failedtext{FAILED}\BLOCK{endif} &
+            \JBLOCK{if result.status == 'verified'}\successtext{VERIFIED}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\JBLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{FAILED}\JBLOCK{endif} &
             \VAR{"%.1f"|format(result.runtime)}s &
             \VAR{"%.1f"|format(result.peak_memory)}MB &
-            \infotext{\BLOCK{if result.cache_hit}CACHED\BLOCK{else}FRESH\BLOCK{endif}} \\
-        \BLOCK{endfor}
-    \BLOCK{endfor}
-\BLOCK{endfor}
-\end{longtable}
+            \infotext{\JBLOCK{if result.cache_hit}CACHED\JBLOCK{else}FRESH\JBLOCK{endif}} \\
+            \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+        \JBLOCK{endfor}
+        \JBLOCK{if not middle_loop.last}\hline\JBLOCK{endif}
+    \JBLOCK{endfor}
+    \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
+\JBLOCK{endfor}
+\hline
+\end{NiceTabular}
 
 \subsection{Global Execution Timeline}
 
-\BLOCK{if report_data.tasks|length > 0 and report_data.tasks[0].execution_timeline|length > 0}
+\JBLOCK{if report_data.tasks|length > 0 and report_data.tasks[0].execution_timeline|length > 0}
 \begin{figure}[H]
 \centering
 \begin{ganttchart}[
@@ -316,72 +336,70 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \gantttitle{Global Execution Timeline}{\VAR{report_data.statistics.total_runtime|int + 5}} \\
 
-\BLOCK{set current_task = ""}
-\BLOCK{for task in report_data.tasks}
-    \BLOCK{if task.execution_timeline|length > 0}
-        \BLOCK{if current_task != task.name}
+\JBLOCK{set current_task = ""}
+\JBLOCK{for task in report_data.tasks}
+    \JBLOCK{if task.execution_timeline|length > 0}
+        \JBLOCK{if current_task != task.name}
 \ganttgroup{\VAR{task.name|latex_escape}}{0}{\VAR{report_data.statistics.total_runtime|int}} \\
-            \BLOCK{set current_task = task.name}
-        \BLOCK{endif}
-        \BLOCK{for item in task.execution_timeline}
+            \JBLOCK{set current_task = task.name}
+        \JBLOCK{endif}
+        \JBLOCK{for item in task.execution_timeline}
 \ganttbar{\VAR{item.label[-20:]|latex_escape}}{\VAR{item.start}}{\VAR{item.end}} \\
-        \BLOCK{endfor}
-    \BLOCK{endif}
-\BLOCK{endfor}
+        \JBLOCK{endfor}
+    \JBLOCK{endif}
+\JBLOCK{endfor}
 
 \end{ganttchart}
 \caption{Global Execution Timeline}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \section{Task Details}
 
-\BLOCK{for task in report_data.tasks}
+\JBLOCK{for task in report_data.tasks}
 \subsection{Task: \VAR{task.name|latex_escape}}\label{task:\VAR{task.name|replace(' ', '-')|lower}}
 
 \subsubsection{Execution Summary}
 
-\begin{longtable}{p{2cm}p{2cm}p{1.5cm}p{1.5cm}p{1.5cm}p{1.5cm}p{1.5cm}p{2cm}p{1.5cm}}
-\toprule
+\begin{NiceTabular}[width=\textwidth]{X[l,2]X[l,1]X[l,1]X[l,1]X[c,1]X[c,1]X[c,1]X[c,1]X[c,1]}
+\hline
 \textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Cache Hit} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Cache Hit} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
-\BLOCK{for lemma_group in task.lemma_groups}
-    \BLOCK{set outer_loop = loop}
-    \BLOCK{for result in lemma_group.results}
-        \BLOCK{if loop.first}
-        \VAR{lemma_group.lemma|latex_escape} &
-        \VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s &
-        \VAR{result.options or "None"} &
-        \VAR{result.preprocessor or "None"} &
-        \BLOCK{endif}
+\hline
+\JBLOCK{for lemma_group in task.lemma_groups}
+    \JBLOCK{set lemma_rowspan = lemma_group.results|length}
+    \JBLOCK{set outer_loop = loop}
+    \JBLOCK{for result in lemma_group.results}
+        \JBLOCK{if loop.first}
+            \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_group.lemma|latex_escape}} &
+            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s} &
+            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.options or "None"}} &
+            \Block{\VAR{lemma_rowspan}-1}{\VAR{result.preprocessor or "None"}} &
+        \JBLOCK{else}
+             &  &  &  &
+        \JBLOCK{endif}
         \VAR{result.tamarin_version} &
-        \BLOCK{if result.status == 'verified'}\successtext{VERIFIED}\BLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\BLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\BLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\BLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\BLOCK{else}\failedtext{FAILED}\BLOCK{endif} &
+        \JBLOCK{if result.status == 'verified'}\successtext{VERIFIED}\JBLOCK{elif result.status == 'falsified'}\falsifiedtext{FALSIFIED}\JBLOCK{elif result.status == 'unterminated'}\unterminatedtext{UNTERMINATED}\JBLOCK{elif result.status == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.status == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{FAILED}\JBLOCK{endif} &
         \VAR{"%.2f"|format(result.runtime)}s &
         \VAR{"%.2f"|format(result.peak_memory)}MB &
-        \infotext{\BLOCK{if result.cache_hit}CACHED\BLOCK{else}FRESH\BLOCK{endif}} \\
-        \BLOCK{if not loop.last or not outer_loop.last}\midrule\BLOCK{endif}
-    \BLOCK{endfor}
-\BLOCK{endfor}
-\end{longtable}
+        \infotext{\JBLOCK{if result.cache_hit}CACHED\JBLOCK{else}FRESH\JBLOCK{endif}} \\
+        \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+    \JBLOCK{endfor}
+    \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
+\JBLOCK{endfor}
+\hline
+\end{NiceTabular}
 
 \#{ Version Comparison Charts if multiple versions }
-\BLOCK{set task_versions = []}
-\BLOCK{for lemma_group in task.lemma_groups}
-    \BLOCK{for result in lemma_group.results}
-        \BLOCK{if result.tamarin_version not in task_versions}
-            \BLOCK{set _ = task_versions.append(result.tamarin_version)}
-        \BLOCK{endif}
-    \BLOCK{endfor}
-\BLOCK{endfor}
+\JBLOCK{set task_versions = []}
+\JBLOCK{for lemma_group in task.lemma_groups}
+    \JBLOCK{for result in lemma_group.results}
+        \JBLOCK{if result.tamarin_version not in task_versions}
+            \JBLOCK{set _ = task_versions.append(result.tamarin_version)}
+        \JBLOCK{endif}
+    \JBLOCK{endfor}
+\JBLOCK{endfor}
 
-\BLOCK{if task_versions|length > 1}
+\JBLOCK{if task_versions|length > 1}
 \subsubsection{Version Comparisons}
 
 \#{ Runtime Comparison Chart }
@@ -398,22 +416,22 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     yticklabel style={font=\footnotesize},
     ytick=data,
     yticklabels={
-    \BLOCK{for lemma_group in task.lemma_groups}
-    \VAR{lemma_group.lemma|latex_escape}\BLOCK{if not loop.last},\BLOCK{endif}
-    \BLOCK{endfor}
+    \JBLOCK{for lemma_group in task.lemma_groups}
+    \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \JBLOCK{endfor}
     },
 ]
 
-\BLOCK{for version in task_versions}
-\BLOCK{set version_idx = loop.index0}
+\JBLOCK{for version in task_versions}
+\JBLOCK{set version_idx = loop.index0}
 \addplot[fill=blue!\VAR{30 + version_idx * 20}] coordinates {
-\BLOCK{for lemma_group in task.lemma_groups}
-    \BLOCK{set version_result = lemma_group.results|selectattr('tamarin_version', 'equalto', version)|list}
+\JBLOCK{for lemma_group in task.lemma_groups}
+    \JBLOCK{set version_result = lemma_group.results|selectattr('tamarin_version', 'equalto', version)|list}
     (\VAR{version_result[0].runtime if version_result else 0}, \VAR{loop.index0})
-\BLOCK{endfor}
+\JBLOCK{endfor}
 };
 \addlegendentry{\VAR{version|latex_escape}}
-\BLOCK{endfor}
+\JBLOCK{endfor}
 
 \end{axis}
 \end{tikzpicture}
@@ -434,31 +452,31 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     yticklabel style={font=\footnotesize},
     ytick=data,
     yticklabels={
-    \BLOCK{for lemma_group in task.lemma_groups}
-    \VAR{lemma_group.lemma|latex_escape}\BLOCK{if not loop.last},\BLOCK{endif}
-    \BLOCK{endfor}
+    \JBLOCK{for lemma_group in task.lemma_groups}
+    \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
+    \JBLOCK{endfor}
     },
 ]
 
-\BLOCK{for version in task_versions}
-\BLOCK{set version_idx = loop.index0}
+\JBLOCK{for version in task_versions}
+\JBLOCK{set version_idx = loop.index0}
 \addplot[fill=orange!\VAR{30 + version_idx * 20}] coordinates {
-\BLOCK{for lemma_group in task.lemma_groups}
-    \BLOCK{set version_result = lemma_group.results|selectattr('tamarin_version', 'equalto', version)|list}
+\JBLOCK{for lemma_group in task.lemma_groups}
+    \JBLOCK{set version_result = lemma_group.results|selectattr('tamarin_version', 'equalto', version)|list}
     (\VAR{version_result[0].peak_memory if version_result else 0}, \VAR{loop.index0})
-\BLOCK{endfor}
+\JBLOCK{endfor}
 };
 \addlegendentry{\VAR{version|latex_escape}}
-\BLOCK{endfor}
+\JBLOCK{endfor}
 
 \end{axis}
 \end{tikzpicture}
 \caption{Memory Usage Comparison by Version for \VAR{task.name|latex_escape}}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \#{ Task Timeline if available }
-\BLOCK{if task.execution_timeline|length > 0}
+\JBLOCK{if task.execution_timeline|length > 0}
 \subsubsection{Task Timeline}
 
 \begin{figure}[H]
@@ -478,56 +496,56 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \gantttitle{\VAR{task.name|latex_escape}}{\VAR{task.total_runtime|int + 2}} \\
 
-\BLOCK{for execution in task.execution_timeline}
+\JBLOCK{for execution in task.execution_timeline}
 \ganttbar{\VAR{execution.label[-15:]|latex_escape}}{\VAR{execution.start}}{\VAR{execution.end}} \\
-\BLOCK{endfor}
+\JBLOCK{endfor}
 
 \end{ganttchart}
 \caption{Execution Timeline for \VAR{task.name|latex_escape}}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \#{ Traces section }
-\BLOCK{set task_traces = report_data.traces|filter_traces_by_task(task)|list}
-\BLOCK{if task_traces|length > 0}
+\JBLOCK{set task_traces = report_data.traces|filter_traces_by_task(task)|list}
+\JBLOCK{if task_traces|length > 0}
 \subsubsection{Traces}
 
-\BLOCK{for trace in task_traces}
+\JBLOCK{for trace in task_traces}
 \paragraph{\VAR{trace.lemma|latex_escape} (\VAR{trace.tamarin_version})}
 
 \textbf{JSON File:} \texttt{\VAR{trace.json_file|relative_from_report|latex_escape}}
-\BLOCK{if trace.dot_file}
+\JBLOCK{if trace.dot_file}
 \newline\textbf{DOT File:} \texttt{\VAR{trace.dot_file|relative_from_report|latex_escape}}
-\BLOCK{endif}
+\JBLOCK{endif}
 
-\BLOCK{if trace.png_file}
+\JBLOCK{if trace.png_file}
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{\VAR{trace.png_file|relative_from_report}}
 \caption{Trace visualization for \VAR{trace.lemma|latex_escape}}
 \end{figure}
-\BLOCK{elif trace.svg_content}
+\JBLOCK{elif trace.svg_content}
 \#{ Note: SVG content cannot be directly embedded in LaTeX, would need conversion }
 \textit{SVG trace visualization available (see HTML report for interactive view)}
-\BLOCK{endif}
+\JBLOCK{endif}
 
-\BLOCK{endfor}
-\BLOCK{endif}
+\JBLOCK{endfor}
+\JBLOCK{endif}
 
-\BLOCK{endfor}
+\JBLOCK{endfor}
 
-\BLOCK{if report_data.has_errors}
+\JBLOCK{if report_data.has_errors}
 \section{Errors}
 
 \#{ Error Types Pie Chart }
-\BLOCK{if report_data.error_type_distribution|length > 0}
+\JBLOCK{if report_data.error_type_distribution|length > 0}
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
-\BLOCK{set error_pie_data = []}
-\BLOCK{for error_type in report_data.error_type_distribution}
-\BLOCK{set _ = error_pie_data.append("%.1f"|format(error_type.percentage) + "/" + error_type.name)}
-\BLOCK{endfor}
+\JBLOCK{set error_pie_data = []}
+\JBLOCK{for error_type in report_data.error_type_distribution}
+\JBLOCK{set _ = error_pie_data.append("%.1f"|format(error_type.percentage) + "/" + error_type.name)}
+\JBLOCK{endfor}
 \pie[
     text=legend,
     radius=3,
@@ -538,51 +556,53 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \end{tikzpicture}
 \caption{Error Types Distribution}
 \end{figure}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \subsection{Error Summary}
 
-\begin{longtable}{p{2cm}p{1.5cm}p{2cm}p{1.5cm}p{1.5cm}p{1.5cm}p{1.5cm}p{1.5cm}p{2cm}p{3cm}}
-\toprule
+\begin{NiceTabular}[width=\textwidth]{X[l,1]X[l,1]X[l,1]X[l,1]X[l,1]X[c,1]X[l,1]X[c,1]X[c,1]X[l,2]}
+\hline
 \textbf{Task} & \textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Error} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Description} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Task} & \textbf{Lemma} & \textbf{Resources config} & \textbf{Options} & \textbf{Preprocessor} & \textbf{Tamarin Version} & \textbf{Error} & \textbf{Runtime} & \textbf{Peak Memory Used} & \textbf{Description} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
-\BLOCK{for error in report_data.error_summary}
-    \BLOCK{set outer_loop = loop}
-    \BLOCK{for lemma_error in error.lemma_errors}
-        \BLOCK{set middle_loop = loop}
-        \BLOCK{for result in lemma_error.results}
-            \BLOCK{if loop.first and middle_loop.first}
-            \VAR{error.task_name|latex_escape} &
-            \BLOCK{endif}
-            \BLOCK{if loop.first}
-            \VAR{lemma_error.lemma|latex_escape} &
-            \VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s &
-            \VAR{result.options or "None"} &
-            \VAR{result.preprocessor or "None"} &
-            \BLOCK{endif}
+\hline
+\JBLOCK{for error in report_data.error_summary}
+    \JBLOCK{set task_rowspan = error.total_errors}
+    \JBLOCK{set outer_loop = loop}
+    \JBLOCK{for lemma_error in error.lemma_errors}
+        \JBLOCK{set lemma_rowspan = lemma_error.results|length}
+        \JBLOCK{set middle_loop = loop}
+        \JBLOCK{for result in lemma_error.results}
+            \JBLOCK{if loop.first and middle_loop.first}
+                \Block{\VAR{task_rowspan}-1}{\VAR{error.task_name|latex_escape}} &
+            \JBLOCK{else}
+                 &
+            \JBLOCK{endif}
+            \JBLOCK{if loop.first}
+                \Block{\VAR{lemma_rowspan}-1}{\VAR{lemma_error.lemma|latex_escape}} &
+                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.cores}c / \VAR{result.memory}GB / \VAR{result.timeout}s} &
+                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.options or "None"}} &
+                \Block{\VAR{lemma_rowspan}-1}{\VAR{result.preprocessor or "None"}} &
+            \JBLOCK{else}
+                 &  &  &  &
+            \JBLOCK{endif}
             \VAR{result.tamarin_version} &
-            \BLOCK{if result.error_type == 'tamarin_error'}\failedtext{TAMARIN ERROR}\BLOCK{elif result.error_type == 'timeout'}\warningtext{TIMEOUT}\BLOCK{elif result.error_type == 'memory_limit'}\memorytext{MEMORY LIMIT}\BLOCK{else}\failedtext{ERROR}\BLOCK{endif} &
+            \JBLOCK{if result.error_type == 'tamarin_error'}\failedtext{TAMARIN ERROR}\JBLOCK{elif result.error_type == 'timeout'}\warningtext{TIMEOUT}\JBLOCK{elif result.error_type == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{ERROR}\JBLOCK{endif} &
             \VAR{"%.2f"|format(result.runtime)}s &
             \VAR{"%.2f"|format(result.peak_memory)}MB &
             \VAR{result.error_description or "No description available"|latex_escape} \\
-            \BLOCK{if not loop.last or not middle_loop.last or not outer_loop.last}\midrule\BLOCK{endif}
-        \BLOCK{endfor}
-    \BLOCK{endfor}
-\BLOCK{endfor}
-\end{longtable}
+            \JBLOCK{if not loop.last}\hline\JBLOCK{endif}
+        \JBLOCK{endfor}
+        \JBLOCK{if not middle_loop.last}\hline\JBLOCK{endif}
+    \JBLOCK{endfor}
+    \JBLOCK{if not outer_loop.last}\hline\JBLOCK{endif}
+\JBLOCK{endfor}
+\hline
+\end{NiceTabular}
 
 \subsection{Detailed Error Information}
 
-\BLOCK{for error in report_data.detailed_errors}
+\JBLOCK{for error in report_data.detailed_errors}
 \subsubsection*{
-\BLOCK{if error.type == 'tamarin_error'}\failedtext{FAILED}\BLOCK{elif error.type == 'timeout'}\warningtext{TIMED OUT}\BLOCK{elif error.type == 'memory_limit'}\memorytext{MEMORY LIMIT}\BLOCK{else}\failedtext{ERROR}\BLOCK{endif}:
+\JBLOCK{if error.type == 'tamarin_error'}\failedtext{FAILED}\JBLOCK{elif error.type == 'timeout'}\warningtext{TIMED OUT}\JBLOCK{elif error.type == 'memory_limit'}\memorytext{MEMORY LIMIT}\JBLOCK{else}\failedtext{ERROR}\JBLOCK{endif}:
 \VAR{error.task_name|latex_escape}
 }
 
@@ -590,17 +610,17 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \VAR{error.description|latex_escape}
 
-\BLOCK{if error.stderr_output}
+\JBLOCK{if error.stderr_output}
 \begin{lstlisting}[style=shellstyle, language=bash, caption=Error Output]
 \VAR{error.stderr_output}
 \end{lstlisting}
-\BLOCK{endif}
+\JBLOCK{endif}
 
-\BLOCK{endfor}
+\JBLOCK{endfor}
 
 \textbf{Rerun file:} \texttt{\VAR{report_data.rerun_file|relative_from_report|latex_escape}}
 
-\BLOCK{else}
+\JBLOCK{else}
 \section{Execution Summary}
 
 \begin{center}
@@ -608,7 +628,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 All tasks completed successfully without any failures, timeouts, or memory limit issues.
 \end{center}
-\BLOCK{endif}
+\JBLOCK{endif}
 
 \vfill
 

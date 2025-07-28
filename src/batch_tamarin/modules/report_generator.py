@@ -43,7 +43,7 @@ class ReportGenerator:
         # Create LaTeX-specific environment with custom delimiters
         self.latex_env = Environment(
             loader=FileSystemLoader(str(template_dir)),
-            block_start_string="\\BLOCK{",
+            block_start_string="\\JBLOCK{",
             block_end_string="}",
             variable_start_string="\\VAR{",
             variable_end_string="}",
