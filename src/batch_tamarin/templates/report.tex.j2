@@ -185,7 +185,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \pie[
     text=legend,
     radius=3,
-    color={successcolor, falsifiedcolor, unterminatedcolor, failedcolor, warningcolor, memorycolor}
+    color={successcolor!60!white, falsifiedcolor!60!white, unterminatedcolor!60!white, failedcolor!60!white, warningcolor!60!white, memorycolor!60!white},
+    sum=auto
 ]{
 \VAR{pie_data|join(', ')}
 }
@@ -201,7 +202,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \pie[
     text=legend,
     radius=3,
-    color={infocolor, darkinfocolor}
+    color={infocolor!60!white, darkinfocolor!45!white},
+    sum=auto
 ]{
 \VAR{"%.1f"|format(report_data.statistics.cache_hit_percentage)}/Cache Hit,
 \VAR{"%.1f"|format(report_data.statistics.fresh_percentage)}/Freshly Executed
@@ -218,7 +220,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{axis}[
     xbar,
     width=0.6\textwidth,
-    height=0.4\textheight,
+    height=\VAR{report_data.tasks|length * 0.03}\textheight,
     xlabel={Runtime (seconds)},
     ylabel={Tasks},
     ytick=data,
@@ -227,6 +229,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     \tiny{\VAR{task.name|latex_escape}} \JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
+    enlarge x limits=0.20,
+    enlarge y limits=0.10,
     nodes near coords,
     nodes near coords align={horizontal},
 ]
@@ -249,7 +253,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{axis}[
     xbar,
     width=0.6\textwidth,
-    height=0.4\textheight,
+    height=\VAR{report_data.tasks|length * 0.03}\textheight,
     xlabel={Memory (MB)},
     ylabel={Tasks},
     ytick=data,
@@ -258,6 +262,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
     \tiny{\VAR{task.name|latex_escape}}\JBLOCK{if not loop.last},\JBLOCK{endif}
     \JBLOCK{endfor}
     },
+    enlarge x limits=0.20,
+    enlarge y limits=0.10,
     nodes near coords,
     nodes near coords align={horizontal},
 ]
@@ -276,7 +282,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \begin{NiceTabular}[width=\textwidth]{X[l,2]X[l,2]X[c,1]X[c,1]X[c,1]X[c,1]X[c,1]}
 \hline
-\textbf{Task} & \textbf{Lemma} & \textbf{Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Memory} & \textbf{Cache} \\
+\tiny{\textbf{Task}} & \tiny{\textbf{Lemma}} & \tiny{\textbf{Version}} & \tiny{\textbf{Status}} & \tiny{\textbf{Runtime}} & \tiny{\textbf{Memory}} & \tiny{\textbf{Cache}} \\
 \hline
 
 \JBLOCK{for task in report_data.tasks}
@@ -360,7 +366,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \begin{NiceTabular}[width=\textwidth]{X[l,2]X[l,1]X[l,1]X[l,1]X[c,1]X[c,1]X[c,1]X[c,1]X[c,1]}
 \hline
-\textbf{Lemma} & \textbf{Resour-ces config} & \textbf{Options} & \textbf{Prepro-cessor} & \textbf{Tamarin Version} & \textbf{Status} & \textbf{Runtime} & \textbf{Memory Used} & \textbf{Cache Hit} \\
+\tiny{\textbf{Lemma}} & \tiny{\textbf{Resources config}} & \tiny{\textbf{Options}} & \tiny{\textbf{Preprocessor}} & \tiny{\textbf{Tamarin Version}} & \tiny{\textbf{Status}} & \tiny{\textbf{Runtime}} & \tiny{\textbf{Memory Used}} & \tiny{\textbf{Cache Hit}} \\
 \hline
 \JBLOCK{for lemma_group in task.lemma_groups}
     \JBLOCK{set lemma_rowspan = lemma_group.results|length}
@@ -406,12 +412,14 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{axis}[
     xbar,
     width=0.6\textwidth,
-    height=0.4\textheight,
+    height=\VAR{task.lemma_groups|length * 0.1}\textheight,
     xlabel={Runtime (seconds)},
     ylabel={Lemmas},
     legend style={at={(0.5,-0.15)},anchor=north,legend columns=\VAR{task_versions|length}},
     yticklabel style={font=\tiny},
     ytick=data,
+    enlarge x limits=0.2,
+    enlarge y limits=0.75,
     yticklabels={
     \JBLOCK{for lemma_group in task.lemma_groups}
     \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
@@ -444,12 +452,14 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \begin{axis}[
     xbar,
     width=0.6\textwidth,
-    height=0.4\textheight,
+    height=\VAR{task.lemma_groups|length * 0.1}\textheight,
     xlabel={Memory (MB)},
     ylabel={Lemmas},
     legend style={at={(0.5,-0.15)},anchor=north,legend columns=\VAR{task_versions|length}},
     yticklabel style={font=\tiny},
     ytick=data,
+    enlarge x limits=0.2,
+    enlarge y limits=0.75,
     yticklabels={
     \JBLOCK{for lemma_group in task.lemma_groups}
     \VAR{lemma_group.lemma|latex_escape}\JBLOCK{if not loop.last},\JBLOCK{endif}
@@ -549,7 +559,8 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 \pie[
     text=legend,
     radius=3,
-    color={failedcolor, warningcolor, memorycolor, orange, purple}
+    color={failedcolor!60!white, warningcolor!60!white, memorycolor!60!white, orange!60!white, purple!60!white},
+    sum=auto
 ]{
 \VAR{error_pie_data|join(', ')}
 }
@@ -562,7 +573,7 @@ Cache hits & \infotext{\VAR{report_data.statistics.cache_hits} (\VAR{"%.1f"|form
 
 \begin{NiceTabular}[width=\textwidth]{X[l,1]X[l,1]X[l,1]X[l,1]X[l,1]X[c,1]X[l,1]X[c,1]X[c,1]X[l,2]}
 \hline
-\textbf{\small{Task}} & \textbf{\small{Lemma}} & \textbf{\small{Resour-ces config}} & \textbf{\small{Options}} & \textbf{\small{Prepro-cessor}} & \textbf{\small{Ta–marin Version}} & \textbf{\small{Error Type}} & \textbf{\small{Runtime}} & \textbf{\small{Me-mory Used}} & \textbf{\small{Description}} \\
+\textbf{\tiny{Task}} & \textbf{\tiny{Lemma}} & \textbf{\tiny{Resources config}} & \textbf{\tiny{Options}} & \textbf{\tiny{Preprocessor}} & \textbf{\tiny{Tamarin Version}} & \textbf{\tiny{Error Type}} & \textbf{\tiny{Runtime}} & \textbf{\tiny{Memory Used}} & \textbf{\tiny{Description}} \\
 \hline
 \JBLOCK{for error in report_data.error_summary}
     \JBLOCK{set task_rowspan = error.total_errors}

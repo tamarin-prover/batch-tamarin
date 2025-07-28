@@ -24,7 +24,7 @@
     "total_tasks": 17,
     "total_successes": 14,
     "total_failures": 3,
-    "total_cache_hit": 17,
+    "total_cache_hit": 10,
     "total_runtime": 46.65651607998734,
     "total_memory": 1826.375,
     "max_runtime": 25.374023042000772,
@@ -87,7 +87,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:40.704959",
             "exec_end": "1970-01-01T16:14:41.143093",
             "exec_duration_monotonic": 0.438133415998891,
@@ -210,7 +210,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:42.719508",
             "exec_end": "1970-01-01T16:14:43.176501",
             "exec_duration_monotonic": 0.45699237500230083,
@@ -278,7 +278,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:40.700056",
             "exec_end": "1970-01-01T16:14:41.128516",
             "exec_duration_monotonic": 0.4284599579987116,
@@ -346,7 +346,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:42.733781",
             "exec_end": "1970-01-01T16:14:43.142526",
             "exec_duration_monotonic": 0.4087455420012702,
@@ -418,7 +418,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:44.720664",
             "exec_end": "1970-01-01T16:14:45.145838",
             "exec_duration_monotonic": 0.42517395799950464,
@@ -452,7 +452,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:44.731831",
             "exec_end": "1970-01-01T16:14:45.147254",
             "exec_duration_monotonic": 0.4154232079963549,
@@ -486,7 +486,7 @@
           "task_execution_metadata": {
             "command": [],
             "status": "completed",
-            "cache_hit": true,
+            "cache_hit": false,
             "exec_start": "1970-01-01T16:14:44.737171",
             "exec_end": "1970-01-01T16:14:45.157777",
             "exec_duration_monotonic": 0.4206059999996796,
