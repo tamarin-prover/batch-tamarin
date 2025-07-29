@@ -1,6 +1,6 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) [![Release](https://img.shields.io/badge/release-0.2.3-forestgreen)](https://github.com/tamarin-prover/batch-tamarin/releases) [![PyPI version](https://img.shields.io/pypi/v/batch-tamarin.svg?color=blue)](https://pypi.org/project/batch-tamarin/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) [![Release](https://img.shields.io/badge/release-0.2.4-forestgreen)](https://github.com/tamarin-prover/batch-tamarin/releases) [![PyPI version](https://img.shields.io/pypi/v/batch-tamarin.svg?color=blue)](https://pypi.org/project/batch-tamarin/)
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files, comprehensive reporting, and validation tools.
 
@@ -14,9 +14,12 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 -   **Resource Management**: Intelligent CPU and memory allocation for parallel task execution
 -   **Progress Tracking**: Real-time progress updates with Rich-formatted output
 -   **Output Processing**: Reformat the different Tamarin output to give a detailed summary of execution
--   **CLI Interface**: Easy-to-use command-line interface with `run`, `check`, and `init` commands
+-   **CLI Interface**: Easy-to-use command-line interface with `run`, `check`, `init`, and `report` commands
 -   **Configuration Validation**: Validate JSON recipes and preview tasks before execution
 -   **Wellformedness Checking**: Check theory files for syntax errors and warnings
+-   **Comprehensive Reporting**: Generate detailed reports in multiple formats (Markdown, HTML, LaTeX, Typst)
+-   **Result Caching**: Intelligent caching system to avoid re-executing identical tasks
+-   **Trace Visualization**: Automatic generation of attack trace visualizations in SVG format
 
 ## Table of Contents
 
@@ -96,6 +99,18 @@ batch-tamarin init protocol.spthy
 
 # Generate configuration with multiple files and custom output
 batch-tamarin init protocol1.spthy protocol2.spthy --output my_recipe.json
+
+# Generate comprehensive reports from execution results
+batch-tamarin report ./results report.md --format md
+
+# Generate HTML report with interactive visualizations
+batch-tamarin report ./results report.html --format html
+
+# Generate LaTeX report for academic publications
+batch-tamarin report ./results report.tex --format latex
+
+# Clear cached results
+batch-tamarin --rm-cache
 ```
 
 ### Configuration Example
@@ -167,13 +182,21 @@ output_directory/
 ├── proofs/
 │   ├── output_prefix[\_lemma]\_tamarin_alias.spthy
 │   └── ...
-└── success/
+├── success/
+│   ├── output_prefix[\_lemma]\_tamarin_alias.json
+│   └── ...
+└── traces/
     ├── output_prefix[\_lemma]\_tamarin_alias.json
+    ├── output_prefix[\_lemma]\_tamarin_alias.dot
+    ├── output_prefix[\_lemma]\_tamarin_alias.svg
     └── ...
 ```
 
-As the name of each directory and file describe, you will find successful task in `success` and their linked models proofs in `proofs`
-Failed tasks don't output proofs (that's a tamarin behavior), you will only find a json in `failed`
+As the name of each directory and file describe, you will find:
+- **`success/`**: JSON results for successful task executions with detailed timing and lemma verification information
+- **`failed/`**: JSON results for failed tasks with error descriptions and diagnostics
+- **`proofs/`**: Generated `.spthy` model files from successful Tamarin runs (not generated for failed tasks)
+- **`traces/`**: Attack trace visualizations in JSON, DOT, and SVG formats when available
 
 Here is an example for each result json :
 `success/`
@@ -215,6 +238,32 @@ Here is an example for each result json :
 	"last_stderr_lines": ["Process exceeded memory limit"]
 }
 ```
+
+### Report Generation
+
+After running batch execution, you can generate comprehensive reports using the `report` command:
+
+```bash
+# Generate a Markdown report with statistics and charts
+batch-tamarin report ./results execution_report.md --format md
+
+# Generate an interactive HTML report
+batch-tamarin report ./results execution_report.html --format html
+
+# Generate a LaTeX report for academic publications
+batch-tamarin report ./results execution_report.tex --format latex
+
+# Generate a modern Typst report
+batch-tamarin report ./results execution_report.typ --format typst
+```
+
+**Report Features:**
+- **Execution Statistics**: Success/failure rates, timing analysis, resource utilization
+- **Visual Charts**: Pie charts for error types, bar charts for execution times, Gantt charts for timelines
+- **Trace Visualization**: Embedded attack trace diagrams when available
+- **Multiple Formats**: Choose the format that best fits your needs (presentations, publications, web)
+
+The report command automatically validates the results directory structure and generates comprehensive analytics from your batch execution results.
 
 ## Development
 
