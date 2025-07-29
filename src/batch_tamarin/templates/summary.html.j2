@@ -244,7 +244,7 @@
                                     {% endif %}
                                 {% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}⏳ Timed Out
                                 {% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}🧠 Memory Limit
-                                {% else %}❌ Failed
+                                {% else %}❌ Error
                                 {% endif %}
                             </td>
                             <td>{{ "%.1f"|format(rich_executable.task_execution_metadata.exec_duration_monotonic) }}s</td>
@@ -261,7 +261,7 @@
     <h2>🚨 Error Report</h2>
     {% for task in failed_tasks %}
     <div class="error-details">
-        <h3><span class="failed">❌ FAILED :</span> {{ task.task_name }}</h3>
+        <h3><span class="failed">❌ ERROR :</span> {{ task.task_name }}</h3>
         <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
         <p>{{ task.rich_executable.task_result.error_description }}</p>
         {% if task.rich_executable.task_result.last_stderr_lines %}
