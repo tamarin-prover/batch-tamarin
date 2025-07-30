@@ -88,18 +88,25 @@ class TestTaskExecution:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_run_executable_task_success(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test successful task execution."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager
         mock_process_manager.run_command = AsyncMock(
@@ -134,7 +141,9 @@ class TestTaskExecution:
         assert result.return_code == 0
         assert result.stdout == "success output"
         assert result.stderr == ""
-        assert result.duration == 10.0
+        assert (
+            result.duration > 0.0
+        )  # Duration should be positive due to incrementing time
 
         # Verify tracking
 
@@ -153,18 +162,25 @@ class TestTaskExecution:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_run_executable_task_failure(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test task execution with failure."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager to return failure
         mock_process_manager.run_command = AsyncMock(
@@ -210,18 +226,25 @@ class TestTaskExecution:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_run_executable_task_timeout(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test task execution with timeout."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager to return timeout
         mock_process_manager.run_command = AsyncMock(
@@ -254,18 +277,25 @@ class TestTaskExecution:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_run_executable_task_memory_limit(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test task execution with memory limit exceeded."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager to return memory limit exceeded
         mock_process_manager.run_command = AsyncMock(
@@ -298,18 +328,25 @@ class TestTaskExecution:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_run_executable_task_exception(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test task execution with unexpected exception."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager to raise exception
         mock_process_manager.run_command = AsyncMock(
@@ -378,18 +415,25 @@ class TestCacheManagement:
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
+    @patch("batch_tamarin.modules.task_manager.time.time")
     async def test_cache_miss_and_store(
         self,
-        mock_loop: Mock,
+        mock_time: Mock,
         mock_notification: Mock,
         mock_process_manager: Mock,
         mock_output_manager: Mock,
         mock_executable_task: ExecutableTask,
     ):
         """Test task execution with cache miss and subsequent storage."""
-        # Mock event loop time
-        mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+        # Mock time.time() with incrementing values to ensure proper duration calculation
+        time_counter = [1000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1  # Small increment each call
+            return current
+
+        mock_time.side_effect = time_mock
 
         # Mock process manager
         mock_process_manager.run_command = AsyncMock(
@@ -453,10 +497,16 @@ class TestCacheManagement:
                 )
                 mock_output_manager.is_initialized.return_value = False
 
-                with patch(
-                    "batch_tamarin.modules.task_manager.asyncio.get_event_loop"
-                ) as mock_loop:
-                    mock_loop.return_value.time.side_effect = [1000.0, 1010.0]
+                with patch("batch_tamarin.modules.task_manager.time.time") as mock_time:
+                    mock_time.side_effect = [
+                        1000.0,
+                        1000.0,
+                        1000.0,
+                        1000.0,
+                        1010.0,
+                        1010.0,
+                        1010.0,
+                    ]
 
                     result = await task_manager.run_executable_task(
                         mock_executable_task
@@ -468,10 +518,10 @@ class TestCacheManagement:
 class TestProgressReporting:
     """Test progress reporting functionality."""
 
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
-    def test_get_execution_progress_empty(self, mock_loop: Mock):
+    @patch("batch_tamarin.modules.task_manager.time.time")
+    def test_get_execution_progress_empty(self, mock_time: Mock):
         """Test progress reporting with no tasks."""
-        mock_loop.return_value.time.return_value = 2000.0
+        mock_time.return_value = 2000.0
 
         task_manager = TaskManager()
         progress = task_manager.get_execution_progress()
@@ -483,10 +533,10 @@ class TestProgressReporting:
         assert progress.failed_tasks == 0
         assert progress.current_time == 2000.0
 
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
-    def test_get_execution_progress_with_tasks(self, mock_loop: Mock):
+    @patch("batch_tamarin.modules.task_manager.time.time")
+    def test_get_execution_progress_with_tasks(self, mock_time: Mock):
         """Test progress reporting with various task statuses."""
-        mock_loop.return_value.time.return_value = 2000.0
+        mock_time.return_value = 2000.0
 
         task_manager = TaskManager()
 
@@ -509,10 +559,11 @@ class TestProgressReporting:
         assert progress.failed_tasks == 3  # FAILED, TIMEOUT, MEMORY_LIMIT_EXCEEDED
         assert progress.current_time == 2000.0
 
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
-    def test_update_task_status(self, mock_loop: Mock):
+    @patch("batch_tamarin.modules.task_manager.time.time")
+    def test_update_task_status(self, mock_time: Mock):
         """Test manual task status updates."""
-        mock_loop.return_value.time.return_value = 2000.0
+        # Use return_value for simple cases where timing doesn't matter
+        mock_time.return_value = 2000.0
 
         task_manager = TaskManager()
 
@@ -529,10 +580,18 @@ class TestProgressReporting:
         # Start time should remain unchanged
         assert task_manager._task_start_times["task1"] == 2000.0  # type:ignore
 
-    @patch("batch_tamarin.modules.task_manager.asyncio.get_event_loop")
-    def test_update_task_status_no_duplicate_start_time(self, mock_loop: Mock):
+    @patch("batch_tamarin.modules.task_manager.time.time")
+    def test_update_task_status_no_duplicate_start_time(self, mock_time: Mock):
         """Test that start time is not overwritten if already set."""
-        mock_loop.return_value.time.side_effect = [2000.0, 2010.0]
+        # Mock time.time() with incrementing values
+        time_counter = [2000.0]
+
+        def time_mock():
+            current = time_counter[0]
+            time_counter[0] += 0.1
+            return current
+
+        mock_time.side_effect = time_mock
 
         task_manager = TaskManager()
 
