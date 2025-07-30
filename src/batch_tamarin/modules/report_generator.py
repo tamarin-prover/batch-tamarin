@@ -60,6 +60,7 @@ class ReportGenerator:
         filters["latex_escape"] = self._latex_escape
         filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
         filters["relative_from_report"] = self._relative_from_report  # type: ignore
+        filters["hyphenate"] = self._hyphenate  # type: ignore
 
         latex_filters: Dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
         latex_filters["latex_escape"] = self._latex_escape

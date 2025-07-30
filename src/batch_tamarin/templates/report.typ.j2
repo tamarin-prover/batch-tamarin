@@ -1,3 +1,7 @@
+#import "@preview/cetz:0.4.0": canvas, draw
+#import "@preview/cetz-plot:0.1.2": chart
+#import "@preview/timeliney:0.3.0"
+
 #set page(
   paper: "a4",
   margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
@@ -16,12 +20,27 @@
   ]
 )
 
-#set text(font: "New Computer Modern", size: 11pt)
-#set par(justify: true)
+#set text(font: "New Computer Modern", size: 11pt, lang: "en", hyphenate: true)
+#set par(justify: true, linebreaks: "optimized")
 #set heading(numbering: "1.1")
 
+// Force aggressive word wrapping in tables - break words anywhere if needed
+#show table.cell: it => {
+  set par(linebreaks: "optimized", hanging-indent: 0pt)
+  set text(hyphenate: true, size: 7pt, lang: "en")
+  set block(breakable: true, width: 100%)
+  it
+}
+
+// Ensure table cells can break and overflow properly with aggressive wrapping
+#show table: it => {
+  set text(size: 7pt, hyphenate: true, lang: "en")
+  set par(linebreaks: "optimized")
+  block(breakable: true, width: 100%, it)
+}
+
 #align(center)[
-  #text(size: 18pt, weight: "bold")[Batch Tamarin Execution Report]
+  #text(size: 20pt, weight: "bold")[Batch Tamarin Execution Report]
 
   #v(0.5em)
 
@@ -34,19 +53,36 @@
 
 #v(1em)
 
-= Overview
+*Execution results from:* `{{ results_directory }}`
+*Executed:* {{ batch_execution_date.strftime('%Y-%m-%d %H:%M:%S') }}
 
-*Execution results from:* `{{ report_data.results_directory }}`
-*Executed:* {{ report_data.batch_execution_date.strftime('%Y-%m-%d %H:%M:%S') }}
+#v(1em)
 
-== Configuration
+= Table of Contents
+
+- #link(<overview>)[Overview]
+  - #link(<configuration>)[Configuration]
+  - #link(<global-summary>)[Global Summary]
+  - #link(<global-results>)[Global Results]
+  - #link(<global-timeline>)[Global Execution Timeline]
+- #link(<task-details>)[Task Details]
+  {% for task in report_data.tasks %}
+  - #link(<task-{{ task.name|replace(' ', '-')|lower }}>)[{{ task.name }}]
+  {% endfor %}
+- #link(<errors>)[Errors]
+
+#v(1em)
+
+= Overview <overview>
+
+== Configuration <configuration>
 
 === Global Settings
 
 #table(
   columns: (1fr, 1fr),
   stroke: 0.5pt,
-  [*Setting*], [*Value*],
+  table.header[*Setting*][*Value*],
   [Max cores], [{{ report_data.config.global_max_cores or 'Not specified' }}],
   [Max memory], [{{ report_data.config.global_max_memory or 'Not specified' }}GB],
   [Default timeout], [{{ report_data.config.default_timeout or 'Not specified' }}s],
@@ -58,141 +94,323 @@
 #table(
   columns: (1fr, 2fr, 1fr),
   stroke: 0.5pt,
-  [*Alias*], [*Path*], [*Version*],
+  table.header[*Alias*][*Path*][*Version*],
   {% for alias, info in report_data.config.tamarin_versions.items() %}
-  [{{ alias }}], [`{{ info.path }}`], [{{ info.version }}],
+  [`{{ alias }}`], [`{{ info.path }}`], [{{ info.version }}],
   {% endfor %}
 )
 
-== Summary
+== Global Summary <global-summary>
 
 === Global Statistics
 
 #table(
   columns: (1fr, 1fr),
   stroke: 0.5pt,
-  [*Metric*], [*Value*],
-  [Total tasks], [{{ report_data.statistics.total_tasks }}],
-  [Extracted lemmas], [{{ report_data.statistics.total_lemmas }}],
-  [Cached lemmas], [{{ report_data.statistics.cache_hits }}],
-  [Successful tasks], [#text(fill: green)[{{ report_data.statistics.successful_tasks }} ({{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}%)]],
-  [Failed tasks], [#text(fill: red)[{{ report_data.statistics.failed_tasks }} ({{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}%)]],
-  [Total runtime], [{{ "%.2f"|format(report_data.statistics.total_runtime) }}s],
-  [Total memory usage (peak)], [{{ "%.2f"|format(report_data.statistics.total_memory_usage) }}MB],
+  table.header[*Metric*][*Value*],
+  [Total Executed Lemmas], [{{ report_data.statistics.total_lemmas }}],
+  [Verified Lemmas], [#text(fill: green)[{{ report_data.statistics.verified_lemmas }} ({{ "%.1f"|format(report_data.statistics.verified_percentage) }}%)]],
+  [Falsified Lemmas], [#text(fill: orange)[{{ report_data.statistics.falsified_lemmas }} ({{ "%.1f"|format(report_data.statistics.falsified_percentage) }}%)]],
+  [Unterminated Lemmas], [#text(fill: blue)[{{ report_data.statistics.unterminated_lemmas }} ({{ "%.1f"|format(report_data.statistics.unterminated_percentage) }}%)]],
+  [Failed Executions], [#text(fill: red)[{{ report_data.statistics.failed_lemmas }} ({{ "%.1f"|format(report_data.statistics.failed_percentage) }}%)]],
+  [Lemmas killed by timeout], [#text(fill: purple)[{{ report_data.statistics.timeout_lemmas }} ({{ "%.1f"|format(report_data.statistics.timeout_percentage) }}%)]],
+  [Lemmas killed for memory limit], [#text(fill: maroon)[{{ report_data.statistics.memory_limit_lemmas }} ({{ "%.1f"|format(report_data.statistics.memory_limit_percentage) }}%)]],
+)
+
+#table(
+  columns: (1fr, 1fr),
+  stroke: 0.5pt,
+  table.header[*Metric*][*Value*],
+  [Total runtime], [{{ "%.1f"|format(report_data.statistics.total_runtime) }}s],
+  [Total peak memory used], [{{ "%.1f"|format(report_data.statistics.total_memory_usage / 1024) }}GB],
+  [Max peak memory used], [{{ "%.1f"|format(report_data.statistics.max_memory_usage / 1024) }}GB],
+  [Freshly executed tasks], [#text(fill: navy)[{{ report_data.statistics.fresh_executions }} ({{ "%.1f"|format(report_data.statistics.fresh_percentage) }}%)]],
+  [Cache hits], [#text(fill: teal)[{{ report_data.statistics.cache_hits }} ({{ "%.1f"|format(report_data.statistics.cache_hit_percentage) }}%)]],
 )
 
 === Charts Overview
 
+#grid(
+  columns: (1fr, 1fr),
+  column-gutter: 2em,
+  [
+    #figure(
+      canvas({
+        let data = (
+          {% if report_data.statistics.verified_lemmas > 0 %}([Verified], {{ report_data.statistics.verified_lemmas }}),{% endif %}
+          {% if report_data.statistics.falsified_lemmas > 0 %}([Falsified], {{ report_data.statistics.falsified_lemmas }}),{% endif %}
+          {% if report_data.statistics.unterminated_lemmas > 0 %}([Unterminated], {{ report_data.statistics.unterminated_lemmas }}),{% endif %}
+          {% if report_data.statistics.failed_lemmas > 0 %}([Failed], {{ report_data.statistics.failed_lemmas }}),{% endif %}
+          {% if report_data.statistics.timeout_lemmas > 0 %}([Timeout], {{ report_data.statistics.timeout_lemmas }}),{% endif %}
+          {% if report_data.statistics.memory_limit_lemmas > 0 %}([Memory Limit], {{ report_data.statistics.memory_limit_lemmas }}){% endif %}
+        )
+        let colors = gradient.linear(green, orange, blue, red, purple, maroon)
+        chart.piechart(
+          data,
+          value-key: 1,
+          label-key: 0,
+          radius: 2,
+          slice-style: colors,
+          outer-label: (content: "%", radius: 110%)
+        )
+      }),
+      caption: [Lemma Status Distribution]
+    )
+  ],
+  [
+    #figure(
+      canvas({
+        let data = (
+          ([Cache Hits], {{ report_data.statistics.cache_hits }}),
+          ([Fresh Executions], {{ report_data.statistics.fresh_executions }})
+        )
+        let colors = gradient.linear(blue, navy)
+        chart.piechart(
+          data,
+          value-key: 1,
+          label-key: 0,
+          radius: 2,
+          slice-style: colors,
+          outer-label: (content: "%", radius: 110%)
+        )
+      }),
+      caption: [Cache Performance]
+    )
+  ]
+)
+
+=== Runtime per Task (Horizontal Bar Chart)
+
 #figure(
-  grid(
-    columns: (1fr, 1fr),
-    column-gutter: 2em,
-    [
-      // Simple pie chart representation using rectangles
-      #stack(
-        dir: ttb,
-        spacing: 0.5em,
-        [*Success Rate Distribution*],
-        rect(
-          width: 100% * {{ "%.3f"|format(report_data.statistics.successful_tasks_percentage / 100) }},
-          height: 20pt,
-          fill: green
-        ),
-        text(size: 10pt)[Successful: {{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}%],
-        rect(
-          width: 100% * {{ "%.3f"|format(report_data.statistics.failed_tasks_percentage / 100) }},
-          height: 20pt,
-          fill: red
-        ),
-        text(size: 10pt)[Failed: {{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}%]
-      )
-    ],
-    [
-      // Simple bar chart for cache performance
-      #stack(
-        dir: ttb,
-        spacing: 0.5em,
-        [*Cache Performance*],
-        grid(
-          columns: (1fr, 1fr),
-          row-gutter: 0.5em,
-          [Cached],
-          rect(
-            width: 60pt * {{ "%.3f"|format(report_data.statistics.cache_hits / report_data.statistics.total_tasks if report_data.statistics.total_tasks > 0 else 0) }},
-            height: 20pt,
-            fill: blue
-          ),
-          [Not Cached],
-          rect(
-            width: 60pt * {{ "%.3f"|format((report_data.statistics.total_tasks - report_data.statistics.cache_hits) / report_data.statistics.total_tasks if report_data.statistics.total_tasks > 0 else 0) }},
-            height: 20pt,
-            fill: gray
-          )
-        ),
-        text(size: 10pt)[{{ report_data.statistics.cache_hits }} cached, {{ report_data.statistics.total_tasks - report_data.statistics.cache_hits }} not cached]
-      )
-    ]
+  canvas({
+    draw.set-style(barchart: (bar-width: .8))
+    let data = (
+      {% for task in report_data.tasks %}
+      ([{{ task.name|hyphenate(15) }}], {{ "%.2f"|format(task.total_runtime) }}),
+      {% endfor %}
+    )
+
+    chart.barchart(
+      mode: "basic",
+      size: (8, auto),
+      label-key: 0,
+      value-key: 1,
+      data,
+      x-label: [Runtime (seconds)],
+      y-label: [Tasks]
+    )
+  }),
+  caption: [Total Runtime Distribution by Task]
+)
+
+=== Memory Usage per Task (Horizontal Bar Chart)
+
+#figure(
+  canvas({
+    draw.set-style(barchart: (bar-width: .8))
+    let data = (
+      {% for task in report_data.tasks %}
+      ([{{ task.name|hyphenate(15) }}], {{ "%.2f"|format(task.peak_memory) }}),
+      {% endfor %}
+    )
+
+    chart.barchart(
+      mode: "basic",
+      size: (8, auto),
+      label-key: 0,
+      value-key: 1,
+      data,
+      x-label: [Memory (MB)],
+      y-label: [Tasks]
+    )
+  }),
+  caption: [Peak Memory Usage Distribution by Task]
+)
+
+== Global Results <global-results>
+
+#figure(
+  table(
+    columns: (1.5fr, 1fr, 1fr, 1fr, 1fr, 1fr, 0.8fr),
+    stroke: 0.5pt,
+    table.header[*Task*][*Lemma*][*Tamarin Version*][*Status*][*Runtime*][*Peak Memory*][*Cache Hit*],
+    {% for task in report_data.tasks %}
+      {% set task_loop = loop %}
+      {% for lemma_group in task.lemma_groups %}
+        {% set lemma_loop = loop %}
+        {% for result in lemma_group.results %}
+          {% if loop.first and lemma_loop.first %}
+            table.cell(rowspan: {{ task.total_results }})[
+              *{{ task.name }}*\
+              #text(size: 8pt, fill: gray)[{{ task.theory_file|replace('_', '\_') }}]
+            ],
+          {% endif %}
+          {% if loop.first %}
+            table.cell(rowspan: {{ lemma_group.results|length }})[`{{ lemma_group.lemma|hyphenate(18) }}`],
+          {% endif %}
+          [{{ result.tamarin_version }}],
+          [{% if result.status == 'verified' %}#text(fill: green)[✅ Verified]
+          {% elif result.status == 'falsified' %}#text(fill: orange)[❗ Falsified]
+          {% elif result.status == 'unterminated' %}#text(fill: blue)[🚧 Unterminated]
+          {% elif result.status == 'timeout' %}#text(fill: purple)[⏳ Timeout]
+          {% elif result.status == 'memory_limit' %}#text(fill: maroon)[🧠 Memory Limit]
+          {% else %}#text(fill: red)[❌ Error]
+          {% endif %}],
+          [{{ "%.1f"|format(result.runtime) }}s],
+          [{{ "%.1f"|format(result.peak_memory) }}MB],
+          [{% if result.cache_hit %}#text(fill: teal)[💾 Yes]{% else %}#text(fill: navy)[💻 No]{% endif %}],
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
   ),
-  caption: [Performance Overview]
+  caption: [Complete Results Summary]
 )
 
-=== Runtime per Task
+== Global Execution Timeline <global-timeline>
 
-#table(
-  columns: (1fr, 1fr),
-  stroke: 0.5pt,
-  [*Task*], [*Average Runtime (seconds)*],
-  {% for task in report_data.tasks %}
-  [{{ task.name }}], [{{ "%.2f"|format((task.results|sum(attribute='runtime')/task.results|length) if task.results else 0) }}],
-  {% endfor %}
+#figure(
+  block(
+    width: 70%,
+    height: 180pt,
+    timeliney.timeline(
+      show-grid: false,
+      {
+        import timeliney: *
+
+        // Minimal header
+        headerline(group(([*Timeline*], 1)))
+
+        // Show all tasks with normalized timeline
+        {% set colors = ['blue', 'green', 'orange', 'purple', 'red'] %}
+        {% set max_time = report_data.statistics.total_runtime %}
+        {% for task in report_data.tasks %}
+        taskgroup(title: [{{ task.name|hyphenate(6) }}], {
+          task("{{ task.name|hyphenate(8) }}",
+               ({{ "%.1f"|format(loop.index0 * 2) }}, {{ "%.1f"|format((loop.index0 + 1) * 2) }}),
+               style: (stroke: 1pt + {{ colors[loop.index0 % colors|length] }})
+          )
+        })
+        {% endfor %}
+      }
+    )
+  ),
+  caption: [Global Execution Timeline]
 )
 
-=== Memory Usage per Task
-
-#table(
-  columns: (1fr, 1fr),
-  stroke: 0.5pt,
-  [*Task*], [*Average Memory Usage (MB)*],
-  {% for task in report_data.tasks %}
-  [{{ task.name }}], [{{ "%.2f"|format((task.results|sum(attribute='peak_memory')/task.results|length) if task.results else 0) }}],
-  {% endfor %}
-)
-
-=== Execution Timeline
-
-#table(
-  columns: (1fr, 1fr, 1fr),
-  stroke: 0.5pt,
-  [*Task*], [*Total Runtime (seconds)*], [*Results Count*],
-  {% for task in report_data.tasks %}
-  [{{ task.name }}], [{{ "%.2f"|format(task.results|sum(attribute='runtime') if task.results else 0) }}], [{{ task.results|length }}],
-  {% endfor %}
-)
-
-= Task Details
+= Task Details <task-details>
 
 {% for task in report_data.tasks %}
-== Task: {{ task.name }}
+== Task: {{ task.name }} <task-{{ task.name|replace(' ', '-')|lower }}>
 
 === Execution Summary
 
 #table(
-  columns: (1fr, 1fr, 0.5fr, 0.5fr, 0.5fr, 1fr, 1fr, 1fr, 1fr, 0.5fr),
+  columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 0.8fr),
   stroke: 0.5pt,
-  [*Lemma*], [*Options*], [*Cores*], [*Memory*], [*Timeout*], [*Tamarin Version*], [*Status*], [*Memory Used*], [*Runtime*], [*Cache Hit*],
-  {% for result in task.results %}
-  [`{{ result.lemma }}`],
-  [{{ result.tamarin_options|join(' ') if result.tamarin_options else 'None' }}],
-  [{{ result.max_cores or 'Default' }}],
-  [{{ result.max_memory or 'Default' }}GB],
-  [{{ result.timeout or 'Default' }}s],
-  [{{ result.tamarin_version }}],
-  [{% if result.status == "success" %}#text(fill: green)[✓ Success]{% else %}#text(fill: red)[✗ Failed]{% endif %}],
-  [{{ "%.2f"|format(result.peak_memory) }}MB],
-  [{{ "%.2f"|format(result.runtime) }}s],
-  [{% if result.cache_hit %}#text(fill: green)[✓]{% else %}#text(fill: red)[✗]{% endif %}],
+  table.header[*Lemma*][*Resources*][*Options*][*Preprocessor*][*Tamarin Version*][*Status*][*Runtime*][*Peak Memory*][*Cache Hit*],
+  {% for lemma_group in task.lemma_groups %}
+    {% for result in lemma_group.results %}
+      {% if loop.first %}
+        table.cell(rowspan: {{ lemma_group.results|length }})[`{{ lemma_group.lemma }}`],
+        table.cell(rowspan: {{ lemma_group.results|length }})[{{ result.cores }}c / {{ result.memory }}GB / {{ result.timeout }}s],
+        table.cell(rowspan: {{ lemma_group.results|length }})[{{ result.options or "None" }}],
+        table.cell(rowspan: {{ lemma_group.results|length }})[{{ result.preprocessor or "None" }}],
+      {% endif %}
+      [{{ result.tamarin_version }}],
+      [{% if result.status == 'verified' %}#text(fill: green)[✅ Verified]
+      {% elif result.status == 'falsified' %}#text(fill: orange)[❗ Falsified]
+      {% elif result.status == 'unterminated' %}#text(fill: blue)[🚧 Unterminated]
+      {% elif result.status == 'timeout' %}#text(fill: purple)[⏳ Timeout]
+      {% elif result.status == 'memory_limit' %}#text(fill: maroon)[🧠 Memory Limit]
+      {% else %}#text(fill: red)[❌ Error]
+      {% endif %}],
+      [{{ "%.2f"|format(result.runtime) }}s],
+      [{{ "%.2f"|format(result.peak_memory) }}MB],
+      [{% if result.cache_hit %}#text(fill: teal)[💾 Yes]{% else %}#text(fill: navy)[💻 No]{% endif %}],
+    {% endfor %}
   {% endfor %}
 )
+
+{% set task_versions = [] %}
+{% for lemma_group in task.lemma_groups %}
+{% for result in lemma_group.results %}
+{% if result.tamarin_version not in task_versions %}
+{% set _ = task_versions.append(result.tamarin_version) %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if task_versions|length > 1 %}
+=== Performance Comparison Across Versions
+
+#grid(
+  columns: (1fr, 1fr),
+  column-gutter: 2em,
+  [
+    #figure(
+      canvas({
+        draw.set-style(barchart: (bar-width: .8))
+        let data = (
+          {% for lemma_group in task.lemma_groups %}
+          {% set lemma_data = [] %}
+          {% for version in task_versions %}
+          {% for result in lemma_group.results %}
+          {% if result.tamarin_version == version %}
+          {% set _ = lemma_data.append(result.runtime) %}
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+          ([{{ lemma_group.lemma }}]{% for runtime in lemma_data %}, {{ "%.2f"|format(runtime) }}{% endfor %}),
+          {% endfor %}
+        )
+
+        chart.barchart(
+          mode: "clustered",
+          size: (8, auto),
+          label-key: 0,
+          value-key: (..range(1, {{ task_versions|length + 1 }})),
+          data,
+          labels: ({% for version in task_versions %}[{{ version }}]{% if not loop.last %}, {% endif %}{% endfor %}),
+          x-label: [Runtime (seconds)],
+          y-label: [Lemmas]
+        )
+      }),
+      caption: [Runtime Comparison by Version]
+    )
+  ],
+  [
+    #figure(
+      canvas({
+        draw.set-style(barchart: (bar-width: .8))
+        let data = (
+          {% for lemma_group in task.lemma_groups %}
+          {% set lemma_data = [] %}
+          {% for version in task_versions %}
+          {% for result in lemma_group.results %}
+          {% if result.tamarin_version == version %}
+          {% set _ = lemma_data.append(result.peak_memory) %}
+          {% endif %}
+          {% endfor %}
+          {% endfor %}
+          ([{{ lemma_group.lemma }}]{% for memory in lemma_data %}, {{ "%.2f"|format(memory) }}{% endfor %}),
+          {% endfor %}
+        )
+
+        chart.barchart(
+          mode: "clustered",
+          size: (8, auto),
+          label-key: 0,
+          value-key: (..range(1, {{ task_versions|length + 1 }})),
+          data,
+          labels: ({% for version in task_versions %}[{{ version }}]{% if not loop.last %}, {% endif %}{% endfor %}),
+          x-label: [Memory (MB)],
+          y-label: [Lemmas]
+        )
+      }),
+      caption: [Memory Usage Comparison by Version]
+    )
+  ]
+)
+{% endif %}
 
 {% set task_traces = report_data.traces|filter_traces_by_task(task)|list %}
 {% if task_traces %}
@@ -212,55 +430,134 @@
   image("{{ svg_file }}", width: 80%, height: 400pt, fit: "contain"),
   caption: [Trace visualization for {{ trace.lemma }}]
 )
-{% elif trace.svg_content %}
-#figure(
-  raw(trace.svg_content, lang: "svg"),
-  caption: [Trace visualization for {{ trace.lemma }}]
-)
 {% endif %}
 {% endfor %}
 {% endif %}
 
-{% endfor %}
-
-{% set failed_results = report_data.failed_results %}
-{% if failed_results %}
-= Errors
-
-== Error Summary
-
+{% if task.execution_timeline %}
+=== Task Timeline
 
 #figure(
-  table(
-    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 2fr),
-    stroke: 0.5pt,
-    [*Task*], [*Lemma*], [*Version*], [*Options*], [*Resources*], [*Error Type*], [*Description*],
-    {% for error in report_data.error_details %}
-    [`{{ error.task }}`],
-    [`{{ error.lemma }}`],
-    [{{ error.version }}],
-    [{{ error.options }}],
-    [{{ error.resources }}],
-    [{{ error.type }}],
-    [{{ error.message }}],
-    {% endfor %}
+  block(
+    width: 60%,
+    height: 120pt,
+    timeliney.timeline(
+      show-grid: false,
+      {
+        import timeliney: *
+
+        headerline(group(([{{ task.name|hyphenate(8) }}], 1)))
+
+        taskgroup(title: [Executions], {
+          {% for execution in task.execution_timeline %}
+          task("{{ execution.label|hyphenate(10) }}",
+               ({{ "%.1f"|format(execution.start / 10) }}, {{ "%.1f"|format(execution.end / 10) }}),
+               style: (stroke: 1pt + blue)
+          )
+          {% endfor %}
+        })
+      }
+    )
   ),
-  caption: [Detailed Error Information]
+  caption: [Timeline for {{ task.name }}]
+)
+{% endif %}
+
+{% endfor %}
+
+= Errors <errors>
+
+{% if report_data.has_errors %}
+
+=== Error Type Distribution
+
+#figure(
+  canvas({
+    let data = (
+      {% for error_dist in report_data.error_type_distribution %}
+      {% if error_dist.percentage > 0 %}
+      ([{{ error_dist.name }}], {{ error_dist.percentage }}),
+      {% endif %}
+      {% endfor %}
+    )
+    let colors = gradient.linear(red, orange, purple, maroon)
+    chart.piechart(
+      data,
+      value-key: 1,
+      label-key: 0,
+      radius: 2,
+      slice-style: colors,
+      outer-label: (content: "%", radius: 110%)
+    )
+  }),
+  caption: [Error Type Distribution]
 )
 
-== Detailed Error Information
+=== Error Summary
 
-{% for result in failed_results %}
-=== {{ result.task_name }}--{{ result.lemma }}--{{ result.tamarin_version }}
+#table(
+  columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 2fr),
+  stroke: 0.5pt,
+  table.header[*Task*][*Lemma*][*Resources*][*Options*][*Preprocessor*][*Tamarin Version*][*Error*][*Runtime*][*Peak Memory*][*Description*],
+  {% for error in report_data.error_summary %}
+    {% set error_loop = loop %}
+    {% for lemma_error in error.lemma_errors %}
+      {% set lemma_error_loop = loop %}
+      {% for result in lemma_error.results %}
+        {% if loop.first and lemma_error_loop.first %}
+          table.cell(rowspan: {{ error.total_errors }})[{{ error.task_name }}],
+        {% endif %}
+        {% if loop.first %}
+          table.cell(rowspan: {{ lemma_error.results|length }})[{{ lemma_error.lemma }}],
+          table.cell(rowspan: {{ lemma_error.results|length }})[{{ result.cores or 'Default' }}c / {{ result.memory or 'Default' }}GB / {{ result.timeout or 'Default' }}s],
+          table.cell(rowspan: {{ lemma_error.results|length }})[{{ result.options or "None" }}],
+          table.cell(rowspan: {{ lemma_error.results|length }})[{{ result.preprocessor or "None" }}],
+        {% endif %}
+        [{{ result.tamarin_version }}],
+        [{% if result.error_type == 'tamarin_error' %}#text(fill: red)[❌ Tamarin Error]
+        {% elif result.error_type == 'timeout' %}#text(fill: purple)[⏳ Timeout]
+        {% elif result.error_type == 'memory_limit' %}#text(fill: maroon)[🧠 Memory Limit]
+        {% else %}#text(fill: red)[❌ Error]
+        {% endif %}],
+        [{{ "%.2f"|format(result.runtime) }}s],
+        [{{ "%.2f"|format(result.peak_memory) }}MB],
+        [{{ result.error_description or "No description available" }}],
+      {% endfor %}
+    {% endfor %}
+  {% endfor %}
+)
 
-{{ result.error_description }}
+=== Detailed Error Information
 
-{% if result.stderr_lines %}
+{% for error in report_data.detailed_errors %}
+*{% if error.type == 'tamarin_error' %}❌ TAMARIN ERROR
+{% elif error.type == 'timeout' %}⏳ TIMED OUT
+{% elif error.type == 'memory_limit' %}🧠 MEMORY LIMIT
+{% else %}❌ UNEXPECTED ERROR
+{% endif %}:* {{ error.task_name }}
+
+*On lemma:* {{ error.lemma }}, *with tamarin-prover:* {{ error.tamarin_version }}
+
+{{ error.description }}
+
+{% if error.stderr_output %}
 ```bash
-{{ result.stderr_lines|join('\n') }}
+{{ error.stderr_output }}
 ```
 {% endif %}
+
 {% endfor %}
+
+*Rerun file:* `{{ report_data.rerun_file|relative_from_report }}`
+
+{% else %}
+#align(center)[
+  #text(size: 14pt, fill: green)[✅ *No errors encountered in this run*]
+
+  #v(0.5em)
+
+  All tasks completed successfully without any failures, timeouts, or memory limit issues.
+]
 {% endif %}
 
 #v(1fr)
