@@ -5,6 +5,8 @@ This module provides common test fixtures and configuration for testing
 the batch-tamarin package, including mock data and helper utilities.
 """
 
+# pyright: basic
+
 import json
 import tempfile
 from pathlib import Path

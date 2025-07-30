@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Tamarin Execution Report</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -14,55 +15,135 @@
             margin: 0 auto;
             padding: 20px;
         }
-        h1, h2, h3 { color: #2c3e50; }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
         table {
             border-collapse: collapse;
             width: 100%;
             margin: 20px 0;
         }
-        th, td {
+
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 12px;
             text-align: left;
         }
+
         th {
-            background-color: #f8f9fa;
+            background-color: #dfe9ee;
             font-weight: 600;
         }
+
         tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background-color: #f6f6f6;
         }
-        .success { color: #28a745; }
-        .failed { color: #dc3545; }
-        .warning { color: #ffc107; }
-        .info { color: #17a2b8; }
-        .mermaid {
-            margin: 20px 0;
-            text-align: center;
+
+        /* Simple task and lemma alternating colors */
+        .task-table tr.task-white {
+            background-color: white;
         }
-        .chart-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin: 20px 0;
+
+        .task-table tr.task-light-gray {
+            background-color: #f4fbff;
         }
-        .chart-item {
-            flex: 1;
-            min-width: 400px;
+
+        /* light blue accent */
+
+        /* Lemma alternation within white tasks */
+        .task-table tr.task-white.lemma-alt {
+            background-color: #f6f6f6;
         }
+
+        /* lighter gray */
+
+        /* Lemma alternation within light gray tasks */
+        .task-table tr.task-light-gray.lemma-alt {
+            background-color: #edf7ff;
+        }
+
+        /* deeper blue accent */
+        .success {
+            color: #28a745;
+        }
+
+        /* green for verified */
+        .failed {
+            color: #ec1026;
+        }
+
+        /* red for failed */
+        .warning {
+            color: #ea9400;
+        }
+
+        /* orange with green for timeout */
+        .info {
+            color: #116dd7;
+        }
+
+        /* blue for info */
+        .darkinfo {
+            color: #1200b9;
+        }
+
+        /* darker blue for info */
+        .memory {
+            color: #8b5cf6;
+        }
+
+        /* violet for memory limit */
+        .falsified {
+            color: #e600ff;
+        }
+
+        /* light violet for falsified */
+        .unterminated {
+            color: #dbc100;
+        }
+
+        /* yellow-orange for unterminated */
         pre {
             background-color: #f8f9fa;
             padding: 15px;
             border-radius: 5px;
             overflow-x: auto;
         }
+
         .error-details {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
+            background-color: #ffeaec;
+            border: 1px solid #ffdcdf;
             border-radius: 5px;
             padding: 15px;
             margin: 10px 0;
         }
+
+        .error-details h3 {
+            margin: 0;
+        }
+
+        .chart-div {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .chart-item {
+            flex: 1;
+            min-width: 400px;
+        }
+
         .trace-visualization {
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -70,16 +151,25 @@
             margin: 10px 0;
             background-color: #fff;
         }
+
         .trace-visualization svg {
             max-width: 100%;
             height: auto;
             border: 1px solid #eee;
             border-radius: 3px;
         }
+
         .trace-svg-container {
             text-align: center;
             margin: 20px 0;
             overflow-x: auto;
+        }
+
+        .settings,
+        .summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
@@ -87,242 +177,324 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
     <script>hljs.highlightAll();</script>
 </head>
+
 <body>
     <h1>Batch Tamarin Execution Report</h1>
 
     <div class="info">
-        <strong>Execution results from:</strong> {{ results_directory }}
-        <strong>Executed :</strong> {{ batch_execution_date.strftime('%Y-%m-%d %H:%M:%S') }}<br>
+        <strong>Execution results from:</strong> {{ results_directory }}<br>
+        <strong>Executed :</strong> {{ batch_execution_date.strftime('%Y-%m-%d %H:%M:%S') }}
     </div>
 
-    <h2>Overview</h2>
+    <h2 id="table-of-contents">Table of Contents</h2>
+    <ul>
+        <li><a href="#overview">Overview</a>
+            <ul>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#global-summary">Global Summary</a></li>
+                <li><a href="#global-results">Global Results</a></li>
+                <li><a href="#global-timeline">Global Execution Timeline</a></li>
+            </ul>
+        </li>
+        <li><a href="#task-details">Task Details</a>
+            <ul>
+                {% for task in report_data.tasks %}
+                <li><a href="#task-{{ task.name|replace(' ', '-')|lower }}">{{ task.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li><a href="#errors">Errors</a></li>
+    </ul>
 
-    <h3>Configuration</h3>
+    <h2 id="overview">Overview</h2>
 
-    <h4>Global Settings</h4>
-    <table>
-        <thead>
-            <tr>
-                <th>Setting</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Max cores</td>
-                <td>{{ report_data.config.global_max_cores or 'Not specified' }}</td>
-            </tr>
-            <tr>
-                <td>Max memory</td>
-                <td>{{ report_data.config.global_max_memory or 'Not specified' }}GB</td>
-            </tr>
-            <tr>
-                <td>Default timeout</td>
-                <td>{{ report_data.config.default_timeout or 'Not specified' }}s</td>
-            </tr>
-            <tr>
-                <td>Output directory</td>
-                <td>{{ report_data.config.output_directory or 'Not specified' }}</td>
-            </tr>
-        </tbody>
-    </table>
+    <h3 id="configuration">Configuration</h3>
 
-    <h4>Tamarin Versions</h4>
-    <table>
-        <thead>
-            <tr>
-                <th>Alias</th>
-                <th>Path</th>
-                <th>Version</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for alias, info in report_data.config.tamarin_versions.items() %}
-            <tr>
-                <td>{{ alias }}</td>
-                <td>{{ info.path }}</td>
-                <td>{{ info.version }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="settings">
+        <div>
+            <h4>Global Settings</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Max cores</td>
+                        <td>{{ report_data.config.global_max_cores or 'Not specified' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Max memory</td>
+                        <td>{{ report_data.config.global_max_memory or 'Not specified' }}GB</td>
+                    </tr>
+                    <tr>
+                        <td>Default timeout</td>
+                        <td>{{ report_data.config.default_timeout or 'Not specified' }}s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <h3>Summary</h3>
+        <div>
+            <h4>Tamarin Versions</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>Path</th>
+                        <th>Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alias, info in report_data.config.tamarin_versions.items() %}
+                    <tr>
+                        <td>{{ alias }}</td>
+                        <td><code>{{ info.path }}</code></td>
+                        <td>{{ info.version }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h3 id="global-summary">Global Summary</h3>
 
     <h4>Global Statistics</h4>
-    <table>
-        <thead>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Total tasks</td>
-                <td>{{ report_data.statistics.total_tasks }}</td>
-            </tr>
-            <tr>
-                <td>Extracted lemmas</td>
-                <td>{{ report_data.statistics.total_lemmas }}</td>
-            </tr>
-            <tr>
-                <td>Cached lemmas</td>
-                <td>{{ report_data.statistics.cache_hits }}</td>
-            </tr>
-            <tr>
-                <td>Successful tasks</td>
-                <td class="success">{{ report_data.statistics.successful_tasks }} ({{ "%.1f"|format(report_data.statistics.successful_tasks_percentage) }}%)</td>
-            </tr>
-            <tr>
-                <td>Failed tasks</td>
-                <td class="failed">{{ report_data.statistics.failed_tasks }} ({{ "%.1f"|format(report_data.statistics.failed_tasks_percentage) }}%)</td>
-            </tr>
-            <tr>
-                <td>Total runtime</td>
-                <td>{{ "%.2f"|format(report_data.statistics.total_runtime) }}s</td>
-            </tr>
-            <tr>
-                <td>Total memory usage (peak)</td>
-                <td>{{ "%.2f"|format(report_data.statistics.total_memory_usage) }}MB</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="chart-container">
-        {% if charts.success_rate %}
-        <div class="chart-item">
-            <h4>Success Rate</h4>
-            <div class="mermaid">
-                {{ charts.success_rate.to_mermaid_pie() }}
-            </div>
-        </div>
-        {% endif %}
-        {% if charts.cache_hit_rate %}
-        <div class="chart-item">
-            <h4>Cache Performance</h4>
-            <div class="mermaid">
-                {{ charts.cache_hit_rate.to_mermaid_pie() }}
-            </div>
-        </div>
-        {% endif %}
+    <div class="summary">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total Executed Lemmas</td>
+                    <td>{{ report_data.statistics.total_lemmas }}</td>
+                </tr>
+                <tr>
+                    <td>Verified Lemmas</td>
+                    <td class="success">{{ report_data.statistics.verified_lemmas }} ({{ "%.1f"|format(report_data.statistics.verified_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Falsified Lemmas</td>
+                    <td class="falsified">{{ report_data.statistics.falsified_lemmas }} ({{ "%.1f"|format(report_data.statistics.falsified_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Unterminated Lemmas</td>
+                    <td class="unterminated">{{ report_data.statistics.unterminated_lemmas }} ({{ "%.1f"|format(report_data.statistics.unterminated_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Failed Executions</td>
+                    <td class="failed">{{ report_data.statistics.failed_lemmas }} ({{ "%.1f"|format(report_data.statistics.failed_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Lemmas killed by timeout</td>
+                    <td class="warning">{{ report_data.statistics.timeout_lemmas }} ({{ "%.1f"|format(report_data.statistics.timeout_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Lemmas killed for memory limit</td>
+                    <td class="memory">{{ report_data.statistics.memory_limit_lemmas }} ({{ "%.1f"|format(report_data.statistics.memory_limit_percentage) }}%)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total runtime</td>
+                    <td>{{ "%.1f"|format(report_data.statistics.total_runtime) }}s</td>
+                </tr>
+                <tr>
+                    <td>Total peak memory used</td>
+                    <td>{{ "%.1f"|format(report_data.statistics.total_memory_usage / 1024) }}GB</td>
+                </tr>
+                <tr>
+                    <td>Max peak memory used</td>
+                    <td>{{ "%.1f"|format(report_data.statistics.max_memory_usage / 1024) }}GB</td>
+                </tr>
+                <tr>
+                    <td>Freshly executed tasks</td>
+                    <td class="darkinfo">{{ report_data.statistics.fresh_executions }} ({{ "%.1f"|format(report_data.statistics.fresh_percentage) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Cache hits</td>
+                    <td class="info">{{ report_data.statistics.cache_hits }} ({{ "%.1f"|format(report_data.statistics.cache_hit_percentage) }}%)</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <div class="chart-container">
-        {% if charts.runtime_per_task %}
         <div class="chart-item">
-            <h4>Runtime per Task</h4>
-            <div class="mermaid">
-                {{ charts.runtime_per_task.to_mermaid_bar() }}
-            </div>
+            <div id="success_rate_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
-        {% endif %}
-        {% if charts.memory_per_task %}
         <div class="chart-item">
-            <h4>Memory Usage per Task</h4>
-            <div class="mermaid">
-                {{ charts.memory_per_task.to_mermaid_bar() }}
-            </div>
+            <div id="cache_performance_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
-        {% endif %}
     </div>
 
-    {% if charts.execution_timeline %}
-    <h4>Execution Timeline</h4>
-    <div class="mermaid">
-        {{ charts.execution_timeline.to_mermaid_gantt() }}
-    </div>
-    {% endif %}
+    <div id="runtime_per_task_chart" class="chart-div" style="width: 100%; height: 400px; margin: 20px 0;"></div>
+    <div id="memory_per_task_chart" class="chart-div" style="width: 100%; height: 400px; margin: 20px 0;"></div>
 
-    <h2>Task Details</h2>
-
-    {% for task in report_data.tasks %}
-    <h3>Task: {{ task.name }}</h3>
-
-    <h4>Execution Summary</h4>
-    <table>
+    <h3 id="global-results">Global Results</h3>
+    <table class="task-table">
         <thead>
             <tr>
-                <th>Lemma</th>
-                <th>Options</th>
-                <th>Cores</th>
-                <th>Memory</th>
-                <th>Timeout</th>
+                <th>Task</th>
+                <th>Extracted lemma</th>
                 <th>Tamarin Version</th>
                 <th>Status</th>
-                <th>Memory Used</th>
                 <th>Runtime</th>
+                <th>Peak Memory Used</th>
                 <th>Cache Hit</th>
             </tr>
         </thead>
         <tbody>
-            {% for result in task.results %}
-            <tr>
-                <td>{{ result.lemma }}</td>
-                <td>{{ result.tamarin_options|join(' ') if result.tamarin_options else 'None' }}</td>
-                <td>{{ result.max_cores or 'Default' }}</td>
-                <td>{{ result.max_memory or 'Default' }}GB</td>
-                <td>{{ result.timeout or 'Default' }}s</td>
-                <td>{{ result.tamarin_version }}</td>
-                <td class="{{ 'success' if result.status == 'success' else 'failed' }}">
-                    {{ "✅ Success" if result.status == "success" else "❌ Failed" }}
-                </td>
-                <td>{{ "%.2f"|format(result.peak_memory) }}MB</td>
-                <td>{{ "%.2f"|format(result.runtime) }}s</td>
-                <td class="{{ 'success' if result.cache_hit else 'failed' }}">
-                    {{ "✅" if result.cache_hit else "❌" }}
-                </td>
-            </tr>
+            {% for task in report_data.tasks %}
+                {% set task_rowspan = task.total_results %}
+                {% set outer_loop = loop %}
+                {% set task_color = "task-white" if outer_loop.index0 % 2 == 0 else "task-light-gray" %}
+                {% for lemma_group in task.lemma_groups %}
+                    {% set lemma_rowspan = lemma_group.results|length %}
+                    {% set middle_loop = loop %}
+                    {% set lemma_alt = middle_loop.index0 % 2 == 1 %}
+                    {% for result in lemma_group.results %}
+                        <tr class="{{ task_color }}{% if lemma_alt %} lemma-alt{% endif %}">
+                            {% if loop.first and middle_loop.first %}
+                                <td{% if task_rowspan > 1 %} rowspan="{{ task_rowspan }}"{% endif %}>
+                                    <strong>{{ task.name }}</strong><br>
+                                    <small style="color: #6c757d;">{{ task.theory_file }}</small>
+                                </td>
+                            {% endif %}
+                            {% if loop.first %}
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_group.lemma }}</td>
+                            {% endif %}
+                            <td>{{ result.tamarin_version }}</td>
+                            <td class="{% if result.status == 'verified' %}success{% elif result.status == 'falsified' %}falsified{% elif result.status == 'unterminated' %}unterminated{% elif result.status == 'timeout' %}warning{% elif result.status == 'memory_limit' %}memory{% else %}failed{% endif %}">
+                                {% if result.status == 'verified' %} ✅ Verified
+                                {% elif result.status == 'falsified' %} ❗ Falsified
+                                {% elif result.status == 'unterminated' %} 🚧 Unterminated
+                                {% elif result.status == 'timeout' %} ⏳ Timed Out
+                                {% elif result.status == 'memory_limit' %} 🧠 Memory Limit
+                                {% else %} ❌ Error
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.1f"|format(result.runtime) }}s</td>
+                            <td>{{ "%.1f"|format(result.peak_memory) }}MB</td>
+                            <td class="info">{% if result.cache_hit %}💾 Yes{% else %}💾 No{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
             {% endfor %}
         </tbody>
     </table>
 
-    {% if report_data.has_version_comparisons(task.name) %}
-    <h4>Version Comparisons</h4>
+    <h3 id="global-timeline">Global Execution Timeline</h3>
+    <div id="global_timeline_chart" class="chart-div" style="width: 100%; height: 600px;"></div>
 
+    <h2 id="task-details">Task Details</h2>
+
+    {% for task in report_data.tasks %}
+    <h3 id="task-{{ task.name|replace(' ', '-')|lower }}">Task: {{ task.name }}</h3>
+
+    <h4>Execution Summary</h4>
+    <table class="task-table">
+        <thead>
+            <tr>
+                <th>Lemma</th>
+                <th>Resources config</th>
+                <th>Options</th>
+                <th>Preprocessor</th>
+                <th>Tamarin Version</th>
+                <th>Status</th>
+                <th>Runtime</th>
+                <th>Peak Memory Used</th>
+                <th>Cache Hit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lemma_group in task.lemma_groups %}
+                {% set lemma_rowspan = lemma_group.results|length %}
+                {% set outer_loop = loop %}
+                {% set lemma_color = "task-white" if outer_loop.index0 % 2 == 0 else "task-light-gray" %}
+                {% for result in lemma_group.results %}
+                    {% set result_alt = loop.index0 % 2 == 1 %}
+                    <tr class="{{ lemma_color }}{% if result_alt %} lemma-alt{% endif %}">
+                        {% if loop.first %}
+                            <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_group.lemma }}</td>
+                            <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.cores }}c / {{ result.memory }}GB / {{ result.timeout }}s</td>
+                            <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.options or "None" }}</td>
+                            <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.preprocessor or "None" }}</td>
+                        {% endif %}
+                        <td>{{ result.tamarin_version }}</td>
+                        <td class="{% if result.status == 'verified' %}success{% elif result.status == 'falsified' %}falsified{% elif result.status == 'unterminated' %}unterminated{% elif result.status == 'timeout' %}warning{% elif result.status == 'memory_limit' %}memory{% else %}failed{% endif %}">
+                            {% if result.status == 'verified' %}✅ Verified
+                            {% elif result.status == 'falsified' %}❗ Falsified
+                            {% elif result.status == 'unterminated' %}🚧 Unterminated
+                            {% elif result.status == 'timeout' %}⏳ Timed Out
+                            {% elif result.status == 'memory_limit' %}🧠 Memory Limit
+                            {% else %}❌ Error
+                            {% endif %}
+                        </td>
+                        <td>{{ "%.2f"|format(result.runtime) }}s</td>
+                        <td>{{ "%.2f"|format(result.peak_memory) }}MB</td>
+                        <td class="info">{% if result.cache_hit %}💾 Yes{% else %}💻 No{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% set task_versions = [] %}
+    {% for lemma_group in task.lemma_groups %}
+    {% for result in lemma_group.results %}
+    {% if result.tamarin_version not in task_versions %}
+    {% set _ = task_versions.append(result.tamarin_version) %}
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+    {% if task_versions|length > 1 %}
     <div class="chart-container">
         <div class="chart-item">
-            <h5>Runtime Comparison</h5>
-            <div class="mermaid">
-                xychart-beta
-                    title "Runtime by Version for {{ task.name }}"
-                    x-axis [{% for version in task.tamarin_versions %}"{{ version }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-                    y-axis "Runtime (seconds)"
-                    {% for lemma in task.lemmas %}
-                    line [{% for version in task.tamarin_versions %}{% set results = report_data.get_results_by_lemma(lemma)|selectattr('tamarin_version', 'equalto', version)|list %}{{ results[0].runtime if results else 0 }}{% if not loop.last %}, {% endif %}{% endfor %}]
-                    {% endfor %}
-            </div>
+            <div id="runtime_comparison_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
         <div class="chart-item">
-            <h5>Memory Usage Comparison</h5>
-            <div class="mermaid">
-                xychart-beta
-                    title "Memory Usage by Version for {{ task.name }}"
-                    x-axis [{% for version in task.tamarin_versions %}"{{ version }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-                    y-axis "Memory (MB)"
-                    {% for lemma in task.lemmas %}
-                    line [{% for version in task.tamarin_versions %}{% set results = report_data.get_results_by_lemma(lemma)|selectattr('tamarin_version', 'equalto', version)|list %}{{ results[0].peak_memory if results else 0 }}{% if not loop.last %}, {% endif %}{% endfor %}]
-                    {% endfor %}
-            </div>
+            <div id="memory_comparison_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
     {% endif %}
 
-    {% set task_traces = report_data.traces|selectattr('lemma', 'in', task.lemmas)|list %}
+    {% if task.execution_timeline %}
+    <div class="chart-item">
+        <div id="task_timeline_{{ task.name|replace(' ', '_')|lower }}" class="chart-div" style="width: 100%; height: 200px;"></div>
+    </div>
+    {% endif %}
+
+    {% set task_traces = report_data.traces|filter_traces_by_task(task)|list %}
     {% if task_traces %}
     <h4>Traces</h4>
     {% for trace in task_traces %}
     <div class="trace-visualization">
         <h5>{{ trace.lemma }} ({{ trace.tamarin_version }})</h5>
         <p>
-            <strong>JSON File:</strong> <a href="{{ trace.json_file }}">{{ trace.json_file }}</a>
+            <strong>JSON File:</strong> <a href="{{ trace.json_file|relative_from_report }}">{{ trace.json_file|relative_from_report }}</a>
             {% if trace.dot_file %}
-            <br><strong>DOT File:</strong> <a href="{{ trace.dot_file }}">{{ trace.dot_file }}</a>
+            <br><strong>DOT File:</strong> <a href="{{ trace.dot_file|relative_from_report }}">{{ trace.dot_file|relative_from_report }}</a>
             {% endif %}
         </p>
-        {% if trace.svg_content %}
+        {% if trace.dot_file %}
         <div class="trace-svg-container">
-            {{ trace.svg_content|safe }}
+            <img src="{{ trace.dot_file|replace('.dot', '.svg')|relative_from_report }}" alt="{{ trace.lemma }} trace visualization" style="max-width: 100%; height: auto;">
         </div>
         {% endif %}
     </div>
@@ -331,55 +503,89 @@
 
     {% endfor %}
 
-    {% set failed_results = report_data.failed_results %}
-    {% if failed_results %}
-    <h2>Errors</h2>
+    <h2 id="errors">Errors</h2>
 
-    {% if charts.error_types %}
-    <h3>Error Types Distribution</h3>
-    <div class="mermaid">
-        {{ charts.error_types.to_mermaid_pie() }}
-    </div>
-    {% endif %}
+    {% if report_data.has_errors %}
+
+    <div id="error_types_chart" class="chart-div" style="width: 100%; height: 400px;"></div>
 
     <h3>Error Summary</h3>
-    <table>
+    <table class="task-table">
         <thead>
             <tr>
                 <th>Task</th>
                 <th>Lemma</th>
-                <th>Version</th>
+                <th>Resources config</th>
                 <th>Options</th>
-                <th>Resources</th>
-                <th>Error Type</th>
+                <th>Preprocessor</th>
+                <th>Tamarin Version</th>
+                <th>Error</th>
+                <th>Runtime</th>
+                <th>Peak Memory Used</th>
                 <th>Description</th>
             </tr>
         </thead>
         <tbody>
-            {% for error in report_data.error_details %}
-            <tr>
-                <td>{{ error.task }}</td>
-                <td>{{ error.lemma }}</td>
-                <td>{{ error.version }}</td>
-                <td>{{ error.options }}</td>
-                <td>{{ error.resources }}</td>
-                <td>{{ error.type }}</td>
-                <td>{{ error.message }}</td>
-            </tr>
+            {% for error in report_data.error_summary %}
+                {% set task_rowspan = error.total_errors %}
+                {% set outer_loop = loop %}
+                {% set task_color = "task-white" if outer_loop.index0 % 2 == 0 else "task-light-gray" %}
+                {% for lemma_error in error.lemma_errors %}
+                    {% set lemma_rowspan = lemma_error.results|length %}
+                    {% set middle_loop = loop %}
+                    {% set lemma_alt = middle_loop.index0 % 2 == 1 %}
+                    {% for result in lemma_error.results %}
+                        <tr class="{{ task_color }}{% if lemma_alt %} lemma-alt{% endif %}">
+                            {% if loop.first and middle_loop.first %}
+                                <td{% if task_rowspan > 1 %} rowspan="{{ task_rowspan }}"{% endif %}>{{ error.task_name }}</td>
+                            {% endif %}
+                            {% if loop.first %}
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_error.lemma }}</td>
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.cores }}c / {{ result.memory }}GB / {{ result.timeout }}s</td>
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.options or "None" }}</td>
+                                <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ result.preprocessor or "None" }}</td>
+                            {% endif %}
+                            <td>{{ result.tamarin_version }}</td>
+                            <td class="{% if result.error_type == 'tamarin_error' %}failed{% elif result.error_type == 'timeout' %}warning{% elif result.error_type == 'memory_limit' %}memory{% else %}failed{% endif %}">
+                                {% if result.error_type == 'tamarin_error' %}❌ Tamarin Error
+                                {% elif result.error_type == 'timeout' %}⏳ Timeout
+                                {% elif result.error_type == 'memory_limit' %}🧠 Memory Limit
+                                {% else %}❌ Error
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.2f"|format(result.runtime) }}s</td>
+                            <td>{{ "%.2f"|format(result.peak_memory) }}MB</td>
+                            <td>{{ result.error_description or "No description available" }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
             {% endfor %}
         </tbody>
     </table>
 
     <h3>Detailed Error Information</h3>
-    {% for result in failed_results %}
+    {% for error in report_data.detailed_errors %}
     <div class="error-details">
-        <h4>{{ result.task_name }}--{{ result.lemma }}--{{ result.tamarin_version }}</h4>
-        <p>{{ result.error_description }}</p>
-        {% if result.stderr_lines %}
-        <pre><code class="language-bash">{{ result.stderr_lines|join('\n') }}</code></pre>
+        <h3><span class="{% if error.type == 'tamarin_error' %}failed{% elif error.type == 'timeout' %}warning{% elif error.type == 'memory_limit' %}memory{% else %}failed{% endif %}">
+            {% if error.type == 'tamarin_error' %}❌ TAMARIN ERROR :
+            {% elif error.type == 'timeout' %}⏳ TIMED OUT :
+            {% elif error.type == 'memory_limit' %}🧠 MEMORY LIMIT :
+            {% else %}❌ UNEXPECTED ERROR :
+            {% endif %}</span> {{ error.task_name }}</h3>
+        <h4>On lemma : {{ error.lemma }}, with tamarin-prover : {{ error.tamarin_version }}</h4>
+        <p>{{ error.description }}</p>
+        {% if error.stderr_output %}
+        <pre><code class="zsh">{{ error.stderr_output }}</code></pre>
         {% endif %}
     </div>
     {% endfor %}
+
+    <h4>Rerun file : <a href="{{ report_data.rerun_file|relative_from_report }}">{{ report_data.rerun_file|relative_from_report }}</a></h4>
+    {% else %}
+    <div class="info">
+        <p><strong>✅ No errors encountered in this run</strong></p>
+        <p>All tasks completed successfully without any failures, timeouts, or memory limit issues.</p>
+    </div>
     {% endif %}
 
     <hr>
@@ -388,11 +594,339 @@
     </footer>
 
     <script>
-        mermaid.initialize({
-            startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose'
+        // Load Google Charts
+        google.charts.load('current', {
+            'packages': ['corechart', 'bar', 'timeline']
         });
+        google.charts.setOnLoadCallback(drawCharts);
+
+        function drawCharts() {
+            drawSuccessRateChart();
+            drawCachePerformanceChart();
+            drawRuntimePerTaskChart();
+            drawMemoryPerTaskChart();
+            drawGlobalTimelineChart();
+            {% if report_data.has_errors %}
+            drawErrorTypesChart();
+            {% endif %}
+
+            // Draw task-specific charts
+            {% for task in report_data.tasks %}
+            {% set task_versions = [] %}
+            {% for lemma_group in task.lemma_groups %}
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version not in task_versions %}
+            {% set _ = task_versions.append(result.tamarin_version) %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% if task_versions|length > 1 %}
+            drawRuntimeComparisonChart_{{ task.name|replace(' ', '_')|lower }}();
+            drawMemoryComparisonChart_{{ task.name|replace(' ', '_')|lower }}();
+            {% endif %}
+            {% if task.execution_timeline %}
+            drawTaskTimelineChart_{{ task.name|replace(' ', '_')|lower }}();
+            {% endif %}
+            {% endfor %}
+        }
+
+        // Success Rate Pie Chart
+        function drawSuccessRateChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Status', 'Percentage'],
+                {% if report_data.statistics.verified_percentage > 0 %}['Verified', {{ report_data.statistics.verified_percentage }}],{% endif %}
+                {% if report_data.statistics.falsified_percentage > 0 %}['Falsified', {{ report_data.statistics.falsified_percentage }}],{% endif %}
+                {% if report_data.statistics.unterminated_percentage > 0 %}['Unterminated', {{ report_data.statistics.unterminated_percentage }}],{% endif %}
+                {% if report_data.statistics.failed_percentage > 0 %}['Failed', {{ report_data.statistics.failed_percentage }}],{% endif %}
+                {% if report_data.statistics.timeout_percentage > 0 %}['Timeout', {{ report_data.statistics.timeout_percentage }}],{% endif %}
+                {% if report_data.statistics.memory_limit_percentage > 0 %}['Memory Limit', {{ report_data.statistics.memory_limit_percentage }}]{% endif %}
+            ]);
+
+            var options = {
+                title: 'Success Rate',
+                colors: ['#28a745', '#e600ff', '#dbc100', '#ec1026', '#ea9400', '#8b5cf6'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('success_rate_chart'));
+            chart.draw(data, options);
+        }
+
+        // Cache Performance Pie Chart
+        function drawCachePerformanceChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Type', 'Percentage'],
+                ['Cache Hit', {{ report_data.statistics.cache_hit_percentage }}],
+                ['Freshly Executed', {{ report_data.statistics.fresh_percentage }}]
+            ]);
+
+            var options = {
+                title: 'Cache Performance',
+                colors: ['#116dd7', '#1200b9'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('cache_performance_chart'));
+            chart.draw(data, options);
+        }
+
+        // Runtime per Task Horizontal Bar Chart
+        function drawRuntimePerTaskChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Task', 'Runtime (seconds)'],
+                {% for task in report_data.tasks %}
+                ['{{ task.name[-30:] }}', {{ "%.1f"|format(task.total_runtime) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                chart: {
+                    title: 'Runtime per Task',
+                    subtitle: 'Total execution time in seconds'
+                },
+                bars: 'horizontal',
+                hAxis: { title: 'Runtime (seconds)' },
+                vAxis: { title: 'Tasks' },
+                colors: ['#1f77b4'],
+                chartArea: { width: '70%', height: '80%' }
+            };
+
+            var chart = new google.charts.Bar(document.getElementById('runtime_per_task_chart'));
+            chart.draw(data, google.charts.Bar.convertOptions(options));
+        }
+
+        // Memory per Task Horizontal Bar Chart
+        function drawMemoryPerTaskChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Task', 'Memory (MB)'],
+                {% for task in report_data.tasks %}
+                ['{{ task.name[-30:] }}', {{ "%.1f"|format(task.peak_memory) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                chart: {
+                    title: 'Memory Usage per Task',
+                    subtitle: 'Peak memory usage in MB'
+                },
+                bars: 'horizontal',
+                hAxis: { title: 'Memory (MB)' },
+                vAxis: { title: 'Tasks' },
+                colors: ['#ff7f0e'],
+                chartArea: { width: '70%', height: '80%' }
+            };
+
+            var chart = new google.charts.Bar(document.getElementById('memory_per_task_chart'));
+            chart.draw(data, google.charts.Bar.convertOptions(options));
+        }
+
+        // Global Timeline Chart
+        function drawGlobalTimelineChart() {
+            var container = document.getElementById('global_timeline_chart');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Task' });
+            dataTable.addColumn({ type: 'string', id: 'Label' });
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+
+            // Use current time as base for timeline
+            var baseTime = new Date().getTime();
+            var timelineData = [];
+            {% for task in report_data.tasks %}
+            {% if task.execution_timeline %}
+            {% for item in task.execution_timeline %}
+            timelineData.push(['{{ task.name }}', '{{ item.label }}', new Date(baseTime + {{ "%.3f"|format(item.start * 1000) }}), new Date(baseTime + {{ "%.3f"|format(item.end * 1000) }})]);
+            {% endfor %}
+            {% endif %}
+            {% endfor %}
+
+            dataTable.addRows(timelineData);
+
+            var options = {
+                title: 'Global Execution Timeline',
+                timeline: {
+                    groupByRowLabel: true,
+                    showRowLabels: true
+                },
+                backgroundColor: '#fafafa'
+            };
+
+            chart.draw(dataTable, options);
+        }
+
+        {% if report_data.has_errors %}
+        // Error Types Pie Chart
+        function drawErrorTypesChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Error Type', 'Percentage'],
+                {% for error_type in report_data.error_type_distribution %}
+                ['{{ error_type.name }}', {{ "%.1f"|format(error_type.percentage) }}]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                title: 'Error Types',
+                colors: ['#ec1026', '#ea9400', '#8b5cf6', '#d95f02', '#7570b3'],
+                legend: { position: 'bottom' },
+                chartArea: { width: '80%', height: '70%' }
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('error_types_chart'));
+            chart.draw(data, options);
+        }
+        {% endif %}
+
+        {% for task in report_data.tasks %}
+        {% set task_versions = [] %}
+        {% for lemma_group in task.lemma_groups %}
+        {% for result in lemma_group.results %}
+        {% if result.tamarin_version not in task_versions %}
+        {% set _ = task_versions.append(result.tamarin_version) %}
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+        {% if task_versions|length > 1 %}
+        // Runtime Comparison Chart for {{ task.name }}
+        function drawRuntimeComparisonChart_{{ task.name|replace(' ', '_')|lower }}() {
+            // Build versions list from actual data
+            var versions = [{% for version in task_versions %}'{{ version }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+
+            // Build chart data directly from lemma_groups
+            var chartData = [
+                ['Lemma'].concat(versions)
+            ];
+
+            {% for lemma_group in task.lemma_groups %}
+            var lemmaData = ['{{ lemma_group.lemma }}'];
+            // For each version, find the matching result
+            {% for target_version in task_versions %}
+            var foundValue = 0;
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version == target_version %}
+            foundValue = {{ result.runtime }};
+            {% endif %}
+            {% endfor %}
+            lemmaData.push(foundValue);
+            {% endfor %}
+            chartData.push(lemmaData);
+            {% endfor %}
+
+
+            var data = google.visualization.arrayToDataTable(chartData);
+
+            var options = {
+                chart: {
+                    title: 'Runtime by Version for {{ task.name }}',
+                    subtitle: 'Comparison across Tamarin versions'
+                },
+                bars: 'horizontal',
+                hAxis: {
+                    title: 'Runtime (seconds)',
+                    minValue: 0
+                },
+                vAxis: { title: 'Lemmas' },
+                colors: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            };
+
+            var chartElement = document.getElementById('runtime_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            if (chartElement) {
+                var chart = new google.charts.Bar(chartElement);
+                chart.draw(data, google.charts.Bar.convertOptions(options));
+            } else {
+                console.error('Chart element not found: runtime_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            }
+        }
+
+        // Memory Comparison Chart for {{ task.name }}
+        function drawMemoryComparisonChart_{{ task.name|replace(' ', '_')|lower }}() {
+            // Build versions list from actual data
+            var versions = [{% for version in task_versions %}'{{ version }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+
+            // Build chart data directly from lemma_groups
+            var chartData = [
+                ['Lemma'].concat(versions)
+            ];
+
+            {% for lemma_group in task.lemma_groups %}
+            var lemmaData = ['{{ lemma_group.lemma }}'];
+            // For each version, find the matching result
+            {% for target_version in task_versions %}
+            var foundValue = 0;
+            {% for result in lemma_group.results %}
+            {% if result.tamarin_version == target_version %}
+            foundValue = {{ result.peak_memory }};
+            {% endif %}
+            {% endfor %}
+            lemmaData.push(foundValue);
+            {% endfor %}
+            chartData.push(lemmaData);
+            {% endfor %}
+
+
+            var data = google.visualization.arrayToDataTable(chartData);
+
+            var options = {
+                chart: {
+                    title: 'Memory Usage by Version for {{ task.name }}',
+                    subtitle: 'Comparison across Tamarin versions'
+                },
+                bars: 'horizontal',
+                hAxis: {
+                    title: 'Memory (MB)',
+                    minValue: 0
+                },
+                vAxis: { title: 'Lemmas' },
+                colors: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            };
+
+            var chartElement = document.getElementById('memory_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            if (chartElement) {
+                var chart = new google.charts.Bar(chartElement);
+                chart.draw(data, google.charts.Bar.convertOptions(options));
+            } else {
+                console.error('Chart element not found: memory_comparison_{{ task.name|replace(" ", "_")|lower }}');
+            }
+        }
+        {% endif %}
+
+        {% if task.execution_timeline %}
+        // Task Timeline Chart for {{ task.name }}
+        function drawTaskTimelineChart_{{ task.name|replace(' ', '_')|lower }}() {
+            var container = document.getElementById('task_timeline_{{ task.name|replace(" ", "_")|lower }}');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Task' });
+            dataTable.addColumn({ type: 'string', id: 'Label' });
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+
+            // Use current time as base for timeline
+            var baseTime = new Date().getTime();
+            dataTable.addRows([
+                {% for execution in task.execution_timeline %}
+                ['{{ task.name }}', '{{ execution.label }}', new Date(baseTime + {{ "%.3f"|format(execution.start * 1000) }}), new Date(baseTime + {{ "%.3f"|format(execution.end * 1000) }})]{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]);
+
+            var options = {
+                title: 'Execution Timeline for {{ task.name }}',
+                timeline: {
+                    groupByRowLabel: false,
+                    showRowLabels: false
+                },
+                backgroundColor: '#fafafa'
+            };
+
+            chart.draw(dataTable, options);
+        }
+        {% endif %}
+        {% endfor %}
     </script>
 </body>
+
 </html>

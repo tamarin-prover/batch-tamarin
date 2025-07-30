@@ -1,0 +1,271 @@
+{
+	"config": {
+		"global_max_cores": "max",
+		"global_max_memory": "max",
+		"default_timeout": 80,
+		"output_directory": "complete-example-results"
+	},
+	"tamarin_versions": {
+		"stable": {
+			"path": "tamarin-binaries/tamarin-prover-1.10/1.10.0/bin/tamarin-prover"
+		},
+		"dev": {
+			"path": "tamarin-binaries/tamarin-prover-dev/1.11.0/bin/tamarin-prover"
+		},
+		"legacy": {
+			"path": "tamarin-binaries/tamarin-prover-1.8/1.8.0/bin/tamarin-prover"
+		}
+	},
+	"tasks": {
+		"minInjection": {
+			"theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
+			"tamarin_versions": ["dev"],
+			"output_file_prefix": "minInjection",
+			"tamarin_options": ["--heuristic=S"]
+		},
+		"minHashChain": {
+			"theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+			"tamarin_versions": ["stable", "dev", "legacy"],
+			"output_file_prefix": "minHashChain",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			}
+		},
+		"minHashChainSuccessLemma": {
+			"theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "minHashChainSuccessLemma",
+			"resources": {
+				"max_cores": 2
+			},
+			"lemmas": [
+				{
+					"name": "Success_chain",
+					"tamarin_versions": ["dev"],
+					"resources": {
+						"max_memory": 1,
+						"timeout": 50
+					}
+				}
+			]
+		},
+		"simpleChallengePreprocessorKEYWORD1": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "basic_KEYWORD1",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD1"]
+		},
+		"simpleChallengePreprocessorKEYWORD2": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "basic_KEYWORD2",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD1", "KEYWORD2"]
+		},
+		"shouldFail": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "shouldFail",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD2"]
+		},
+		"shouldMemoryLimit": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable", "dev"],
+			"output_file_prefix": "shouldMemoryLimit",
+			"resources": {
+				"max_cores": 4,
+				"max_memory": 1
+			},
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1"
+				},
+				{
+					"name": "nonce_reuse_key_type"
+				}
+			]
+		},
+		"shouldTimeout": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "shouldTimeout",
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"tamarin_versions": ["stable", "dev"],
+					"resources": {
+						"max_cores": 4,
+						"max_memory": 16,
+						"timeout": 15
+					}
+				}
+			]
+		},
+		"falsifiedLemma": {
+			"theory_file": "examples/__protocols__/errors.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "falsifiedLemma",
+			"lemmas": [
+				{
+					"name": "error_lemma_1",
+					"resources": {
+						"max_cores": 1
+					}
+				}
+			]
+		},
+		"unterminatedLemma": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "unterminatedLemma",
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"resources": {
+						"max_cores": 1,
+						"max_memory": 1,
+						"timeout": 20
+					},
+					"tamarin_options": ["--bound=2"]
+				}
+			]
+		},
+		"minInjection2": {
+			"theory_file": "examples/__protocols__/MinimalInjectiveFact.spthy",
+			"tamarin_versions": ["dev"],
+			"output_file_prefix": "minInjection",
+			"tamarin_options": ["--heuristic=S"]
+		},
+		"minHashChain2": {
+			"theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+			"tamarin_versions": ["stable", "dev", "legacy"],
+			"output_file_prefix": "minHashChain",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			}
+		},
+		"minHashChainSuccessLemma2": {
+			"theory_file": "examples/__protocols__/Minimal_HashChain.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "minHashChainSuccessLemma",
+			"resources": {
+				"max_cores": 2
+			},
+			"lemmas": [
+				{
+					"name": "Success_chain",
+					"tamarin_versions": ["dev"],
+					"resources": {
+						"max_memory": 1,
+						"timeout": 50
+					}
+				}
+			]
+		},
+		"simpleChallengePreprocessorKEYWORD12": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "basic_KEYWORD1",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD1"]
+		},
+		"simpleChallengePreprocessorKEYWORD22": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "basic_KEYWORD2",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD1", "KEYWORD2"]
+		},
+		"shouldFail2": {
+			"theory_file": "examples/__protocols__/SimpleChallengeResponse.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "shouldFail",
+			"resources": {
+				"max_cores": 2,
+				"max_memory": 2
+			},
+			"preprocess_flags": ["KEYWORD2"]
+		},
+		"shouldMemoryLimit2": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable", "dev"],
+			"output_file_prefix": "shouldMemoryLimit",
+			"resources": {
+				"max_cores": 4,
+				"max_memory": 1
+			},
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1"
+				},
+				{
+					"name": "nonce_reuse_key_type"
+				}
+			]
+		},
+		"shouldTimeout2": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "shouldTimeout",
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"tamarin_versions": ["stable", "dev"],
+					"resources": {
+						"max_cores": 4,
+						"max_memory": 16,
+						"timeout": 15
+					}
+				}
+			]
+		},
+		"falsifiedLemma2": {
+			"theory_file": "examples/__protocols__/errors.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "falsifiedLemma",
+			"lemmas": [
+				{
+					"name": "error_lemma_1",
+					"resources": {
+						"max_cores": 1
+					}
+				}
+			]
+		},
+		"unterminatedLemma2": {
+			"theory_file": "examples/__protocols__/wpa2.spthy",
+			"tamarin_versions": ["stable"],
+			"output_file_prefix": "unterminatedLemma",
+			"lemmas": [
+				{
+					"name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+					"resources": {
+						"max_cores": 1,
+						"max_memory": 1,
+						"timeout": 20
+					},
+					"tamarin_options": ["--bound=2"]
+				}
+			]
+		}
+	}
+}

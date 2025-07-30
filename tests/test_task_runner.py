@@ -6,6 +6,8 @@ resource coordination, progress reporting, and shutdown handling.
 All external dependencies are mocked for CI compatibility.
 """
 
+# pyright: basic
+
 import asyncio
 from pathlib import Path
 from typing import Any, Dict, List

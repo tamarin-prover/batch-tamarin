@@ -19,7 +19,8 @@ batch-tamarin/
 │   │   ├── __init__.py
 │   │   ├── init.py                        # Interactive configuration generator
 │   │   ├── run.py                         # Task execution command logic
-│   │   └── check.py                       # Configuration validation command logic
+│   │   ├── check.py                       # Configuration validation command logic
+│   │   └── report.py                      # Multi-format report generation command
 │   │
 │   ├── model/                              # Data models and type definitions
 │   │   ├── __init__.py
@@ -130,7 +131,7 @@ graph TB
 
 ### Architecture Layers Explained
 
-1. **Entry Layer**: Handles CLI argument parsing with `run`, `check`, and `init` commands
+1. **Entry Layer**: Handles CLI argument parsing with `run`, `check`, `init`, and `report` commands
 2. **Configuration Layer**: Validates JSON recipes and transforms them into executable objects
 3. **Execution Layer**: Orchestrates parallel task execution with resource management (run command)
 4. **Validation Layer**: Performs configuration validation and wellformedness checking (check command)
@@ -262,7 +263,7 @@ classDiagram
 
 ### 1. CLI Entry Point (`main.py`)
 
-The main entry point provides a Typer-based CLI interface with three main commands: `run`, `check`, and `init`.
+The main entry point provides a Typer-based CLI interface with four main commands: `run`, `check`, `init`, and `report`.
 
 **Key Responsibilities:**
 - Parse command-line arguments and route to appropriate command modules
@@ -275,6 +276,7 @@ The main entry point provides a Typer-based CLI interface with three main comman
 - `run()`: Delegate to RunCommand for task execution
 - `check()`: Delegate to CheckCommand for validation
 - `init()`: Delegate to InitCommand for interactive configuration generation
+- `report()`: Delegate to ReportCommand for multi-format report generation
 - `cli()`: Entry point for pip-installed command
 
 ### 1a. Command Modules (`commands/`)
@@ -294,6 +296,11 @@ The CLI commands are now organized into separate modules for better maintainabil
 #### Init Command (`commands/init.py`)
 - Contains `InitCommand` class for interactive configuration generation
 - Generates JSON configuration files from spthy files
+
+#### Report Command (`commands/report.py`)
+- Contains `ReportCommand` class for comprehensive report generation
+- Supports multiple output formats: Markdown, HTML, LaTeX, and Typst
+- Generates charts, statistics, and visualizations from execution results
 
 ### 2. Lemma Parser (`modules/lemma_parser.py`)
 
@@ -600,15 +607,22 @@ graph TD
             MODELS_DIR[proofs/]
             SPTHY_FILES[task_lemma_version.spthy<br/>Contains: generated Tamarin<br/>models from successful runs]
         end
+
+        subgraph "Trace Visualization"
+            TRACES_DIR[traces/]
+            TRACE_FILES[task_lemma_version.json/.dot/.svg<br/>Contains: attack traces and<br/>visualizations when available]
+        end
     end
 
     OUTPUT_DIR --> SUCCESS_DIR
     OUTPUT_DIR --> FAILED_DIR
     OUTPUT_DIR --> MODELS_DIR
+    OUTPUT_DIR --> TRACES_DIR
 
     SUCCESS_DIR --> SUCCESS_JSON
     FAILED_DIR --> FAILED_JSON
     MODELS_DIR --> SPTHY_FILES
+    TRACES_DIR --> TRACE_FILES
 ```
 
 ### Output Structure Details
@@ -616,6 +630,62 @@ graph TD
 - **success/**: JSON files containing detailed results for successful task executions
 - **failed/**: JSON files with error information and diagnostics for failed tasks
 - **proofs/**: Generated .spthy model files from successful Tamarin runs
+- **traces/**: Attack traces in JSON, DOT, and SVG formats when available
+
+## Report Generation System
+
+The report generation system provides comprehensive analysis reports from execution results:
+
+```mermaid
+flowchart TD
+    RESULTS_DIR[Results Directory] --> VALIDATE_RESULTS[Validate Results Structure]
+    VALIDATE_RESULTS --> LOAD_DATA[Load Success/Failed/Traces Data]
+    LOAD_DATA --> ANALYZE_DATA[Analyze Execution Statistics]
+
+    ANALYZE_DATA --> GENERATE_CHARTS[Generate Charts and Visualizations]
+    GENERATE_CHARTS --> RENDER_TEMPLATE[Render Format-Specific Template]
+
+    RENDER_TEMPLATE --> MD_REPORT{Markdown?}
+    RENDER_TEMPLATE --> HTML_REPORT{HTML?}
+    RENDER_TEMPLATE --> LATEX_REPORT{LaTeX?}
+    RENDER_TEMPLATE --> TYPST_REPORT{Typst?}
+
+    MD_REPORT -->|Yes| MD_OUTPUT[GitHub Markdown with Mermaid Charts]
+    HTML_REPORT -->|Yes| HTML_OUTPUT[Interactive HTML with Embedded SVGs]
+    LATEX_REPORT -->|Yes| LATEX_OUTPUT[Professional PDF-ready LaTeX]
+    TYPST_REPORT -->|Yes| TYPST_OUTPUT[Modern Typesetting Document]
+
+    MD_OUTPUT --> SAVE_REPORT[Save Report File]
+    HTML_OUTPUT --> SAVE_REPORT
+    LATEX_OUTPUT --> SAVE_REPORT
+    TYPST_OUTPUT --> SAVE_REPORT
+```
+
+### Report Generation Features
+
+1. **Multi-Format Support**
+   - **Markdown**: GitHub-flavored with Mermaid charts and statistics tables
+   - **HTML**: Interactive reports with embedded SVG visualizations
+   - **LaTeX**: Professional academic-style reports with proper table formatting
+   - **Typst**: Modern typesetting with automatic figure generation
+
+2. **Comprehensive Analytics**
+   - Execution statistics and timing analysis
+   - Success/failure rate breakdowns by task and Tamarin version
+   - Resource utilization charts and memory usage patterns
+   - Gantt charts showing task execution timelines
+
+3. **Chart Generation**
+   - Pie charts for error types and success rates
+   - Bar charts for execution times and resource usage
+   - Timeline visualizations for batch execution progress
+   - Automatic SVG generation from DOT files for trace visualization
+
+4. **Template-Based Rendering**
+   - Jinja2 template engine with custom filters
+   - Format-specific templates optimized for each output type
+   - Automatic handling of empty datasets and edge cases
+   - LaTeX escaping and special character handling
 
 ## Check Command Architecture
 

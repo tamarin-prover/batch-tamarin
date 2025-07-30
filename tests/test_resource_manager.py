@@ -6,6 +6,8 @@ task scheduling, and resource tracking. All system dependencies are mocked for
 CI compatibility.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import Mock, patch

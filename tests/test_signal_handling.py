@@ -7,6 +7,8 @@ These tests verify that:
 3. Task counting and progress reporting correctly handle signal interruption
 """
 
+# pyright: basic
+
 import pytest
 
 from batch_tamarin.model.executable_task import TaskResult, TaskStatus

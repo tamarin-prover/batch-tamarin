@@ -5,6 +5,8 @@ These tests focus specifically on the LemmaParser functionality,
 including parsing lemmas from theory files and handling preprocessor flags.
 """
 
+# pyright: basic
+
 from pathlib import Path
 
 import pytest

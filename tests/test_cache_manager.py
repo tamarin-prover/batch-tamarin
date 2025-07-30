@@ -5,6 +5,8 @@ This module tests the CacheManager class functionality including cache storage,
 retrieval, key generation, and cache management operations.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch

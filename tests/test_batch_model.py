@@ -12,6 +12,8 @@ This module provides comprehensive tests for all batch model classes including:
 - Enum classes (TaskStatus, LemmaResult, ErrorType)
 """
 
+# pyright: basic
+
 import json
 from pathlib import Path
 

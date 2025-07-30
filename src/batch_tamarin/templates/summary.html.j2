@@ -40,11 +40,14 @@
 
         /* Lemma alternation within light gray tasks */
         .task-table tr.task-light-gray.lemma-alt { background-color: #edf7ff; } /* deeper blue accent */
-        .success { color: #28a745; }
-        .failed { color: #dc3545; }
-        .warning { color: #ffc107; }
-        .info { color: #116dd7; }
-        .memory { color: #640dde; }
+        .success { color: #28a745; }     /* green for verified */
+        .failed { color: #ec1026; }      /* red for failed */
+        .warning { color: #ea9400; }     /* orange with green for timeout */
+        .info { color: #116dd7; }        /* blue for info */
+        .darkinfo { color: #1200b9; } /* darker blue for info */
+        .memory { color: #8b5cf6; }      /* violet for memory limit */
+        .falsified { color: #e600ff; }   /* light violet for falsified */
+        .unterminated { color: #dbc100; } /* yellow-orange for unterminated */
         pre {
             background-color: #f8f9fa;
             padding: 15px;
@@ -80,7 +83,7 @@
         <strong>Full execution parameters :</strong> <a href="./execution_report.json">execution_report.json</a>
     </div>
 
-    <h2>⚙️ Settings</h2>
+    <h2>⚙️ Configuration</h2>
     <div class="settings">
         <table>
             <thead>
@@ -116,7 +119,7 @@
                 {% for alias, version_info in batch.tamarin_versions.items() %}
                 <tr>
                     <td>{{ alias }}</td>
-                    <td>{{ version_info.path }}</td>
+                    <td><code>{{ version_info.path }}</code></td>
                     <td>{{ version_info.version or "Unknown" }}</td>
                 </tr>
                 {% endfor %}
@@ -124,7 +127,9 @@
         </table>
     </div>
 
-    <h2>📊 Summary</h2>
+    <h2>📊 Global Summary</h2>
+
+    <h3>Global Statistics</h3>
     <div class="summary">
         <table>
             <thead>
@@ -135,24 +140,32 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>Total Executions</td>
+                    <td>Total Executed Lemmas</td>
                     <td>{{ batch.execution_metadata.total_tasks }}</td>
                 </tr>
                 <tr>
-                    <td>Successful Executions</td>
-                    <td class="success">{{ batch.execution_metadata.total_successes }}</td>
+                    <td>Verified Lemmas</td>
+                    <td class="success">{{ verified_count }} ({{ "%.1f"|format((verified_count / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Falsified Lemmas</td>
+                    <td class="falsified">{{ falsified_count }} ({{ "%.1f"|format((falsified_count / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
+                </tr>
+                <tr>
+                    <td>Unterminated Lemmas</td>
+                    <td class="unterminated">{{ unterminated_count }} ({{ "%.1f"|format((unterminated_count / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
                 <tr>
                     <td>Failed Executions</td>
-                    <td class="failed">{{ failed_tasks|length }}</td>
+                    <td class="failed">{{ failed_tasks|length }} ({{ "%.1f"|format((failed_tasks|length / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
                 <tr>
-                    <td>Timed Out Executions</td>
-                    <td class="warning">{{ timeout_tasks|length }}</td>
+                    <td>Lemmas killed by timeout</td>
+                    <td class="warning">{{ timeout_tasks|length }} ({{ "%.1f"|format((timeout_tasks|length / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
                 <tr>
-                    <td>Task killed for memory limit</td>
-                    <td class="memory">{{ memory_limit_tasks|length }}</td>
+                    <td>Lemmas killed for memory limit</td>
+                    <td class="memory">{{ memory_limit_tasks|length }} ({{ "%.1f"|format((memory_limit_tasks|length / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
             </tbody>
         </table>
@@ -165,7 +178,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>Total duration</td>
+                    <td>Total runtime</td>
                     <td>{{ "%.1f"|format(batch.execution_metadata.total_runtime) }}s</td>
                 </tr>
                 <tr>
@@ -178,11 +191,11 @@
                 </tr>
                 <tr>
                     <td>Freshly executed tasks</td>
-                    <td>{{ batch.execution_metadata.total_tasks - batch.execution_metadata.total_cache_hit }}</td>
+                    <td class="darkinfo">{{ batch.execution_metadata.total_tasks - batch.execution_metadata.total_cache_hit }} ({{ "%.1f"|format(((batch.execution_metadata.total_tasks - batch.execution_metadata.total_cache_hit) / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
                 <tr>
                     <td>Cache hits</td>
-                    <td class="info">{{ batch.execution_metadata.total_cache_hit }}</td>
+                    <td class="info">{{ batch.execution_metadata.total_cache_hit }} ({{ "%.1f"|format((batch.execution_metadata.total_cache_hit / batch.execution_metadata.total_tasks * 100) if batch.execution_metadata.total_tasks > 0 else 0) }}%)</td>
                 </tr>
             </tbody>
         </table>
@@ -222,11 +235,16 @@
                                 <td{% if lemma_rowspan > 1 %} rowspan="{{ lemma_rowspan }}"{% endif %}>{{ lemma_data.lemma_name }}</td>
                             {% endif %}
                             <td>{{ rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[rich_executable.task_config.tamarin_alias].version or "Unknown" }})</td>
-                            <td class="{% if rich_executable.task_execution_metadata.status.value == 'completed' %}success{% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}warning{% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}memory{% else %}failed{% endif %}">
-                                {% if rich_executable.task_execution_metadata.status.value == 'completed' %}✅ Success
+                            <td class="{% if rich_executable.task_execution_metadata.status.value == 'completed' %}{% if rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'verified' %}success{% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'falsified' %}falsified{% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'unterminated' %}unterminated{% else %}success{% endif %}{% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}warning{% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}memory{% else %}failed{% endif %}">
+                                {% if rich_executable.task_execution_metadata.status.value == 'completed' %}
+                                    {% if rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'verified' %}✅ Verified
+                                    {% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'falsified' %}❗ Falsified
+                                    {% elif rich_executable.task_result and rich_executable.task_result.lemma_result.value == 'unterminated' %}🚧 Unterminated
+                                    {% else %}✅ Success
+                                    {% endif %}
                                 {% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}⏳ Timed Out
                                 {% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}🧠 Memory Limit
-                                {% else %}❌ Failed
+                                {% else %}❌ Error
                                 {% endif %}
                             </td>
                             <td>{{ "%.1f"|format(rich_executable.task_execution_metadata.exec_duration_monotonic) }}s</td>
@@ -243,7 +261,7 @@
     <h2>🚨 Error Report</h2>
     {% for task in failed_tasks %}
     <div class="error-details">
-        <h3><span class="failed">❌ FAILED :</span> {{ task.task_name }}</h3>
+        <h3><span class="failed">❌ ERROR :</span> {{ task.task_name }}</h3>
         <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
         <p>{{ task.rich_executable.task_result.error_description }}</p>
         {% if task.rich_executable.task_result.last_stderr_lines %}
@@ -274,5 +292,11 @@
     {% if has_failed_tasks %}
     <h4>Rerun file : <a href="./{{ recipe_name }}-rerun.json">{{ recipe_name }}-rerun.json</a></h4>
     {% endif %}
+
+    <hr>
+    <footer>
+        <p><em>Summary generated by Batch Tamarin on {{ execution_time }}<br>
+        For more details, generate a report with the following command: <code>batch-tamarin report {{ batch.config.output_directory }}</code></em></p>
+    </footer>
 </body>
 </html>

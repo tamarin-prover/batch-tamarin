@@ -5,6 +5,8 @@ These tests focus specifically on the ConfigManager functionality,
 including JSON loading, validation, error handling, and configuration resolution.
 """
 
+# pyright: basic
+
 import json
 from pathlib import Path
 from typing import Any, Callable, Dict

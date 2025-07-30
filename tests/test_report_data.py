@@ -1,5 +1,7 @@
 """Test module for report data functionality."""
 
+# pyright: basic
+
 import json
 from pathlib import Path
 

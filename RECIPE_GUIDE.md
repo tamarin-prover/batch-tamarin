@@ -84,7 +84,7 @@ Tasks define individual Tamarin analysis configurations. Each task is identified
 
 The `task_suffix` is formatted like following : {lemma}\_{tamarin_version} (with lemma added only if a lemma is specified in config)
 
-- **`lemmas`** (array, optional): Lemmas to prove. If empty or omitted, all lemmas are proved using `--prove`
+- **`lemmas`** (array, optional): Lemmas to prove. If empty or omitted, all lemmas are proved using `--prove`. Supports prefix matching for convenient lemma selection
 - **`tamarin_options`** (array of strings, optional): Additional command-line options for Tamarin
 - **`preprocess_flags`** (array of strings, optional): Preprocessor flags (passed as `-D=flag`)
 - **`resources`** (object, optional): Resource allocation for this task
@@ -131,6 +131,21 @@ Lemmas support comprehensive per-lemma configuration with full inheritance from 
 - **`resources`** (object, optional): Override resource allocation for this lemma
 
 **Override Behavior**: Lemma-level properties completely replace task-level properties (no merging).
+
+### Lemma Selection and Prefix Matching
+
+When using the interactive `init` command, you can efficiently select lemmas using prefix matching:
+
+```bash
+batch-tamarin init protocol.spthy
+```
+
+During the interactive configuration process, you can:
+- **Prefix Matching**: Type a prefix (e.g., `auth`) to show all lemmas starting with that prefix
+- **Multiple Selection**: Select multiple lemmas by their prefixes
+- **All Lemmas**: Leave empty to include all lemmas found in the theory file
+
+Example: If your `.spthy` file contains lemmas like `authentication_lemma`, `auth_secrecy`, and `authorization_check`, typing `auth` will show all three for easy selection.
 
 ## Resource Management
 ```json
@@ -180,6 +195,24 @@ Output files are automatically named based on the configuration to avoid conflic
 ### Tasks with specific lemmas:
 - Pattern: `{output_file}_{lemma_name}_{tamarin_version}`
 - Example: With lemma "auth" → `results_auth_stable.txt`, `results_auth_dev.txt`
+
+## Result Caching
+
+Batch Tamarin automatically caches execution results to avoid re-running identical tasks. The cache is based on:
+- Theory file content (checksum)
+- Task configuration (lemma, options, flags)
+- Tamarin executable version
+
+**Cache Management:**
+```bash
+# Clear all cached results
+batch-tamarin --rm-cache
+
+# View cache statistics (shows hit/miss ratios)
+# Cache info is displayed during normal execution
+```
+
+Tasks are automatically skipped if their cached results are still valid, significantly reducing execution time for repeated runs.
 
 ## Example Configurations
 
