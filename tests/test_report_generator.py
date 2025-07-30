@@ -2,6 +2,8 @@
 Tests for report generator functionality.
 """
 
+# pyright: basic
+
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch

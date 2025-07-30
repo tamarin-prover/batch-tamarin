@@ -6,6 +6,8 @@ JSON generation, directory management, and error handling. All file system
 operations are mocked for CI compatibility.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from unittest.mock import Mock, patch
 

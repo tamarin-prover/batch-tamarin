@@ -6,6 +6,8 @@ execution report generation, and data transformation from TaskRunner results.
 All external dependencies are mocked for CI compatibility.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch

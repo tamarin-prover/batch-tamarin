@@ -5,6 +5,8 @@ These tests verify the complete workflow from JSON recipe loading
 to ExecutableTask generation, ensuring all components work together correctly.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from typing import Any, Callable, Dict
 

@@ -6,6 +6,8 @@ progress reporting, cache management, and execution summary generation.
 All external dependencies are mocked for CI compatibility.
 """
 
+# pyright: basic
+
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
