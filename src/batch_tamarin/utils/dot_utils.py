@@ -13,7 +13,7 @@ from ..utils.notifications import notification_manager
 
 # Try to import graphviz for fallback DOT rendering
 try:
-    import graphviz
+    import graphviz  # type: ignore
 
     HAS_GRAPHVIZ = True
 except ImportError:

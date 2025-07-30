@@ -875,7 +875,7 @@ class ReportData(BaseModel):
                         str(Path(dot_file_path).absolute()) if dot_file_path else None
                     ),
                     svg_content=svg_content,
-                    png_file=str(png_file.absolute()) if png_file is not None else None,
+                    png_file=png_file.absolute() if png_file is not None else None,
                     output_prefix=output_prefix,
                 )
                 traces.append(trace_info)

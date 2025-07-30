@@ -10,7 +10,7 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Optional
 
-from diskcache import Cache
+from diskcache import Cache  # type: ignore
 
 from ..model.executable_task import ExecutableTask, TaskResult
 from ..utils.notifications import notification_manager
