@@ -22,6 +22,7 @@ from batch_tamarin.model.executable_task import (
     TaskStatus,
 )
 from batch_tamarin.model.tamarin_recipe import (
+    SchedulingStrategy,
     TamarinRecipe,
 )
 from batch_tamarin.runner import TaskRunner
@@ -159,7 +160,9 @@ class TestTaskRunnerInitialization:
         assert runner._signal_count == 0  # type: ignore
 
         # Verify managers were initialized
-        mock_resource_manager.assert_called_once_with(mock_recipe)
+        mock_resource_manager.assert_called_once_with(
+            mock_recipe, SchedulingStrategy.FIFO
+        )
         mock_task_manager.assert_called_once()
         mock_output_manager.initialize.assert_called_once()
 
@@ -205,7 +208,10 @@ class TestTaskRunnerExecution:
         mock_recipe: TamarinRecipe,
     ):
         """Test execute_all_tasks with empty task list."""
-        mock_resource_manager.return_value = Mock()
+        mock_resource_mgr_instance = Mock()
+        # Make sure get_next_schedulable_tasks returns an empty list instead of a Mock
+        mock_resource_mgr_instance.get_next_schedulable_tasks.return_value = []
+        mock_resource_manager.return_value = mock_resource_mgr_instance
         mock_task_manager.return_value = Mock()
         mock_output_manager.initialize = Mock()
 
@@ -311,11 +317,12 @@ class TestTaskRunnerExecution:
 
                                     # Verify methods were called
                                     assert mock_should_continue.call_count == 2
-                                    mock_start.assert_called_once()
+                                    # _start_schedulable_tasks is now called multiple times due to event-driven scheduling
+                                    assert mock_start.call_count >= 1
                                     mock_handle.assert_called_once()
                                     mock_display.assert_called()
                                     mock_shutdown.assert_called_once()
-                                    mock_sleep.assert_called_once()
+                                    # asyncio.sleep is no longer called with fixed intervals in the new implementation
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")

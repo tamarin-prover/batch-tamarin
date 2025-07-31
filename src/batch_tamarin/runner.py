@@ -16,7 +16,7 @@ from .model.executable_task import (
     TaskResult,
     TaskStatus,
 )
-from .model.tamarin_recipe import TamarinRecipe
+from .model.tamarin_recipe import SchedulingStrategy, TamarinRecipe
 from .modules.output_manager import output_manager
 from .modules.process_manager import process_manager
 from .modules.resource_manager import ResourceManager
@@ -34,17 +34,22 @@ class TaskRunner:
     progress updates throughout the execution process.
     """
 
-    def __init__(self, recipe: TamarinRecipe) -> None:
+    def __init__(
+        self,
+        recipe: TamarinRecipe,
+        scheduler: SchedulingStrategy = SchedulingStrategy.FIFO,
+    ) -> None:
         """
         Initialize the TaskRunner with a recipe containing global configuration.
 
         Args:
             recipe: TamarinRecipe object containing global configuration and tasks
+            scheduler: Task scheduling strategy to use
         """
         self.recipe = recipe
 
-        # Initialize ResourceManager with recipe (will validate and potentially correct resource limits)
-        self.resource_manager = ResourceManager(recipe)
+        # Initialize ResourceManager with recipe and scheduler (will validate and potentially correct resource limits)
+        self.resource_manager = ResourceManager(recipe, scheduler)
 
         # Initialize TaskManager for execution
         self.task_manager = TaskManager()
@@ -72,6 +77,12 @@ class TaskRunner:
         self._force_shutdown_requested = False
         self._signal_count = 0
         self._signal_interrupted_tasks: Set[str] = set()
+
+        # Task completion event for immediate scheduling (will be set during execution)
+        self._task_completed_event: Optional[asyncio.Event] = None
+
+        # Store scheduler mode for logging
+        self.scheduler = scheduler
 
     async def execute_all_tasks(self, tasks: List[ExecutableTask]) -> None:
         """
@@ -108,6 +119,9 @@ class TaskRunner:
         self.task_results.clear()
         self._shutdown_requested = False
 
+        # Initialize task completion event for this execution
+        self._task_completed_event = asyncio.Event()
+
         # Set up shutdown handler
         def signal_handler(signum: int, frame: Any) -> None:
             _ = signum, frame  # Suppress unused parameter warnings
@@ -130,7 +144,7 @@ class TaskRunner:
         try:
             # Display initial status
             notification_manager.info(
-                f"[TaskRunner] Starting execution of {len(tasks)} tasks. \n"
+                f"[TaskRunner] Starting execution of {len(tasks)} tasks using {self.scheduler.value} scheduling strategy. \n"
                 f"Available resources: {self.resource_manager.get_available_cores()} cores, "
                 f"{self.resource_manager.get_available_memory()}GB memory"
             )
@@ -162,9 +176,11 @@ class TaskRunner:
 
     async def _execute_task_pool(self, all_tasks: List[ExecutableTask]) -> None:
         """
-        Internal method to manage task pool execution.
+        Internal method to manage task pool execution with event-driven scheduling.
 
-        Implements the main scheduling loop:
+        Implements improved scheduling loop:
+        - Event-driven scheduling (immediate on task completion)
+        - Adaptive sleep intervals based on activity
         - Get next schedulable tasks from ResourceManager
         - Start tasks as background coroutines
         - Monitor completions and update progress
@@ -177,17 +193,31 @@ class TaskRunner:
         last_progress_update = 0
         progress_update_interval = 3.0  # Update progress every 3 seconds
 
+        # Try initial scheduling
+        await self._schedule_available_tasks()
+
         while self._should_continue_execution():
-            # Get next schedulable tasks
-            schedulable_tasks = self.resource_manager.get_next_schedulable_tasks(
-                self._pending_tasks
-            )
+            # Wait for task completion event or timeout
+            # Use shorter timeout when tasks are running (more responsive)
+            # Use longer timeout when no tasks running (less CPU usage)
+            timeout = 0.1 if self._running_tasks else 1.0
 
-            # Start new tasks as background coroutines (only if not shutting down)
-            self._start_schedulable_tasks(schedulable_tasks)
+            try:
+                if self._task_completed_event:
+                    await asyncio.wait_for(
+                        self._task_completed_event.wait(), timeout=timeout
+                    )
+                    self._task_completed_event.clear()
+                else:
+                    await asyncio.sleep(timeout)
+            except asyncio.TimeoutError:
+                pass  # Normal timeout, continue with periodic checks
 
-            # Handle completed tasks
+            # Handle completed tasks (this may free up resources)
             await self._handle_completed_tasks(all_tasks)
+
+            # Try to schedule new tasks if resources are available
+            await self._schedule_available_tasks()
 
             # Display progress update periodically
             current_time = asyncio.get_event_loop().time()
@@ -199,14 +229,24 @@ class TaskRunner:
             if self._force_shutdown_requested:
                 break
 
-            # Small sleep to prevent busy loop
-            await asyncio.sleep(1)
-
         # Handle shutdown scenarios
         await self._handle_shutdown()
 
         # Final progress update
         self._display_progress_update()
+
+    async def _schedule_available_tasks(self) -> None:
+        """Schedule available tasks if resources permit."""
+        if self._shutdown_requested or self._force_shutdown_requested:
+            return
+
+        # Get next schedulable tasks
+        schedulable_tasks = self.resource_manager.get_next_schedulable_tasks(
+            self._pending_tasks
+        )
+
+        # Start new tasks as background coroutines
+        self._start_schedulable_tasks(schedulable_tasks)
 
     def _should_continue_execution(self) -> bool:
         """Check if the task pool execution should continue."""
@@ -351,6 +391,10 @@ class TaskRunner:
         # Update internal tracking
         self._task_results[task_id] = result
         self.task_results[task_id] = result
+
+        # Signal that a task has completed (for event-driven scheduling)
+        if self._task_completed_event:
+            self._task_completed_event.set()
 
         if result.status == TaskStatus.COMPLETED:
             self._completed_tasks.add(task_id)
