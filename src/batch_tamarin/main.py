@@ -7,6 +7,7 @@ from .commands.check import CheckCommand
 from .commands.init import InitCommand
 from .commands.report import ReportCommand
 from .commands.run import RunCommand
+from .model.tamarin_recipe import SchedulingStrategy
 from .modules.cache_manager import CacheManager
 from .utils.notifications import notification_manager
 
@@ -71,12 +72,18 @@ def main_callback(
 def run(
     config_file: str = typer.Argument(..., help="JSON recipe file to execute"),
     debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug output"),
+    scheduler: SchedulingStrategy = typer.Option(
+        SchedulingStrategy.FIFO,
+        "--scheduler",
+        "-s",
+        help="Task scheduling strategy: fifo (file sequential scheduling), sjf (shortest job first), ljf (longest job first)",
+    ),
 ) -> None:
     """
     Execute tasks from the specified configuration file.
     """
     try:
-        RunCommand.run(config_file, debug)
+        RunCommand.run(config_file, debug, scheduler)
     except typer.Exit:
         # Re-raise typer.Exit to maintain proper exit codes
         raise

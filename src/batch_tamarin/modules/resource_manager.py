@@ -12,7 +12,7 @@ from typing import Dict, List
 import psutil
 
 from ..model.executable_task import ExecutableTask
-from ..model.tamarin_recipe import TamarinRecipe
+from ..model.tamarin_recipe import SchedulingStrategy, TamarinRecipe
 from ..utils.notifications import notification_manager
 from ..utils.system_resources import resolve_resource_value
 
@@ -26,14 +26,20 @@ class ResourceManager:
     respecting global limits.
     """
 
-    def __init__(self, recipe: TamarinRecipe) -> None:
+    def __init__(
+        self,
+        recipe: TamarinRecipe,
+        scheduler: SchedulingStrategy = SchedulingStrategy.FIFO,
+    ) -> None:
         """
         Initialize the ResourceManager with a recipe containing resource limits.
 
         Args:
             recipe: TamarinRecipe object containing global configuration
+            scheduler: Task scheduling strategy to use
         """
         self.recipe = recipe
+        self.scheduler = scheduler
 
         # Extract initial values from recipe config
         global_max_cores = resolve_resource_value(
@@ -202,10 +208,7 @@ class ResourceManager:
         self, pending_tasks: List[ExecutableTask]
     ) -> List[ExecutableTask]:
         """
-        Implement intelligent scheduling algorithm using greedy bin-packing.
-
-        Sorts tasks by resource requirements (smallest first) and selects as many
-        as possible that fit within current available resources.
+        Implement task scheduling algorithm based on selected strategy.
 
         Args:
             pending_tasks: List of ExecutableTask instances waiting to be scheduled
@@ -216,10 +219,25 @@ class ResourceManager:
         if not pending_tasks:
             return []
 
-        # Sort tasks by total resource requirements (cores + memory) - smallest first
-        sorted_tasks = sorted(
-            pending_tasks, key=lambda task: task.max_cores + task.max_memory
-        )
+        # Sort tasks based on scheduling strategy
+        if self.scheduler == SchedulingStrategy.FIFO:
+            # Maintain original order (file order)
+            sorted_tasks = pending_tasks.copy()
+        elif self.scheduler == SchedulingStrategy.SJF:
+            # Sort by resource requirements (smallest first)
+            sorted_tasks = sorted(
+                pending_tasks, key=lambda task: task.max_cores + task.max_memory
+            )
+        elif self.scheduler == SchedulingStrategy.LJF:
+            # Sort by resource requirements (largest first)
+            sorted_tasks = sorted(
+                pending_tasks,
+                key=lambda task: task.max_cores + task.max_memory,
+                reverse=True,
+            )
+        else:
+            # Fallback to FIFO
+            sorted_tasks = pending_tasks.copy()
 
         schedulable_tasks: List[ExecutableTask] = []
         remaining_cores = self.get_available_cores()
@@ -237,7 +255,7 @@ class ResourceManager:
                 remaining_memory -= task.max_memory
 
                 notification_manager.debug(
-                    f"[ResourceManager] Task {task.task_name} selected for scheduling: "
+                    f"[ResourceManager] Task {task.task_name} selected for scheduling ({self.scheduler.value}): "
                     f"{task.max_cores} cores, {task.max_memory}GB. "
                     f"Remaining: {remaining_cores} cores, {remaining_memory}GB"
                 )
@@ -246,12 +264,12 @@ class ResourceManager:
             total_cores = sum(task.max_cores for task in schedulable_tasks)
             total_memory = sum(task.max_memory for task in schedulable_tasks)
             notification_manager.debug(
-                f"[ResourceManager] Scheduling {len(schedulable_tasks)} tasks requiring "
+                f"[ResourceManager] Scheduling {len(schedulable_tasks)} tasks using {self.scheduler.value} strategy, requiring "
                 f"{total_cores} cores, {total_memory}GB total"
             )
         else:
             notification_manager.debug(
-                "[ResourceManager] No tasks can be scheduled with current resources"
+                f"[ResourceManager] No tasks can be scheduled with current resources using {self.scheduler.value} strategy"
             )
 
         return schedulable_tasks

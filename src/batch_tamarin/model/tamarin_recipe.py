@@ -5,9 +5,18 @@ These models validate batch Tamarin configuration files according to
 the tamarin-config-schema.json specification.
 """
 
+from enum import Enum
 from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+class SchedulingStrategy(str, Enum):
+    """Task scheduling strategy modes."""
+
+    FIFO = "fifo"  # First-in-first-out (file order with parallelization)
+    SJF = "sjf"  # Shortest job first (smallest resource requirements first)
+    LJF = "ljf"  # Longest job first (largest resource requirements first)
 
 
 class Lemma(BaseModel):

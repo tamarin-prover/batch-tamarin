@@ -13,7 +13,7 @@ from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 from batch_tamarin.model.executable_task import ExecutableTask
-from batch_tamarin.model.tamarin_recipe import TamarinRecipe
+from batch_tamarin.model.tamarin_recipe import SchedulingStrategy, TamarinRecipe
 from batch_tamarin.modules.resource_manager import ResourceManager
 
 
@@ -677,7 +677,7 @@ class TestTaskScheduling:
     @patch("batch_tamarin.modules.resource_manager.os.cpu_count")
     @patch("batch_tamarin.modules.resource_manager.psutil.virtual_memory")
     @patch("batch_tamarin.modules.resource_manager.notification_manager")
-    def test_get_next_schedulable_tasks_greedy_selection(
+    def test_get_next_schedulable_tasks_fifo_scheduling(
         self,
         mock_notification: Mock,
         mock_virtual_memory: Mock,
@@ -686,14 +686,77 @@ class TestTaskScheduling:
         minimal_recipe_data: Dict[str, Any],
         tmp_dir: Path,
     ):
-        """Test greedy task scheduling algorithm."""
+        """Test FIFO (First-In-First-Out) task scheduling algorithm."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
         mock_resolve.side_effect = lambda x, _: x  # type: ignore
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
-        resource_manager = ResourceManager(recipe)
+        resource_manager = ResourceManager(recipe, SchedulingStrategy.FIFO)
+
+        # Create tasks with different resource requirements
+        task_small = ExecutableTask(
+            task_name="small_task",
+            original_task_name="small_task",
+            tamarin_version_name="stable",
+            tamarin_executable=tmp_dir / "tamarin-prover",
+            theory_file=tmp_dir / "theory.spthy",
+            output_file=tmp_dir / "output.txt",
+            lemma="small_lemma",
+            tamarin_options=None,
+            preprocess_flags=None,
+            max_cores=2,
+            max_memory=4,
+            task_timeout=3600,
+            traces_dir=tmp_dir / "traces",
+        )
+
+        task_large = ExecutableTask(
+            task_name="large_task",
+            original_task_name="large_task",
+            tamarin_version_name="stable",
+            tamarin_executable=tmp_dir / "tamarin-prover",
+            theory_file=tmp_dir / "theory.spthy",
+            output_file=tmp_dir / "output.txt",
+            lemma="large_lemma",
+            tamarin_options=None,
+            preprocess_flags=None,
+            max_cores=8,
+            max_memory=16,
+            task_timeout=3600,
+            traces_dir=tmp_dir / "traces",
+        )
+
+        # Test FIFO scheduling: tasks selected in original order
+        pending_tasks = [task_large, task_small]  # Order: large, small
+        schedulable_tasks = resource_manager.get_next_schedulable_tasks(pending_tasks)
+
+        # With FIFO, should select task_large first (it exactly fits: 8+16 = 24 <= 8+16 available)
+        assert len(schedulable_tasks) == 1
+        assert schedulable_tasks[0].task_name == "large_task"
+
+    @patch("batch_tamarin.modules.resource_manager.resolve_resource_value")
+    @patch("batch_tamarin.modules.resource_manager.os.cpu_count")
+    @patch("batch_tamarin.modules.resource_manager.psutil.virtual_memory")
+    @patch("batch_tamarin.modules.resource_manager.notification_manager")
+    def test_get_next_schedulable_tasks_sjf_scheduling(
+        self,
+        mock_notification: Mock,
+        mock_virtual_memory: Mock,
+        mock_cpu_count: Mock,
+        mock_resolve: Mock,
+        minimal_recipe_data: Dict[str, Any],
+        tmp_dir: Path,
+    ):
+        """Test SJF (Shortest Job First) task scheduling algorithm."""
+        # Mock system resources
+        mock_cpu_count.return_value = 16
+        mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
+        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        resource_manager = ResourceManager(recipe, SchedulingStrategy.SJF)
 
         # Create tasks with different resource requirements
         task_small = ExecutableTask(
@@ -744,7 +807,7 @@ class TestTaskScheduling:
             traces_dir=tmp_dir / "traces",
         )
 
-        # Test scheduling with limited resources (only small and medium should fit)
+        # Test SJF scheduling: tasks selected by smallest resource requirements first
         pending_tasks = [
             task_large,
             task_medium,
@@ -752,11 +815,73 @@ class TestTaskScheduling:
         ]  # Order: large, medium, small
         schedulable_tasks = resource_manager.get_next_schedulable_tasks(pending_tasks)
 
-        # Should select small and medium tasks (large task won't fit in remaining resources)
+        # With SJF, should select small and medium tasks (small: 2+4=6, medium: 4+8=12, total=18 <= 24)
         assert len(schedulable_tasks) == 2
-        assert schedulable_tasks[0].task_name == "small_task"  # 2+4=6 total
-        assert schedulable_tasks[1].task_name == "medium_task"  # 4+8=12 total
-        # large_task cannot be scheduled (needs 8+16=24 but only 2+4=6 remaining after small+medium)
+        assert schedulable_tasks[0].task_name == "small_task"  # Smallest first
+        assert schedulable_tasks[1].task_name == "medium_task"  # Next smallest
+
+    @patch("batch_tamarin.modules.resource_manager.resolve_resource_value")
+    @patch("batch_tamarin.modules.resource_manager.os.cpu_count")
+    @patch("batch_tamarin.modules.resource_manager.psutil.virtual_memory")
+    @patch("batch_tamarin.modules.resource_manager.notification_manager")
+    def test_get_next_schedulable_tasks_ljf_scheduling(
+        self,
+        mock_notification: Mock,
+        mock_virtual_memory: Mock,
+        mock_cpu_count: Mock,
+        mock_resolve: Mock,
+        minimal_recipe_data: Dict[str, Any],
+        tmp_dir: Path,
+    ):
+        """Test LJF (Longest Job First) task scheduling algorithm."""
+        # Mock system resources
+        mock_cpu_count.return_value = 16
+        mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
+        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        resource_manager = ResourceManager(recipe, SchedulingStrategy.LJF)
+
+        # Create tasks with different resource requirements
+        task_small = ExecutableTask(
+            task_name="small_task",
+            original_task_name="small_task",
+            tamarin_version_name="stable",
+            tamarin_executable=tmp_dir / "tamarin-prover",
+            theory_file=tmp_dir / "theory.spthy",
+            output_file=tmp_dir / "output.txt",
+            lemma="small_lemma",
+            tamarin_options=None,
+            preprocess_flags=None,
+            max_cores=2,
+            max_memory=4,
+            task_timeout=3600,
+            traces_dir=tmp_dir / "traces",
+        )
+
+        task_large = ExecutableTask(
+            task_name="large_task",
+            original_task_name="large_task",
+            tamarin_version_name="stable",
+            tamarin_executable=tmp_dir / "tamarin-prover",
+            theory_file=tmp_dir / "theory.spthy",
+            output_file=tmp_dir / "output.txt",
+            lemma="large_lemma",
+            tamarin_options=None,
+            preprocess_flags=None,
+            max_cores=8,
+            max_memory=16,
+            task_timeout=3600,
+            traces_dir=tmp_dir / "traces",
+        )
+
+        # Test LJF scheduling: tasks selected by largest resource requirements first
+        pending_tasks = [task_small, task_large]  # Order: small, large
+        schedulable_tasks = resource_manager.get_next_schedulable_tasks(pending_tasks)
+
+        # With LJF, should select large task first (it exactly fits: 8+16 = 24 <= 8+16 available)
+        assert len(schedulable_tasks) == 1
+        assert schedulable_tasks[0].task_name == "large_task"  # Largest first
 
     @patch("batch_tamarin.modules.resource_manager.resolve_resource_value")
     @patch("batch_tamarin.modules.resource_manager.os.cpu_count")
