@@ -16,6 +16,39 @@
         pyproject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
         packageVersion = pyproject.project.version;
 
+        # Create py-tree-sitter-spthy package from GitHub
+        py-tree-sitter-spthy = python.pkgs.buildPythonPackage rec {
+          pname = "py-tree-sitter-spthy";
+          version = "1.2.1";
+          format = "pyproject";
+
+          src = pkgs.fetchFromGitHub {
+            owner = "lmandrelli";
+            repo = "py-tree-sitter-spthy";
+            rev = "v${version}";
+            hash = "sha256-CYDn36QUqDvuSLFSIHdKCtmkcmXJefiy35npNNnKzw4=";
+          };
+
+          nativeBuildInputs = with python.pkgs; [
+            setuptools
+            wheel
+          ];
+
+          propagatedBuildInputs = with python.pkgs; [
+            tree-sitter
+          ];
+
+          doCheck = false;
+          pythonImportsCheck = [ "py_tree_sitter_spthy" ];
+
+          meta = with pkgs.lib; {
+            description = "Tree-sitter parser for Spthy language (Tamarin Prover)";
+            homepage = "https://github.com/lmandrelli/py-tree-sitter-spthy";
+            license = licenses.gpl3Plus;
+            platforms = platforms.linux ++ platforms.darwin;
+          };
+        };
+
         # Extract runtime dependencies
         runtimeDeps = with python.pkgs; [
           typer
@@ -25,7 +58,7 @@
           diskcache
           jinja2
           graphviz
-          # py-tree-sitter-spthy will be installed with a shell hook since it's not in nixpkgs
+          py-tree-sitter-spthy
         ];
 
         # Extract development dependencies
@@ -107,10 +140,6 @@
 
             # Add local bin to PATH
             export PATH="$DEV_ROOT/bin:$PATH"
-
-            # Install py-tree-sitter-spthy via pip if not already installed
-            echo "📦 Installing py-tree-sitter-spthy via pip..."
-            pip install "py-tree-sitter-spthy>=1.2.0"
 
             echo "🚀 Batch Tamarin development environment"
             echo "📦 Python ${python.version} with dependencies available"
