@@ -76,7 +76,7 @@ class BatchManager:
             batch = await self._create_batch_with_resolved_config()
 
             # Populate batch with execution results
-            self._populate_batch_with_results(batch, runner, executable_tasks)
+            await self._populate_batch_with_results(batch, runner, executable_tasks)
 
             # Generate execution report file
             await self._write_execution_report(batch)
@@ -139,7 +139,7 @@ class BatchManager:
             tasks={},
         )
 
-    def _populate_batch_with_results(
+    async def _populate_batch_with_results(
         self, batch: Batch, runner: TaskRunner, executable_tasks: List[ExecutableTask]
     ) -> None:
         """Populate batch with execution results."""
@@ -171,11 +171,11 @@ class BatchManager:
         batch.execution_metadata.max_memory = max_memory
 
         # Create RichTask structure from executable tasks
-        batch.tasks = self._create_rich_tasks_from_executable_tasks(
+        batch.tasks = await self._create_rich_tasks_from_executable_tasks(
             executable_tasks, runner, execution_summary
         )
 
-    def _create_rich_tasks_from_executable_tasks(
+    async def _create_rich_tasks_from_executable_tasks(
         self,
         executable_tasks: List[ExecutableTask],
         runner: TaskRunner,
@@ -202,7 +202,7 @@ class BatchManager:
                 theory_file = str(executable_task.theory_file)
 
                 # Create RichExecutableTask
-                rich_executable_task = self._create_rich_executable_task(
+                rich_executable_task = await self._create_rich_executable_task(
                     executable_task, runner, execution_summary
                 )
                 subtasks[executable_task.task_name] = rich_executable_task
@@ -216,7 +216,7 @@ class BatchManager:
 
         return rich_tasks
 
-    def _create_rich_executable_task(
+    async def _create_rich_executable_task(
         self,
         executable_task: ExecutableTask,
         runner: TaskRunner,
@@ -244,8 +244,17 @@ class BatchManager:
             executable_task.task_name
         )
         if task_result:
+            # Get the filtered command from the executable task
+            command = []
+            try:
+                command = await executable_task.to_command()
+            except Exception as e:
+                notification_manager.debug(
+                    f"[BatchManager] Failed to get command for task {executable_task.task_name}: {e}"
+                )
+
             task_execution_metadata = TaskExecMetadata(
-                command=[],  # Would be populated during execution
+                command=command,
                 status=self._convert_task_status(task_result.status),
                 cache_hit=executable_task.task_name
                 in execution_summary.cached_task_ids,
@@ -270,9 +279,18 @@ class BatchManager:
             else:
                 task_result_obj = self._create_task_failed_result(task_result)
         else:
+            # Get the filtered command from the executable task even without results
+            command = []
+            try:
+                command = await executable_task.to_command()
+            except Exception as e:
+                notification_manager.debug(
+                    f"[BatchManager] Failed to get command for task {executable_task.task_name}: {e}"
+                )
+
             # Create placeholder for missing results
             task_execution_metadata = TaskExecMetadata(
-                command=[],
+                command=command,
                 status=TaskStatus.PENDING,
                 cache_hit=False,
                 exec_start="",
