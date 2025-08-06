@@ -1,0 +1,82 @@
+{
+  "config": {
+    "global_max_cores": "max",
+    "global_max_memory": "max",
+    "default_timeout": 7200,
+    "output_directory": "./results"
+  },
+  "tamarin_versions": {
+    "stable": {
+      "docker_preset": "1.10.0"
+    },
+    "dev": {
+      "docker_preset": "develop"
+    },
+    "legacy": {
+      "docker_image": {
+        "image": "lmandrelli/tamarin-prover:1.6.0",
+        "platform": "linux/amd64"
+      }
+    },
+    "custom": {
+        "dockerfile": {
+            "path": "examples/__dockerfiles__/local-tamarin.Dockerfile",
+            "tag": "tamarin-prover:local"
+        }
+    }
+  },
+  "tasks": {
+    "wpa2": {
+      "theory_file": "examples/__protocols__/wpa2.spthy",
+      "tamarin_versions": ["stable", "dev", "legacy", "custom"],
+      "output_file_prefix": "WPA2_Example",
+      "preprocess_flags": ["KEYWORD_YES"],
+      "tamarin_options": ["-v"],
+      "resources": {
+        "max_cores": 2,
+        "max_memory": 8,
+        "timeout": 3600
+      },
+      "lemmas": [
+        {
+          "name": "nonce_reuse_key_type",
+          "resources": {
+            "max_cores": 1
+          }
+        },
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": ["stable","legacy"],
+          "resources": {
+            "max_cores": 4,
+            "max_memory": 16,
+            "timeout": 30
+          }
+        },
+        {
+          "name": "authenticator_rcv_m2_must_be_preceded_by_snd_m1",
+          "tamarin_versions": ["dev", "custom"],
+          "resources": {
+            "max_cores": 4,
+            "max_memory": 1,
+            "timeout": 600
+          }
+        },
+        {
+          "name": "supplicant_rcv_m1_must_be_preceded_by_associate",
+          "tamarin_versions": ["dev", "stable"],
+          "tamarin_options": ["--heuristic=S"],
+          "preprocess_flags": ["KEYWORD_NO"],
+          "resources": {
+            "max_cores": 4,
+            "max_memory": 1,
+            "timeout": 100
+          }
+        },
+        {
+          "name": "authenticator_installed_is_unique_for_anonce"
+        }
+      ]
+    }
+  }
+}

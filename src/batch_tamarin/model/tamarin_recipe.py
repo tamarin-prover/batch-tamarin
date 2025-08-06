@@ -6,7 +6,7 @@ the tamarin-config-schema.json specification.
 """
 
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -17,6 +17,49 @@ class SchedulingStrategy(str, Enum):
     FIFO = "fifo"  # First-in-first-out (file order with parallelization)
     SJF = "sjf"  # Shortest job first (smallest resource requirements first)
     LJF = "ljf"  # Longest job first (largest resource requirements first)
+
+
+class DockerPreset(str, Enum):
+    """Predefined Tamarin Prover Docker configurations."""
+
+    TAMARIN_1_10_0 = "1.10.0"
+    TAMARIN_1_8_0 = "1.8.0"
+    TAMARIN_1_6_1 = "1.6.1"
+    TAMARIN_1_6_0 = "1.6.0"
+    TAMARIN_1_4_1 = "1.4.1"
+    TAMARIN_1_4_0 = "1.4.0"
+    TAMARIN_DEVELOP = "develop"
+    TAMARIN_LATEST = "latest"
+
+    @classmethod
+    def resolve_latest(cls, version: str) -> str:
+        """Resolve 'latest' to the current stable version number."""
+        if version == "latest":
+            return "1.10.0"
+        return version
+
+    @classmethod
+    def get_docker_image(cls, preset: str) -> Optional[str]:
+        """Get the Docker image name for a preset, or None if it needs to be built."""
+        # Maintainer note: Update this mapping to change preset images
+        preset_images = {
+            "1.10.0": "lmandrelli/tamarin-prover:1.10.0",
+            "1.8.0": "lmandrelli/tamarin-prover:1.8.0",
+            "1.6.1": "lmandrelli/tamarin-prover:1.6.1",
+            "1.6.0": "lmandrelli/tamarin-prover:1.6.0",
+            "1.4.1": "lmandrelli/tamarin-prover:1.4.1",
+            "1.4.0": "lmandrelli/tamarin-prover:1.4.0",
+            "develop": "tamarin-prover:develop",  # Hardcoded tag name, not available on docker hub, needs to be built locally
+            "latest": "lmandrelli/tamarin-prover:latest",
+        }
+        return preset_images.get(preset)
+
+    @classmethod
+    def get_platform_flag(cls, preset: str) -> Optional[str]:
+        """Get platform flag for preset if needed."""
+        if preset in ["1.6.0", "1.4.1", "1.4.0"]:
+            return "linux/amd64"
+        return None
 
 
 class Lemma(BaseModel):
@@ -74,18 +117,90 @@ class Resources(BaseModel):
     )
 
 
-class TamarinVersion(BaseModel):
-    """Individual tamarin version definition."""
+class DockerfileConfig(BaseModel):
+    """Configuration for custom Dockerfile builds."""
 
     model_config = ConfigDict(extra="forbid")
 
-    path: str = Field(..., description="File path to the Tamarin prover executable")
+    path: str = Field(..., description="Path to custom Dockerfile")
+    tag: str = Field(..., description="Tag name for the built Docker image")
+    platform: Optional[str] = Field(
+        None, description="Platform for the Docker image (e.g., linux/amd64)"
+    )
+
+
+class DockerImageConfig(BaseModel):
+    """Configuration for custom Docker image execution."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image: str = Field(..., description="Tag name for the Docker image")
+    platform: Optional[str] = Field(
+        None, description="Platform for the Docker image (e.g., linux/amd64)"
+    )
+
+
+class TamarinVersion(BaseModel):
+    """Individual tamarin version definition with support for local, Docker preset, Docker image, or custom Docker execution."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # Execution modes (exactly one required)
+    path: Optional[str] = Field(
+        None, description="File path to the Tamarin prover executable"
+    )
+    docker_preset: Optional[DockerPreset] = Field(
+        None, description="Predefined Docker configuration"
+    )
+    dockerfile: Optional[DockerfileConfig] = Field(
+        None, description="Custom Dockerfile configuration"
+    )
+    docker_image: Optional[DockerImageConfig] = Field(
+        None, description="Custom Docker image configuration"
+    )
+
+    # Options for Docker modes
+    force_rebuild: Optional[bool] = Field(
+        False, description="Force rebuild/redownload of Docker image"
+    )
+
+    # Common metadata
     version: Optional[str] = Field(
         None, description="Version identifier for this Tamarin prover"
     )
     test_success: Optional[bool] = Field(
         None, description="Whether this Tamarin executable passed connectivity tests"
     )
+
+    @model_validator(mode="after")
+    def validate_execution_mode(self) -> "TamarinVersion":
+        """Ensure exactly one execution mode is specified and validate docker-only options."""
+        modes: List[Any] = [
+            self.path,
+            self.docker_preset,
+            self.docker_image,
+            self.dockerfile,
+        ]
+        non_null_modes = [m for m in modes if m is not None]
+
+        # Exactly one execution mode must be selected
+        if len(non_null_modes) != 1:
+            raise ValueError(
+                "Exactly one of 'path', 'docker_preset', 'docker_image', or 'dockerfile' must be specified"
+            )
+
+        # force_rebuild is meaningful only for docker-based execution
+        if self.force_rebuild:
+            if not (
+                self.docker_preset is not None
+                or self.docker_image is not None
+                or self.dockerfile is not None
+            ):
+                raise ValueError(
+                    "force_rebuild can only be used with docker-based execution ('docker_preset', 'docker_image', or 'dockerfile')"
+                )
+
+        return self
 
 
 class Task(BaseModel):

@@ -15,6 +15,7 @@ from ..model.tamarin_recipe import (
 )
 from ..utils.notifications import notification_manager
 from ..utils.system_resources import resolve_executable_path, resolve_resource_value
+from .docker_manager import docker_manager
 from .lemma_parser import LemmaParser, LemmaParsingError
 from .output_manager import output_manager
 
@@ -40,6 +41,99 @@ class ConfigManager:
     """Manages wrapper configuration serialization and deserialization."""
 
     task_id_counter: Dict[str, int] = {}
+
+    @staticmethod
+    def prepare_docker_environment(recipe: TamarinRecipe) -> None:
+        """
+        Prepare all Docker images required by the recipe before execution.
+
+        This method collects all unique Docker configurations from the recipe
+        and ensures the corresponding images are built/pulled and ready.
+
+        Args:
+            recipe: The TamarinRecipe to analyze for Docker requirements
+
+        Raises:
+            ConfigError: If Docker preparation fails
+        """
+        try:
+            docker_configs = ConfigManager._collect_unique_docker_configs(recipe)
+
+            if not docker_configs:
+                notification_manager.info(
+                    "[ConfigManager] No Docker configurations found, skipping Docker preparation"
+                )
+                return
+
+            notification_manager.info(
+                f"[ConfigManager] Preparing {len(docker_configs)} Docker configuration(s)"
+            )
+
+            for tamarin_version in docker_configs:
+                try:
+                    image_tag = docker_manager.ensure_docker_image(tamarin_version)
+                    notification_manager.success(
+                        f"[ConfigManager] Docker image ready: {image_tag}"
+                    )
+                except Exception as e:
+                    raise ConfigError(
+                        f"Failed to prepare Docker image for configuration: {e}"
+                    ) from e
+
+        except Exception as e:
+            if not isinstance(e, ConfigError):
+                error_msg = f"[ConfigManager] Failed to prepare Docker environment: {e}"
+                raise ConfigError(error_msg) from e
+            raise
+
+    @staticmethod
+    def _collect_unique_docker_configs(recipe: TamarinRecipe) -> List[TamarinVersion]:
+        """
+        Collect unique Docker configurations from the recipe.
+
+        Args:
+            recipe: The TamarinRecipe to analyze
+
+        Returns:
+            List of unique TamarinVersion configurations that use Docker
+        """
+        docker_configs: List[TamarinVersion] = []
+        seen_images: set[str] = set()
+
+        for tamarin_version in recipe.tamarin_versions.values():
+            # Only process Docker-based configurations
+            if (
+                tamarin_version.docker_preset
+                or tamarin_version.docker_image
+                or tamarin_version.dockerfile
+            ):
+                # Create a simple hash for deduplication
+                config_hash = ConfigManager._get_docker_config_hash(tamarin_version)
+                if config_hash not in seen_images:
+                    docker_configs.append(tamarin_version)
+                    seen_images.add(config_hash)
+
+        return docker_configs
+
+    @staticmethod
+    def _get_docker_config_hash(tamarin_version: TamarinVersion) -> str:
+        """
+        Generate a hash for Docker configuration deduplication.
+
+        Args:
+            tamarin_version: TamarinVersion configuration
+
+        Returns:
+            String hash representing the Docker configuration
+        """
+        if tamarin_version.docker_preset:
+            return f"preset:{tamarin_version.docker_preset.value}:{tamarin_version.force_rebuild}"
+        elif tamarin_version.docker_image:
+            return f"image:{tamarin_version.docker_image.image}:{tamarin_version.docker_image.platform}:{tamarin_version.force_rebuild}"
+        elif tamarin_version.dockerfile:
+            return f"dockerfile:{tamarin_version.dockerfile.path}:{tamarin_version.dockerfile.tag}:{tamarin_version.force_rebuild}"
+        else:
+            return "local"
 
     @staticmethod
     async def load_json_recipe(config_path: Path) -> TamarinRecipe:
@@ -447,8 +541,12 @@ class ConfigManager:
                         f"[ConfigManager] Tamarin version '{tamarin_version}' not found in recipe for task '{task_name}'"
                     )
 
-                tamarin_executable = ConfigManager.validate_tamarin_executable(
-                    tamarin_version, recipe.tamarin_versions[tamarin_version], recipe
+                executable_path, docker_image = (
+                    ConfigManager.validate_tamarin_executable(
+                        tamarin_version,
+                        recipe.tamarin_versions[tamarin_version],
+                        recipe,
+                    )
                 )
 
                 # Generate unique task ID
@@ -461,7 +559,8 @@ class ConfigManager:
                     task_name=unique_task_id,
                     original_task_name=task_name,
                     tamarin_version_name=tamarin_version,
-                    tamarin_executable=tamarin_executable,
+                    tamarin_executable=executable_path,
+                    docker_image=docker_image,
                     theory_file=theory_file,
                     output_file=models_dir / f"{unique_task_id}.spthy",
                     lemma=lemma_config.lemma_name,
@@ -506,18 +605,62 @@ class ConfigManager:
     @staticmethod
     def validate_tamarin_executable(
         version_name: str, tamarin_version: TamarinVersion, recipe: TamarinRecipe
-    ) -> Path:
-        """Validate that tamarin executable exists and is a file."""
+    ) -> Tuple[Optional[Path], Optional[str]]:
+        """
+        Validate tamarin configuration and return execution parameters.
+
+        Returns tuple of (local_executable_path, docker_image_tag).
+        Exactly one will be non-None based on the configuration type.
+
+        Args:
+            version_name: Alias name for the tamarin version
+            tamarin_version: TamarinVersion configuration
+            recipe: Full recipe (unused but kept for compatibility)
+
+        Returns:
+            Tuple of (executable_path, docker_image) where exactly one is non-None
+
+        Raises:
+            ConfigError: If validation fails
+        """
         try:
-            tamarin_executable = resolve_executable_path(tamarin_version.path)
-            return tamarin_executable
+            # Handle local execution
+            if tamarin_version.path:
+                tamarin_executable = resolve_executable_path(tamarin_version.path)
+                return (tamarin_executable, None)
+
+            # Handle Docker execution - assume images are already prepared
+            elif (
+                tamarin_version.docker_preset
+                or tamarin_version.docker_image
+                or tamarin_version.dockerfile
+            ):
+                # Get the cached image tag - images should already be prepared by prepare_docker_environment
+                try:
+                    image_tag = docker_manager.get_cached_image_tag(tamarin_version)
+                    if image_tag is None:
+                        raise ConfigError(
+                            f"[ConfigManager] Docker image not found in cache for alias '{version_name}'. "
+                            "Ensure prepare_docker_environment() was called before task creation."
+                        )
+                    return (None, image_tag)
+                except Exception as e:
+                    raise ConfigError(
+                        f"[ConfigManager] Docker image resolution failed for alias '{version_name}': {e}"
+                    ) from e
+
+            else:
+                raise ConfigError(
+                    f"[ConfigManager] No valid execution mode configured for alias '{version_name}'"
+                )
+
         except FileNotFoundError as e:
             raise ConfigError(
                 f"[ConfigManager] Tamarin executable not found for alias '{version_name}': {e}"
             ) from e
         except ValueError as e:
             raise ConfigError(
-                f"[ConfigManager] Tamarin executable path is not a file for alias '{version_name}': {e}"
+                f"[ConfigManager] Tamarin executable validation failed for alias '{version_name}': {e}"
             ) from e
 
     @staticmethod

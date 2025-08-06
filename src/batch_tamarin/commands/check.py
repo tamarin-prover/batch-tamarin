@@ -21,6 +21,9 @@ async def check_command_logic(config_path: Path, report: bool) -> None:
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path)
 
+        # Prepare Docker environment (if needed)
+        config_manager.prepare_docker_environment(recipe)
+
         # Check tamarin integrity
         await check_tamarin_integrity(recipe.tamarin_versions)
 

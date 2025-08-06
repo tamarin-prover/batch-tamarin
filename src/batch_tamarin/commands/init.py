@@ -15,6 +15,9 @@ from rich.panel import Panel
 from rich.prompt import Confirm, IntPrompt, Prompt
 
 from ..model.tamarin_recipe import (
+    DockerfileConfig,
+    DockerImageConfig,
+    DockerPreset,
     GlobalConfig,
     Lemma,
     Resources,
@@ -176,33 +179,174 @@ class InitCommand:
         )
 
         versions[first_alias] = TamarinVersion(
-            path=first_path, version=None, test_success=None
+            path=first_path,
+            docker_preset=None,
+            dockerfile=None,
+            docker_image=None,
+            force_rebuild=False,
+            version=None,
+            test_success=None,
         )
 
         # Additional versions
         while Confirm.ask("Add another Tamarin version?", default=False):
-            path = Prompt.ask("Path or symbolic link to tamarin-prover binary")
-            if not path:
-                self.console.print("[red]Path cannot be empty![/red]")
-                continue
-
             alias = Prompt.ask("Linked alias for this version")
             if not alias:
                 self.console.print("[red]Alias cannot be empty![/red]")
                 continue
 
-            if path in versions or alias in versions:
-                self.console.print(
-                    f"[red]Path '{path}' or alias '{alias}' already exists![/red]"
-                )
-                continue
-            if not Path(path).exists():
-                self.console.print(f"[red]Path '{path}' does not exist![/red]")
+            if alias in versions:
+                self.console.print(f"[red]Alias '{alias}' already exists![/red]")
                 continue
 
-            versions[alias] = TamarinVersion(path=path, version=None, test_success=None)
+            # Ask for execution mode
+            execution_mode = Prompt.ask(
+                "Execution mode",
+                choices=["local", "docker-preset", "docker-image", "dockerfile"],
+                default="local",
+            )
+
+            if execution_mode == "local":
+                path = Prompt.ask("Path or symbolic link to tamarin-prover binary")
+                if not path:
+                    self.console.print("[red]Path cannot be empty![/red]")
+                    continue
+                if not Path(path).exists():
+                    self.console.print(f"[red]Path '{path}' does not exist![/red]")
+                    continue
+                versions[alias] = TamarinVersion(
+                    path=path,
+                    docker_preset=None,
+                    dockerfile=None,
+                    docker_image=None,
+                    force_rebuild=False,
+                    version=None,
+                    test_success=None,
+                )
+
+            elif execution_mode == "docker-preset":
+                # Check Docker availability first
+                if not self._check_docker_available():
+                    continue
+
+                preset_choices = [preset.value for preset in DockerPreset]
+                preset = Prompt.ask(
+                    "Docker preset", choices=preset_choices, default="latest"
+                )
+
+                force_rebuild = Confirm.ask("Force rebuild/redownload?", default=False)
+
+                versions[alias] = TamarinVersion(
+                    path=None,
+                    docker_preset=DockerPreset(preset),
+                    dockerfile=None,
+                    docker_image=None,
+                    force_rebuild=force_rebuild,
+                    version=None,
+                    test_success=None,
+                )
+
+            elif execution_mode == "docker-image":
+                # Check Docker availability first
+                if not self._check_docker_available():
+                    continue
+
+                image = Prompt.ask(
+                    "Docker image name", default="lmandrelli/tamarin-prover:latest"
+                )
+                if not image:
+                    self.console.print("[red]Image name cannot be empty![/red]")
+                    continue
+
+                platform = Prompt.ask("Platform (optional)", default="")
+                force_rebuild = Confirm.ask("Force pull latest?", default=False)
+
+                versions[alias] = TamarinVersion(
+                    path=None,
+                    docker_preset=None,
+                    dockerfile=None,
+                    docker_image=DockerImageConfig(
+                        image=image, platform=platform if platform else None
+                    ),
+                    force_rebuild=force_rebuild,
+                    version=None,
+                    test_success=None,
+                )
+
+            elif execution_mode == "dockerfile":
+                # Check Docker availability first
+                if not self._check_docker_available():
+                    continue
+
+                dockerfile_path = Prompt.ask("Dockerfile path")
+                if not dockerfile_path:
+                    self.console.print("[red]Dockerfile path cannot be empty![/red]")
+                    continue
+                if not Path(dockerfile_path).exists():
+                    self.console.print(
+                        f"[red]Dockerfile not found: {dockerfile_path}[/red]"
+                    )
+                    continue
+
+                # Generate unique default tag
+                default_tag = self._generate_unique_tag(
+                    versions, "tamarin-prover:local"
+                )
+                tag = Prompt.ask("Image tag", default=default_tag)
+                platform = Prompt.ask("Platform (optional)", default="")
+                force_rebuild = Confirm.ask("Force rebuild?", default=False)
+
+                versions[alias] = TamarinVersion(
+                    path=None,
+                    docker_preset=None,
+                    dockerfile=DockerfileConfig(
+                        path=dockerfile_path,
+                        tag=tag,
+                        platform=platform if platform else None,
+                    ),
+                    docker_image=None,
+                    force_rebuild=force_rebuild,
+                    version=None,
+                    test_success=None,
+                )
 
         return versions
+
+    def _generate_unique_tag(
+        self, versions: Dict[str, TamarinVersion], base_tag: str
+    ) -> str:
+        """Generate a unique Docker tag by adding a counter if the base tag is already used."""
+        used_tags: set[str] = set()
+
+        # Collect all currently used tags
+        for version in versions.values():
+            if version.dockerfile and version.dockerfile.tag:
+                used_tags.add(version.dockerfile.tag)
+
+        # If base tag is not used, return it
+        if base_tag not in used_tags:
+            return base_tag
+
+        # Generate unique tag with counter
+        counter = 2
+        while f"{base_tag}_{counter}" in used_tags:
+            counter += 1
+
+        return f"{base_tag}_{counter}"
+
+    def _check_docker_available(self) -> bool:
+        """Check if Docker is available and warn user if not."""
+        from ..modules.docker_manager import docker_manager
+
+        if not docker_manager.validate_docker_available():
+            self.console.print(
+                "[yellow]Warning: Docker not available on this system[/yellow]"
+            )
+            if not Confirm.ask(
+                "Continue with Docker configuration anyway?", default=False
+            ):
+                return False
+        return True
 
     def _collect_tasks(
         self, spthy_files: List[Path], tamarin_aliases: List[str]

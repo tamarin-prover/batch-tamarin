@@ -58,6 +58,7 @@
           diskcache
           jinja2
           graphviz
+          docker
           py-tree-sitter-spthy
         ];
 

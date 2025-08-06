@@ -23,6 +23,9 @@ async def process_config_file(
         config_manager = ConfigManager()
         recipe = await config_manager.load_json_recipe(config_path)
 
+        # Prepare Docker environment (if needed)
+        config_manager.prepare_docker_environment(recipe)
+
         # Initialize TaskRunner - this validates and potentially corrects resource limits
         runner = TaskRunner(recipe, scheduler)
 
