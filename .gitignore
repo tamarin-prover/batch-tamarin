@@ -227,6 +227,7 @@ pyrightconfig.json
 .ionide
 
 tamarin-binaries
+examples/__dockerfiles__/tamarin-prover
 
 # Nix development environment
 .dev/
