@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ..modules.config_manager import ConfigManager
 from ..modules.output_manager import output_manager
-from ..modules.tamarin_test_cmd import check_tamarin_integrity
+from ..modules.tamarin_test_cmd import extract_tamarin_versions
 from ..utils.model_checking import validate_with_tamarin
 from ..utils.notifications import notification_manager
 
@@ -24,8 +24,8 @@ async def check_command_logic(config_path: Path, report: bool) -> None:
         # Prepare Docker environment (if needed)
         config_manager.prepare_docker_environment(recipe)
 
-        # Check tamarin integrity
-        await check_tamarin_integrity(recipe.tamarin_versions)
+        # Extract tamarin versions
+        await extract_tamarin_versions(recipe.tamarin_versions)
 
         # Initialize output manager (bypass directory creation)
         output_manager.initialize(Path(recipe.config.output_directory), bypass=True)

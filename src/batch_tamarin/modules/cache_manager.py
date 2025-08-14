@@ -217,10 +217,20 @@ class CacheManager:
                 hasher.update(chunk)
         theory_hash = hasher.hexdigest()
 
-        # Hash executable info (cross-platform compatible)
-        exe_stat = Path(task.tamarin_executable).stat()
-        exe_info = f"{task.tamarin_executable}_{exe_stat.st_mtime}_{exe_stat.st_size}"
-        exe_hash = hashlib.sha256(exe_info.encode()).hexdigest()
+        # Hash execution environment info
+        if task.tamarin_executable:
+            # Local execution: hash executable info (cross-platform compatible)
+            exe_stat = Path(task.tamarin_executable).stat()
+            exe_info = (
+                f"{task.tamarin_executable}_{exe_stat.st_mtime}_{exe_stat.st_size}"
+            )
+            exe_hash = hashlib.sha256(exe_info.encode()).hexdigest()
+        elif task.docker_image:
+            # Docker execution: hash docker image info
+            exe_info = f"docker:{task.docker_image}"
+            exe_hash = hashlib.sha256(exe_info.encode()).hexdigest()
+        else:
+            raise ValueError("Task must have either tamarin_executable or docker_image")
 
         # Combine all relevant fields
         key_data = "|".join(

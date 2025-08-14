@@ -8,7 +8,10 @@ with a specific tamarin version, ready for execution by the ProcessManager.
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional, Set
+from typing import TYPE_CHECKING, Any, List, Optional, Set
+
+if TYPE_CHECKING:
+    from .command_builder import CommandBuilder
 
 
 @dataclass
@@ -32,6 +35,9 @@ class ExecutableTask:
 
     tamarin_version_name: str
     """Name of the tamarin version being used"""
+
+    tamarin_version: Optional[str]
+    """Version string of the tamarin version (e.g., '1.6.1', '1.10.0')"""
 
     tamarin_executable: Optional[Path]
     """Path to the tamarin executable (for local execution)"""
@@ -76,72 +82,23 @@ class ExecutableTask:
                 "Exactly one of tamarin_executable or docker_image must be specified"
             )
 
+        # Initialize command builder
+        from .command_builder import create_command_builder
+
+        self._command_builder: "CommandBuilder" = create_command_builder(self)
+
     async def to_command(self) -> List[str]:
         """
-        Convert this task to a runnable command for ProcessManager.
+        Convert this task to a runnable command.
 
-        Supports both local and Docker execution modes:
-        - Local: tamarin-prover +RTS -N{cores} -RTS [args...]
-        - Docker: docker run --rm --memory={memory}g -v {pwd}:/workspace -w /workspace {image} tamarin-prover +RTS -N{cores} -RTS [args...]
+        Uses the appropriate command builder based on the execution mode:
+        - LocalCommandBuilder for local execution
+        - DockerCommandBuilder for Docker execution
 
         Returns:
-            List[str]: Command components ready for ProcessManager execution
+            List[str]: Command components ready for execution
         """
-        # Build base tamarin command
-        base_command = ["tamarin-prover"]
-
-        # Add Haskell RTS flags for performance limiting
-        base_command.extend(["+RTS", f"-N{self.max_cores}", "-RTS"])
-
-        # Add theory file
-        base_command.append(str(self.theory_file))
-
-        if self.lemma:
-            # Prove specific lemma
-            base_command.append(f"--prove={self.lemma}")
-
-        # Add tamarin options if provided
-        if self.tamarin_options:
-            base_command.extend(self.tamarin_options)
-
-        # Add preprocessor flags with -D= prefix if provided
-        if self.preprocess_flags:
-            for flag in self.preprocess_flags:
-                base_command.append(f"-D={flag}")
-
-        # Add trace output parameters
-        base_command.append(f"--output-json={self.traces_dir}/{self.task_name}.json")
-        base_command.append(f"--output-dot={self.traces_dir}/{self.task_name}.dot")
-
-        # Add output file
-        base_command.append(f"--output={self.output_file}")
-
-        # Handle execution mode
-        if self.docker_image:
-            # Docker execution mode
-            from ..modules.docker_manager import docker_manager
-
-            return docker_manager.create_docker_command(
-                base_command,
-                self.docker_image,
-                self.theory_file.parent,
-                self.max_memory,
-            )
-        elif self.tamarin_executable:
-            # Local execution mode
-            # Replace "tamarin-prover" with actual executable path
-            base_command[0] = str(self.tamarin_executable)
-
-            # Apply compatibility filtering based on tamarin version
-            from ..utils.compatibility_filter import compatibility_filter
-
-            filtered_command = await compatibility_filter(
-                base_command, self.tamarin_executable
-            )
-            return filtered_command
-        else:
-            # This should never happen due to __post_init__ validation
-            raise RuntimeError("No execution mode configured")
+        return await self._command_builder.build(self)
 
 
 class TaskStatus(Enum):

@@ -554,11 +554,16 @@ class ConfigManager:
                 base_task_id = f"{task.output_file_prefix}--{task_suffix}"
                 unique_task_id = ConfigManager.get_unique_task_id(base_task_id)
 
+                # Get version string from tamarin version configuration
+                tamarin_version_config = recipe.tamarin_versions[tamarin_version]
+                version_string = getattr(tamarin_version_config, "version", None)
+
                 # Create ExecutableTask
                 executable_task = ExecutableTask(
                     task_name=unique_task_id,
                     original_task_name=task_name,
                     tamarin_version_name=tamarin_version,
+                    tamarin_version=version_string,
                     tamarin_executable=executable_path,
                     docker_image=docker_image,
                     theory_file=theory_file,

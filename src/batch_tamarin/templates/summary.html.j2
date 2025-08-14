@@ -264,7 +264,12 @@
         <h3><span class="failed">❌ ERROR :</span> {{ task.task_name }}</h3>
         <h4>On lemma : {{ task.rich_executable.task_config.lemma }}, with tamarin-prover : {{ task.rich_executable.task_config.tamarin_alias }} ({{ batch.tamarin_versions[task.rich_executable.task_config.tamarin_alias].version or "Unknown" }})</h4>
         <p>{{ task.rich_executable.task_result.error_description }}</p>
+        {% if task.rich_executable.task_result.last_stdout_lines %}
+        <h4>Last stdout lines:</h4>
+        <pre><code class="zsh">{{ task.rich_executable.task_result.last_stdout_lines|join('\n') }}</code></pre>
+        {% endif %}
         {% if task.rich_executable.task_result.last_stderr_lines %}
+        <h4>Last stderr lines:</h4>
         <pre><code class="zsh">{{ task.rich_executable.task_result.last_stderr_lines|join('\n') }}</code></pre>
         {% endif %}
     </div>

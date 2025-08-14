@@ -383,6 +383,9 @@ class BatchManager:
             last_stderr_lines=(
                 task_result.stderr.split("\n")[-10:] if task_result.stderr else []
             ),
+            last_stdout_lines=(
+                task_result.stdout.split("\n")[-10:] if task_result.stdout else []
+            ),
         )
 
     def _extract_lemma_name_from_task_id(self, task_id: str) -> str:

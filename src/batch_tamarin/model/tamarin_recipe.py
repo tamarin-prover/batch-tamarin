@@ -161,7 +161,7 @@ class TamarinVersion(BaseModel):
 
     # Options for Docker modes
     force_rebuild: Optional[bool] = Field(
-        False, description="Force rebuild/redownload of Docker image"
+        None, description="Force rebuild/redownload of Docker image"
     )
 
     # Common metadata

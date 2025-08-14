@@ -22,8 +22,8 @@ async def validate_with_tamarin(
     Validate theory files with tamarin executables.
 
     Runs tamarin without --prove flags to check for warnings/errors in theory files.
-    Groups tasks by unique (tamarin_executable, theory_file) combinations to avoid
-    duplicate validation runs.
+    Groups tasks by unique (tamarin_executable/docker_image, theory_file) combinations to avoid
+    duplicate validation runs. Uses Docker commands for Docker-based tasks.
 
     Args:
         executable_tasks: List of ExecutableTask objects to validate
@@ -34,17 +34,27 @@ async def validate_with_tamarin(
     """
     validation_errors: Dict[str, List[str]] = {}
 
-    # Group tasks by unique (tamarin_executable, theory_file) combinations
+    # Group tasks by unique execution context and theory file
     unique_validations: Dict[tuple[str, str], "ExecutableTask"] = {}
     for task in executable_tasks:
-        key = (str(task.tamarin_executable), str(task.theory_file))
+        # Create unique key based on execution mode
+        if task.docker_image:
+            exec_key = f"docker:{task.docker_image}"
+        else:
+            exec_key = str(task.tamarin_executable)
+        key = (exec_key, str(task.theory_file))
         if key not in unique_validations:
             unique_validations[key] = task
 
     for (_, _), task in unique_validations.items():
         try:
-            # Run tamarin without any prove flags to check for warnings/errors
-            cmd = [str(task.tamarin_executable), str(task.theory_file)]
+            # Build validation command based on execution mode
+            if task.docker_image:
+                # Docker-based validation
+                cmd = await _build_docker_validation_command(task)
+            else:
+                # Local validation
+                cmd = [str(task.tamarin_executable), str(task.theory_file)]
 
             notification_manager.debug(f"Running validation: {' '.join(cmd)}")
 
@@ -74,6 +84,43 @@ async def validate_with_tamarin(
             validation_errors[task.task_name] = [f"Validation failed: {str(e)}"]
 
     return validation_errors
+
+
+async def _build_docker_validation_command(task: "ExecutableTask") -> List[str]:
+    """
+    Build Docker validation command for a task.
+
+    Args:
+        task: ExecutableTask with Docker image
+
+    Returns:
+        List of command components for Docker validation
+    """
+    if not task.docker_image:
+        raise ValueError("Task must have docker_image for Docker validation")
+
+    # Get the absolute path of the theory file for mounting
+    theory_file_abs = task.theory_file.absolute()
+    theory_dir = theory_file_abs.parent
+    theory_filename = theory_file_abs.name
+
+    # Build Docker command following DockerManager pattern
+    docker_cmd = ["docker", "run", "--rm"]
+
+    # Add memory and CPU limits for validation
+    docker_cmd.extend(["--memory", "4g"])
+    docker_cmd.extend(["--cpus", "2"])
+
+    # Mount theory directory as workspace (read-only for safety)
+    docker_cmd.extend(
+        ["-v", f"{theory_dir.absolute()}:/workspace:ro", "-w", "/workspace"]
+    )
+
+    # Add image and tamarin command
+    docker_cmd.append(task.docker_image)
+    docker_cmd.extend(["tamarin-prover", theory_filename])
+
+    return docker_cmd
 
 
 def parse_tamarin_output(

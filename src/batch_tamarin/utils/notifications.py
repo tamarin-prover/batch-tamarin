@@ -373,16 +373,41 @@ class NotificationManager:
                 # Format other columns
                 tamarin_alias = rich_executable.task_config.tamarin_alias
                 tamarin_version_obj = batch.tamarin_versions.get(tamarin_alias)
-                tamarin_version = (
-                    tamarin_version_obj.version
-                    if tamarin_version_obj and tamarin_version_obj.version
-                    else "Unknown"
-                )
-                version_display = (
-                    f"{tamarin_alias} ({tamarin_version})"
-                    if tamarin_version != "Unknown"
-                    else tamarin_alias
-                )
+
+                # Show Docker image info instead of path for Docker-based execution
+                if tamarin_version_obj:
+                    if tamarin_version_obj.docker_image:
+                        # Show Docker image name and tag
+                        image_display = tamarin_version_obj.docker_image.image
+                        if tamarin_version_obj.docker_image.platform:
+                            image_display += (
+                                f" ({tamarin_version_obj.docker_image.platform})"
+                            )
+                        version_display = f"{tamarin_alias} (🐳 {image_display})"
+                    elif tamarin_version_obj.docker_preset:
+                        # Show Docker preset info
+                        preset_display = tamarin_version_obj.docker_preset.value
+                        version_display = f"{tamarin_alias} (🐳 {preset_display})"
+                    elif tamarin_version_obj.dockerfile:
+                        # Show Dockerfile info
+                        dockerfile_display = (
+                            f"custom:{tamarin_version_obj.dockerfile.tag}"
+                        )
+                        version_display = f"{tamarin_alias} (🐳 {dockerfile_display})"
+                    else:
+                        # Local execution - show version if available, otherwise just alias
+                        tamarin_version = (
+                            tamarin_version_obj.version
+                            if tamarin_version_obj.version
+                            else "Unknown"
+                        )
+                        version_display = (
+                            f"{tamarin_alias} ({tamarin_version})"
+                            if tamarin_version != "Unknown"
+                            else tamarin_alias
+                        )
+                else:
+                    version_display = tamarin_alias
 
                 duration_display = self._format_duration(
                     rich_executable.task_execution_metadata.exec_duration_monotonic

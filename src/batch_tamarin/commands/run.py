@@ -10,6 +10,7 @@ from pathlib import Path
 from ..model.tamarin_recipe import SchedulingStrategy
 from ..modules.batch_manager import BatchManager
 from ..modules.config_manager import ConfigManager
+from ..modules.tamarin_test_cmd import extract_tamarin_versions
 from ..runner import TaskRunner
 from ..utils.notifications import notification_manager
 
@@ -25,6 +26,9 @@ async def process_config_file(
 
         # Prepare Docker environment (if needed)
         config_manager.prepare_docker_environment(recipe)
+
+        # Extract tamarin versions
+        await extract_tamarin_versions(recipe.tamarin_versions)
 
         # Initialize TaskRunner - this validates and potentially corrects resource limits
         runner = TaskRunner(recipe, scheduler)

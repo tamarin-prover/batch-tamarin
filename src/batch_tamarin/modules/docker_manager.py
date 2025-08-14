@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from ..model.tamarin_recipe import DockerfileConfig, DockerPreset, TamarinVersion
 from ..utils.notifications import notification_manager
+from .docker_executor import ContainerConfig, ContainerResult, docker_executor
 
 
 class DockerManager:
@@ -322,6 +323,222 @@ class DockerManager:
                 build_cmd,
                 "Build timeout: tamarin-prover develop build took longer than 1 hour",
             )
+
+    async def run_temporary_container(
+        self,
+        image: str,
+        command: List[str],
+        timeout: float = 30.0,
+    ) -> Optional[Dict[str, str]]:
+        """
+        Run a temporary Docker container for simple commands like --version.
+
+        Args:
+            image: Docker image to use
+            command: Command to execute in the container
+            timeout: Timeout in seconds
+
+        Returns:
+            Dictionary with 'stdout', 'stderr', and 'error_type' keys, or None if failed
+        """
+        container = None
+        try:
+            import time
+
+            import docker
+            from docker.errors import ContainerError, DockerException, ImageNotFound
+
+            client = docker.from_env()
+
+            try:
+                # Run container with minimal configuration
+                container = client.containers.run(
+                    image,
+                    command,
+                    detach=True,
+                    remove=False,  # We'll remove manually after getting logs
+                    mem_limit=f"{1}g",  # 1GB limit for version extraction
+                    nano_cpus=int(1 * 1e9),  # 1 CPU limit
+                )
+
+                # Wait for completion with timeout
+                start_time = time.time()
+                try:
+                    exit_code = container.wait(timeout=timeout)
+                    execution_time = time.time() - start_time
+                except Exception as wait_error:
+                    execution_time = time.time() - start_time
+
+                    # Check if it's a timeout
+                    if execution_time >= timeout - 1:  # Allow 1 second tolerance
+                        try:
+                            container.kill()
+                        except:
+                            pass
+
+                        notification_manager.warning(
+                            f"[DockerManager] Container timeout after {execution_time:.1f}s for image '{image}'"
+                        )
+                        return {
+                            "stdout": "",
+                            "stderr": f"Container timeout after {execution_time:.1f} seconds",
+                            "error_type": "timeout",
+                        }
+                    else:
+                        # Some other wait error
+                        return {
+                            "stdout": "",
+                            "stderr": f"Container wait error: {str(wait_error)}",
+                            "error_type": "unknown",
+                        }
+
+                # Get logs
+                stdout = ""
+                stderr = ""
+                try:
+                    stdout = container.logs(stdout=True, stderr=False).decode(
+                        "utf-8", errors="replace"
+                    )
+                    stderr = container.logs(stdout=False, stderr=True).decode(
+                        "utf-8", errors="replace"
+                    )
+                except Exception as log_error:
+                    notification_manager.warning(
+                        f"[DockerManager] Failed to get logs: {log_error}"
+                    )
+
+                # Check for timeout indicators in output
+                if any(
+                    indicator in stdout.lower()
+                    for indicator in ["timeout", "timed out", "time limit"]
+                ) or any(
+                    indicator in stderr.lower()
+                    for indicator in ["timeout", "timed out", "time limit"]
+                ):
+                    return {"stdout": stdout, "stderr": stderr, "error_type": "timeout"}
+
+                # Check for memory limit indicators
+                if any(
+                    indicator in stdout.lower()
+                    for indicator in ["out of memory", "memory", "killed"]
+                ) or any(
+                    indicator in stderr.lower()
+                    for indicator in ["out of memory", "memory", "killed"]
+                ):
+                    # Try to get memory stats to confirm
+                    try:
+                        stats = container.stats(stream=False)
+                        if stats and "memory_stats" in stats:
+                            memory_usage = stats["memory_stats"].get("usage", 0)
+                            memory_limit = stats["memory_stats"].get(
+                                "limit", 1073741824
+                            )  # 1GB default
+
+                            # If memory usage is near limit (>90%)
+                            if memory_usage > 0.9 * memory_limit:
+                                return {
+                                    "stdout": stdout,
+                                    "stderr": stderr,
+                                    "error_type": "memory_limit",
+                                }
+                    except:
+                        pass
+
+                    # Fallback: assume memory issue based on output
+                    return {
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "error_type": "memory_limit",
+                    }
+
+                # Success case
+                return {"stdout": stdout, "stderr": stderr, "error_type": None}
+
+            except ImageNotFound:
+                notification_manager.error(
+                    f"[DockerManager] Docker image '{image}' not found"
+                )
+                return None
+            except ContainerError as e:
+                notification_manager.error(f"[DockerManager] Container error: {e}")
+                return {
+                    "stdout": "",
+                    "stderr": f"Container error: {str(e)}",
+                    "error_type": "unknown",
+                }
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "timeout" in error_msg:
+                    error_type = "timeout"
+                elif "memory" in error_msg or "killed" in error_msg:
+                    error_type = "memory_limit"
+                else:
+                    error_type = "unknown"
+
+                notification_manager.warning(
+                    f"[DockerManager] Container execution error ({error_type}): {e}"
+                )
+                return {"stdout": "", "stderr": str(e), "error_type": error_type}
+            finally:
+                # Clean up container
+                if container:
+                    try:
+                        container.remove(force=True)
+                    except:
+                        pass
+                try:
+                    client.close()
+                except:
+                    pass
+
+        except DockerException as e:
+            notification_manager.error(f"[DockerManager] Docker error: {e}")
+            return None
+        except Exception as e:
+            notification_manager.error(
+                f"[DockerManager] Unexpected error running temporary container: {e}"
+            )
+            return None
+
+    async def run_container(
+        self,
+        image: str,
+        command: List[str],
+        working_dir: Path,
+        memory_limit_gb: float,
+        cpu_limit: float,
+        timeout_seconds: float,
+        environment: Optional[Dict[str, str]] = None,
+    ) -> ContainerResult:
+        """
+        Run a Docker container with the specified configuration.
+
+        Args:
+            image: Docker image to use
+            command: Command to execute in the container
+            working_dir: Working directory to mount as volume
+            memory_limit_gb: Memory limit in GB
+            cpu_limit: CPU limit (number of cores)
+            timeout_seconds: Timeout in seconds
+            environment: Optional environment variables
+
+        Returns:
+            ContainerResult with execution details and stats
+
+        Raises:
+            RuntimeError: If Docker is not available or execution fails
+        """
+        config = ContainerConfig(
+            image=image,
+            command=command,
+            working_dir=working_dir,
+            memory_limit_mb=memory_limit_gb * 1024,  # Convert GB to MB
+            cpu_limit=cpu_limit,
+            timeout_seconds=timeout_seconds,
+            environment=environment,
+        )
+
+        return await docker_executor.run_container_with_monitoring(config)
 
 
 # Global instance for other modules to use

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from pydantic import BaseModel, Field, computed_field
 
+from ..model.tamarin_recipe import DockerPreset
 from ..utils.dot_utils import is_dot_file_empty, process_dot_file
 from .batch import (
     Batch,
@@ -655,7 +656,53 @@ class ReportData(BaseModel):
             for subtask_key, executable_task in rich_task.subtasks.items():
                 # Extract lemma and version directly from the task config
                 lemma = executable_task.task_config.lemma
-                version = executable_task.task_config.tamarin_alias
+
+                # Build descriptive version string for display
+                alias = executable_task.task_config.tamarin_alias
+                tamarin_version_config = batch.tamarin_versions.get(alias)
+                version_str = (
+                    tamarin_version_config.version if tamarin_version_config else ""
+                )
+
+                if tamarin_version_config:
+                    if tamarin_version_config.docker_preset:
+                        # Docker preset: show preset image (version)
+                        docker_image = DockerPreset.get_docker_image(
+                            tamarin_version_config.docker_preset.value
+                        )
+                        if docker_image and version_str:
+                            version = f"{docker_image} ({version_str})"
+                        elif docker_image:
+                            version = docker_image
+                        else:
+                            version = (
+                                f"{alias} ({version_str})" if version_str else alias
+                            )
+                    elif tamarin_version_config.docker_image:
+                        # Docker image: show image:tag (version)
+                        if version_str:
+                            version = f"{tamarin_version_config.docker_image.image} ({version_str})"
+                        else:
+                            version = tamarin_version_config.docker_image.image
+                    elif tamarin_version_config.dockerfile:
+                        # Dockerfile: show tag (version)
+                        if version_str:
+                            version = f"{tamarin_version_config.dockerfile.tag} ({version_str})"
+                        else:
+                            version = tamarin_version_config.dockerfile.tag
+                    elif tamarin_version_config.path:
+                        # Local execution: show executable name (version)
+                        executable_name = Path(tamarin_version_config.path).name
+                        if version_str:
+                            version = f"{executable_name} ({version_str})"
+                        else:
+                            version = executable_name
+                    else:
+                        # Fallback
+                        version = f"{alias} ({version_str})" if version_str else alias
+                else:
+                    # No config found, use alias
+                    version = alias
                 status = executable_task.task_execution_metadata.status
 
                 # Update task totals

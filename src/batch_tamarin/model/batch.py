@@ -113,6 +113,9 @@ class TaskFailedResult(BaseModel):
     last_stderr_lines: List[str] = Field(
         default_factory=list, description="Last stderr lines"
     )
+    last_stdout_lines: List[str] = Field(
+        default_factory=list, description="Last stdout lines"
+    )
 
 
 class ExecMetadata(BaseModel):

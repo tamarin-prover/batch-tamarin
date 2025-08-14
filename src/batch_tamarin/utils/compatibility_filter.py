@@ -69,8 +69,8 @@ def is_version_greater_than(
         return False
 
 
-async def compatibility_filter(
-    command: List[str], tamarin_executable: Path
+def compatibility_filter_with_version(
+    command: List[str], version_str: str
 ) -> List[str]:
     """
     Filter Tamarin command options based on version compatibility.
@@ -80,16 +80,13 @@ async def compatibility_filter(
 
     Args:
         command: List of command arguments
-        tamarin_executable: Path to the Tamarin executable
+        version_str: Version string (e.g., "1.6.1", "1.10.0")
 
     Returns:
         Filtered command list with incompatible options removed
     """
-    # Extract version from the executable
-    version_str = await extract_tamarin_version(tamarin_executable)
-
     if not version_str:
-        # If we can't determine the version, return command as-is
+        # If we don't have a version, return command as-is
         return command
 
     filtered_command: list[str] = []
@@ -116,7 +113,29 @@ async def compatibility_filter(
         #         filtered_command.append(arg)
         #     continue
 
-        # Keep all other arguments
+        # Default: include the argument
         filtered_command.append(arg)
 
     return filtered_command
+
+
+async def compatibility_filter(
+    command: List[str], tamarin_executable: Path
+) -> List[str]:
+    """
+    Filter Tamarin command options based on version compatibility.
+
+    This function removes options that are not supported by the given
+    Tamarin version to prevent command failures.
+
+    Args:
+        command: List of command arguments
+        tamarin_executable: Path to the Tamarin executable
+
+    Returns:
+        Filtered command list with incompatible options removed
+    """
+    # Extract version from the executable
+    version_str = await extract_tamarin_version(tamarin_executable)
+
+    return compatibility_filter_with_version(command, version_str or "")

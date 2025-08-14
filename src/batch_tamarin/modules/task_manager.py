@@ -17,6 +17,7 @@ from ..model.executable_task import (
 )
 from ..utils.notifications import notification_manager
 from .cache_manager import CacheManager
+from .docker_manager import docker_manager
 from .output_manager import output_manager
 from .process_manager import process_manager
 
@@ -90,11 +91,6 @@ class TaskManager:
         self._task_start_times[task_id] = start_time
         self.update_task_status(task_id, TaskStatus.PENDING)
 
-        # Convert task to command
-        command = await task.to_command()
-        executable = task.tamarin_executable
-        args = command[1:]  # Remove the executable from the command list
-
         # Update status to running
         self.update_task_status(task_id, TaskStatus.RUNNING)
 
@@ -102,50 +98,20 @@ class TaskManager:
         notification_manager.debug(f"[TaskManager] Starting task: {task_id}")
 
         try:
-            # Execute the command using existing run_command method (now returns memory stats)
-            # Convert memory limit from GB to MB
-            memory_limit_mb = float(task.max_memory) * 1024
-            return_code, stdout, stderr, memory_stats = (
-                await process_manager.run_command(
-                    executable,
-                    args,
-                    timeout=float(task.task_timeout),
-                    memory_limit_mb=memory_limit_mb,
-                )
-            )
-
-            # Determine final status based on return code
-            end_time = time.time()
-            duration = end_time - start_time
-
-            if return_code == 0:
-                status = TaskStatus.COMPLETED
-            elif return_code == -1 and stderr == "Process timed out":
-                status = TaskStatus.TIMEOUT
-            elif return_code == -2 and stderr == "Process exceeded memory limit":
-                status = TaskStatus.MEMORY_LIMIT_EXCEEDED
+            # Route to appropriate execution pipeline based on task type
+            if task.docker_image:
+                # Docker execution pipeline
+                task_result = await self._execute_docker_task(task, task_id, start_time)
             else:
-                status = TaskStatus.FAILED
-
-            # Create task result with memory statistics
-            task_result = TaskResult(
-                task_id=task_id,
-                status=status,
-                return_code=return_code,
-                stdout=stdout,
-                stderr=stderr,
-                start_time=start_time,
-                end_time=end_time,
-                duration=duration,
-                memory_stats=memory_stats,
-            )
+                # Local execution pipeline
+                task_result = await self._execute_local_task(task, task_id, start_time)
 
             # Update tracking
-            self._task_status[task_id] = status
+            self._task_status[task_id] = task_result.status
             self._task_results[task_id] = task_result
 
             # Store results in cache, except for signal-interrupted tasks
-            if status != TaskStatus.SIGNAL_INTERRUPTED:  # type: ignore
+            if task_result.status != TaskStatus.SIGNAL_INTERRUPTED:
                 try:
                     self._cache_manager.store_result(task, task_result)
                     notification_manager.debug(
@@ -173,7 +139,7 @@ class TaskManager:
             return task_result
 
         except Exception as e:
-            # Handle unexpected errors
+            # Handle unexpected errors at the top level
             end_time = time.time()
             duration = end_time - start_time
 
@@ -208,6 +174,148 @@ class TaskManager:
                     )
 
             return task_result
+
+    async def _execute_docker_task(
+        self, task: ExecutableTask, task_id: str, start_time: float
+    ) -> TaskResult:
+        """Execute a Docker task using the container pipeline."""
+        try:
+            # Get the base command from the task
+            command = await task.to_command()
+
+            # Use the docker_image directly as the final image
+            # Image preparation should have been done during recipe processing
+            final_image = task.docker_image
+
+            # Run container with monitoring - mount project root directory
+            from pathlib import Path
+
+            project_root = Path.cwd()  # Use current working directory as project root
+
+            container_result = await docker_manager.run_container(
+                image=final_image,
+                command=command,
+                working_dir=project_root,
+                memory_limit_gb=float(task.max_memory),
+                cpu_limit=float(task.max_cores),
+                timeout_seconds=float(task.task_timeout),
+            )
+
+            # Convert ContainerResult to TaskResult
+            end_time = container_result.end_time
+            duration = container_result.duration
+
+            # For Docker tasks, always use FAILED status except for success
+            # This allows us to see raw stdout/stderr without timeout/memory detection
+            if container_result.exit_code == 0:
+                status = TaskStatus.COMPLETED
+            else:
+                status = TaskStatus.FAILED
+
+            # Create task result
+            task_result = TaskResult(
+                task_id=task_id,
+                status=status,
+                return_code=container_result.exit_code,
+                stdout=container_result.stdout,
+                stderr=container_result.stderr,
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                memory_stats=container_result.memory_stats,
+            )
+
+            return task_result
+
+        except Exception as e:
+            # Handle Docker-specific errors
+            end_time = time.time()
+            duration = end_time - start_time
+
+            notification_manager.error(
+                f"[TaskManager] Docker execution error for task {task_id}: {e}"
+            )
+
+            return TaskResult(
+                task_id=task_id,
+                status=TaskStatus.FAILED,
+                return_code=-1,
+                stdout="",
+                stderr=f"Docker execution error: {e}",
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                memory_stats=None,
+            )
+
+    async def _execute_local_task(
+        self, task: ExecutableTask, task_id: str, start_time: float
+    ) -> TaskResult:
+        """Execute a local task using the process manager."""
+        try:
+            # Convert task to command
+            command = await task.to_command()
+            executable = task.tamarin_executable
+            args = command[1:]  # Remove the executable from the command list
+
+            # Execute the command using existing run_command method (now returns memory stats)
+            # Convert memory limit from GB to MB
+            memory_limit_mb = float(task.max_memory) * 1024
+            return_code, stdout, stderr, memory_stats = (
+                await process_manager.run_command(
+                    executable,
+                    args,
+                    timeout=float(task.task_timeout),
+                    memory_limit_mb=memory_limit_mb,
+                )
+            )
+
+            # Determine final status based on return code
+            end_time = time.time()
+            duration = end_time - start_time
+
+            if return_code == 0:
+                status = TaskStatus.COMPLETED
+            elif return_code == -1 and stderr == "Process timed out":
+                status = TaskStatus.TIMEOUT
+            elif return_code == -2 and stderr == "Process exceeded memory limit":
+                status = TaskStatus.MEMORY_LIMIT_EXCEEDED
+            else:
+                status = TaskStatus.FAILED
+
+            # Create task result with memory statistics
+            return TaskResult(
+                task_id=task_id,
+                status=status,
+                return_code=return_code,
+                stdout=stdout,
+                stderr=stderr,
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                memory_stats=memory_stats,
+            )
+
+        except Exception as e:
+            # Handle local execution errors
+            end_time = time.time()
+            duration = end_time - start_time
+
+            notification_manager.error(
+                f"[TaskManager] Local execution error for task {task_id}: {e}"
+            )
+
+            return TaskResult(
+                task_id=task_id,
+                status=TaskStatus.FAILED,
+                return_code=-1,
+                stdout="",
+                stderr=f"Local execution error: {e}",
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                memory_stats=None,
+            )
 
     def get_execution_progress(self) -> ProgressReport:
         """
