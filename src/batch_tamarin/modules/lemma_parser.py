@@ -62,9 +62,8 @@ class LemmaParser:
             if not theory_file.exists():
                 raise LemmaParsingError(f"Theory file not found: {theory_file}")
 
-            # Read the file content
-            with open(theory_file, "r", encoding="utf-8") as f:
-                content = f.read()
+            # Read the file content with preprocessing for #include directives
+            content = self._preprocess_includes(theory_file)
 
             # Parse the content with tree-sitter
             tree = self.parser.parse(content.encode("utf-8"))
@@ -80,6 +79,48 @@ class LemmaParser:
         except Exception as e:
             raise LemmaParsingError(
                 f"Failed to parse lemmas from {theory_file}: {e}"
+            ) from e
+
+    def _preprocess_includes(self, theory_file: Path) -> str:
+        """
+        Preprocess the theory file to handle #include directives.
+
+        Args:
+            theory_file: Path to the .spthy theory file
+
+        Returns:
+            Preprocessed file content as a string
+        """
+        try:
+            with open(theory_file, "r", encoding="utf-8") as f:
+                content = f.readlines()
+
+            processed_lines: List[str] = []
+
+            for line in content:
+                stripped_line = line.strip()
+                if stripped_line.startswith("#include"):
+                    # Extract the included file path
+                    include_path = stripped_line.split("#include", 1)[1].strip().strip(
+                        '"<>'
+                    )
+                    include_file = theory_file.parent / include_path
+                    if include_file.exists():
+                        with open(include_file, "r", encoding="utf-8") as included_file:
+                            included_content = included_file.read()
+                            processed_lines.append(included_content)
+                    else:
+                        notification_manager.warning(
+                            f"[LemmaParser] Included file not found: {include_file}"
+                        )
+                else:
+                    processed_lines.append(line)
+
+            return "\n".join(processed_lines)
+
+        except Exception as e:
+            raise LemmaParsingError(
+                f"Failed to preprocess includes in {theory_file}: {e}"
             ) from e
 
     def _extract_lemma_names(self, node: Node, content: str) -> List[str]:
