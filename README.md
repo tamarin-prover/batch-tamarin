@@ -51,7 +51,7 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 
 ### Prerequisites
 
--   **Python 3.9+**
+-   **Python 3.10+**
 -   **Tamarin Prover binaries** (installed separately)
 
 ### From PyPI
