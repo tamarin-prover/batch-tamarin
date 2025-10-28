@@ -57,37 +57,33 @@
     "tamarin_versions": {
       "type": "object",
       "description": "Named aliases for different Tamarin prover executables",
-      "patternProperties": {
-        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
-          "type": "object",
-          "required": ["path"],
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "File path to the Tamarin prover executable"
-            },
-            "version": {
-              "type": "string",
-              "description": "Version identifier for this Tamarin prover"
-            },
-            "test_success": {
-              "type": "boolean",
-              "description": "Whether this Tamarin executable passed connectivity tests"
-            }
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File path to the Tamarin prover executable"
           },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+          "version": {
+            "type": "string",
+            "description": "Version identifier for this Tamarin prover"
+          },
+          "test_success": {
+            "type": "boolean",
+            "description": "Whether this Tamarin executable passed connectivity tests"
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "tasks": {
       "type": "object",
       "description": "Named tasks, each defining a Tamarin execution configuration",
-      "patternProperties": {
-        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
-          "type": "object",
-          "required": ["theory_file", "tamarin_versions", "output_file_prefix"],
-          "properties": {
+      "additionalProperties": {
+        "type": "object",
+        "required": ["theory_file", "tamarin_versions", "output_file_prefix"],
+        "properties": {
 				"theory_file": {
 					"type": "string",
 					"description": "Path to the .spthy theory file to analyze"
@@ -204,8 +200,7 @@
 			},
           "additionalProperties": false
         }
-      },
-      "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

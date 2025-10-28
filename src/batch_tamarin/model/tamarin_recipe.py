@@ -8,7 +8,7 @@ the tamarin-config-schema.json specification.
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SchedulingStrategy(str, Enum):
@@ -196,26 +196,3 @@ class TamarinRecipe(BaseModel):
     tasks: Dict[str, Task] = Field(
         ..., description="Named tasks, each defining a Tamarin execution configuration"
     )
-
-    @model_validator(mode="after")
-    def validate_name_patterns(self) -> "TamarinRecipe":
-        """Validate that keys match the required pattern: ^[a-zA-Z][a-zA-Z0-9_-]*$"""
-        import re
-
-        pattern = re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]*$")
-
-        # Validate tamarin_versions keys
-        for key in self.tamarin_versions.keys():
-            if not pattern.match(key):
-                raise ValueError(
-                    f'Tamarin version key "{key}" must start with a letter and contain only letters, numbers, underscores, and hyphens'
-                )
-
-        # Validate tasks keys
-        for key in self.tasks.keys():
-            if not pattern.match(key):
-                raise ValueError(
-                    f'Task key "{key}" must start with a letter and contain only letters, numbers, underscores, and hyphens'
-                )
-
-        return self
