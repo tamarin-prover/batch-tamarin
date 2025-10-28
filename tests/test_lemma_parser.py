@@ -41,6 +41,28 @@ end
         assert "test_lemma" in lemmas
         assert "another_lemma" in lemmas
 
+    def test_parse_lemmas_with_includes(self, tmp_dir: Path) -> None:
+        """Test parsing lemmas from a theory file with #include directives."""
+        theory_content: str = """
+theory IncludedTheory
+begin
+#include "library.spthy"
+end
+        """
+        library_content: str = """
+lemma included_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+        """
+        theory_file = tmp_dir / "included_theory.spthy"
+        theory_file.write_text(theory_content)
+        library_file = tmp_dir / "library.spthy"
+        library_file.write_text(library_content)
+
+        parser = LemmaParser()
+        lemmas = parser.parse_lemmas_from_file(theory_file)
+        assert len(lemmas) == 1
+        assert "included_lemma" in lemmas
+
     def test_parse_lemmas_with_complex_names(self, tmp_dir: Path) -> None:
         """Test parsing lemmas with complex names including underscores and numbers."""
         theory_content = """
