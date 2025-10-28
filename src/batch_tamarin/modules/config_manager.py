@@ -244,10 +244,6 @@ class ConfigManager:
 
         if not task.lemmas:
             # Scenario A: No lemmas specified - use task-level flags for all lemmas
-            notification_manager.debug(
-                f"[ConfigManager] No lemmas specified for task '{task_name}', using task-level flags"
-            )
-
             try:
                 parser = LemmaParser(task.preprocess_flags)
                 all_lemmas = parser.parse_lemmas_from_file(theory_file)
@@ -257,6 +253,10 @@ class ConfigManager:
                         f"[ConfigManager] No lemmas found in theory file {theory_file} for task '{task_name}'"
                     )
                     return lemma_configs
+
+                notification_manager.debug(
+                    f"[ConfigManager] No lemmas specified for task '{task_name}', using all {len(all_lemmas)} lemmas"
+                )
 
                 for lemma_name in all_lemmas:
                     lemma_config = ConfigManager._create_lemma_config(
