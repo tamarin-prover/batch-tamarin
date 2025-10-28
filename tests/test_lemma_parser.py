@@ -404,7 +404,20 @@ end
         parser = LemmaParser()
 
         try:
-            # This should raise a parsing error due to permissions
+            # Check if file permissions are actually enforced in this environment
+            # In Docker/CI environments running as root, chmod 000 might not prevent reading
+            try:
+                with open(theory_file, "r") as f:
+                    f.read()
+                # If we can read the file, permissions aren't enforced in this environment
+                pytest.skip(
+                    "File permissions not enforced in current environment (likely running as root)"
+                )
+            except PermissionError:
+                # Permissions are enforced, expect LemmaParsingError
+                pass
+
+            # If we get here, permissions are enforced, so the parsing should fail
             with pytest.raises(LemmaParsingError):
                 parser.parse_lemmas_from_file(theory_file)
         finally:
