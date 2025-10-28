@@ -40,36 +40,62 @@ class InitCommand:
             spthy_files: List of spthy file paths
             output_path: Optional output path for the generated config
         """
-        self.console.print(
-            Panel.fit(
-                "[bold blue]Batch Tamarin Configuration Generator[/bold blue]",
-                style="blue",
+        try:
+            self.console.print(
+                Panel.fit(
+                    "[bold blue]Batch Tamarin Configuration Generator[/bold blue]",
+                    style="blue",
+                )
             )
-        )
 
-        # Validate spthy files exist
-        validated_files = self._validate_spthy_files(spthy_files)
-        if not validated_files:
-            self.console.print("[red]No valid spthy files provided![/red]")
+            # Validate spthy files exist
+            validated_files = self._validate_spthy_files(spthy_files)
+            if not validated_files:
+                self.console.print("[red]No valid spthy files provided![/red]")
+                return
+
+            # Collect configuration interactively with fallbacks
+            config = self._collect_global_config_with_fallback()
+            # store for use in task-specific resource defaults
+            self._global_config = config
+            tamarin_versions = self._collect_tamarin_versions_with_fallback()
+            tasks, failed_files = self._collect_tasks(
+                validated_files, list(tamarin_versions.keys())
+            )
+
+            # Display summary of failed files
+            if failed_files:
+                self._display_failed_files_summary(failed_files)
+
+            # Check if we have any valid tasks
+            if not tasks:
+                self.console.print(
+                    "[red]No valid tasks were created. Configuration file not generated.[/red]"
+                )
+                return
+
+            # Build the recipe
+            recipe = TamarinRecipe(
+                config=config, tamarin_versions=tamarin_versions, tasks=tasks
+            )
+
+            # Save or output
+            if output_path:
+                self._save_config(recipe, output_path)
+            else:
+                self._save_config(recipe, "recipe.json")
+
+        except KeyboardInterrupt:
+            self.console.print("\n[yellow]Initialization cancelled by user.[/yellow]")
             return
-
-        # Collect configuration interactively
-        config = self._collect_global_config()
-        # store for use in task-specific resource defaults
-        self._global_config = config
-        tamarin_versions = self._collect_tamarin_versions()
-        tasks = self._collect_tasks(validated_files, list(tamarin_versions.keys()))
-
-        # Build the recipe
-        recipe = TamarinRecipe(
-            config=config, tamarin_versions=tamarin_versions, tasks=tasks
-        )
-
-        # Save or output
-        if output_path:
-            self._save_config(recipe, output_path)
-        else:
-            self._save_config(recipe, "recipe.json")
+        except Exception as e:
+            self.console.print(
+                f"\n[red]Unexpected error during initialization:[/red] {e}"
+            )
+            self.console.print(
+                "[yellow]Please report this issue if it persists.[/yellow]"
+            )
+            return
 
     def _validate_spthy_files(self, spthy_files: List[str]) -> List[Path]:
         """Validate that spthy files exist and are readable."""
@@ -88,6 +114,59 @@ class InitCommand:
                 )
             validated.append(path)
         return validated
+
+    def _collect_global_config_with_fallback(self) -> GlobalConfig:
+        """Collect global configuration with fallbacks for input failures."""
+        try:
+            return self._collect_global_config()
+        except (KeyboardInterrupt, EOFError):
+            self.console.print(
+                "[yellow]Using default global configuration due to input cancellation.[/yellow]"
+            )
+            # Return sensible defaults
+            system_cores = get_max_cpu_cores()
+            system_memory = get_max_memory_gb()
+            return GlobalConfig(
+                global_max_cores=system_cores,
+                global_max_memory=system_memory,
+                default_timeout=3600,
+                output_directory="result",
+            )
+        except Exception as e:
+            self.console.print(
+                f"[yellow]Error collecting global config, using defaults: {e}[/yellow]"
+            )
+            system_cores = get_max_cpu_cores()
+            system_memory = get_max_memory_gb()
+            return GlobalConfig(
+                global_max_cores=system_cores,
+                global_max_memory=system_memory,
+                default_timeout=3600,
+                output_directory="result",
+            )
+
+    def _collect_tamarin_versions_with_fallback(self) -> Dict[str, TamarinVersion]:
+        """Collect Tamarin versions with fallbacks for input failures."""
+        try:
+            return self._collect_tamarin_versions()
+        except (KeyboardInterrupt, EOFError):
+            self.console.print(
+                "[yellow]Using default Tamarin configuration due to input cancellation.[/yellow]"
+            )
+            return {
+                "default": TamarinVersion(
+                    path="tamarin-prover", version=None, test_success=None
+                )
+            }
+        except Exception as e:
+            self.console.print(
+                f"[yellow]Error collecting Tamarin versions, using defaults: {e}[/yellow]"
+            )
+            return {
+                "default": TamarinVersion(
+                    path="tamarin-prover", version=None, test_success=None
+                )
+            }
 
     def _collect_global_config(self) -> GlobalConfig:
         """Collect global configuration settings interactively."""
@@ -206,65 +285,157 @@ class InitCommand:
 
     def _collect_tasks(
         self, spthy_files: List[Path], tamarin_aliases: List[str]
-    ) -> Dict[str, Task]:
-        """Collect task configurations for each spthy file."""
+    ) -> tuple[Dict[str, Task], List[tuple[Path, str]]]:
+        """Collect task configurations for each spthy file.
+
+        Returns:
+            Tuple of (successful_tasks, failed_files) where failed_files contains
+            (file_path, error_message) tuples.
+        """
         self.console.print("\n[bold]Tasks Configuration[/bold]")
 
         tasks: dict[str, Task] = {}
+        failed_files: List[tuple[Path, str]] = []
 
         for spthy_file in spthy_files:
             self.console.print(
                 f"\n[bold cyan]Configuring task for:[/bold cyan] {spthy_file.name}"
             )
 
-            # Task name
-            default_task_name = spthy_file.stem
-            task_name = Prompt.ask(
-                "Task name", default=default_task_name, show_default=True
-            )
-
-            # Output file prefix
-            output_prefix = Prompt.ask(
-                "Result output file prefix", default=task_name, show_default=True
-            )
-
-            # Select Tamarin versions for this task
-            selected_versions = self._select_tamarin_versions(
-                tamarin_aliases, f"task '{task_name}'"
-            )
-
-            # Collect task-wide parameters
-            preprocess_flags = self._collect_preprocess_flags(f"task '{task_name}'")
-
-            # Check for diff operator usage to auto-add --diff flag
             try:
-                parser = LemmaParser(preprocess_flags, ignore_preprocessor=True)
-                content = parser.preprocess_includes(spthy_file)
-                diff_detected = parser.detect_diff_operator(content)
-                suggested_options = ["--diff"] if diff_detected else None
-            except Exception:
-                suggested_options = None
+                # Task name with fallback
+                default_task_name = spthy_file.stem
+                try:
+                    task_name = Prompt.ask(
+                        "Task name", default=default_task_name, show_default=True
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    task_name = default_task_name
+                    self.console.print(
+                        f"[yellow]Using default task name: {task_name}[/yellow]"
+                    )
 
-            tamarin_options = self._collect_tamarin_options(
-                f"task '{task_name}'", suggested_options
-            )
-            resources = self._collect_resources(f"task '{task_name}'")
-            lemmas = self._collect_lemmas(spthy_file, preprocess_flags, tamarin_aliases)
+                # Output file prefix with fallback
+                try:
+                    output_prefix = Prompt.ask(
+                        "Result output file prefix",
+                        default=task_name,
+                        show_default=True,
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    output_prefix = task_name
+                    self.console.print(
+                        f"[yellow]Using default output prefix: {output_prefix}[/yellow]"
+                    )
 
-            # Create task with collected parameters
-            task = Task(
-                theory_file=str(spthy_file),
-                tamarin_versions=selected_versions,
-                output_file_prefix=output_prefix,
-                resources=resources,
-                tamarin_options=tamarin_options,
-                preprocess_flags=preprocess_flags,
-                lemmas=lemmas,
-            )
+                # Select Tamarin versions for this task with fallback
+                try:
+                    selected_versions = self._select_tamarin_versions(
+                        tamarin_aliases, f"task '{task_name}'"
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    selected_versions = (
+                        tamarin_aliases[:1] if tamarin_aliases else ["default"]
+                    )
+                    self.console.print(
+                        f"[yellow]Using default Tamarin version: {selected_versions[0]}[/yellow]"
+                    )
 
-            tasks[task_name] = task
+                # Collect task-wide parameters with fallback
+                try:
+                    preprocess_flags = self._collect_preprocess_flags(
+                        f"task '{task_name}'"
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    preprocess_flags = None
+                    self.console.print(
+                        "[yellow]No preprocessor flags configured[/yellow]"
+                    )
 
-        return tasks
+                # Check for diff operator usage to auto-add --diff flag
+                try:
+                    parser = LemmaParser(preprocess_flags, ignore_preprocessor=True)
+                    content = parser.preprocess_includes(spthy_file)
+                    diff_detected = parser.detect_diff_operator(content)
+                    suggested_options = ["--diff"] if diff_detected else None
+                except Exception:
+                    suggested_options = None
+
+                try:
+                    tamarin_options = self._collect_tamarin_options(
+                        f"task '{task_name}'", suggested_options
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    tamarin_options = suggested_options
+                    self.console.print(
+                        "[yellow]Using default or suggested tamarin options[/yellow]"
+                    )
+
+                try:
+                    resources = self._collect_resources(f"task '{task_name}'")
+                except (KeyboardInterrupt, EOFError):
+                    resources = None
+                    self.console.print(
+                        "[yellow]Using default resource allocation[/yellow]"
+                    )
+
+                try:
+                    lemmas = self._collect_lemmas(
+                        spthy_file, preprocess_flags, tamarin_aliases
+                    )
+                except (KeyboardInterrupt, EOFError):
+                    lemmas = None
+                    self.console.print(
+                        "[yellow]Using all lemmas (default behavior)[/yellow]"
+                    )
+
+                # Create task with collected parameters
+                task = Task(
+                    theory_file=str(spthy_file),
+                    tamarin_versions=selected_versions,
+                    output_file_prefix=output_prefix,
+                    resources=resources,
+                    tamarin_options=tamarin_options,
+                    preprocess_flags=preprocess_flags,
+                    lemmas=lemmas,
+                )
+
+                tasks[task_name] = task
+                self.console.print(
+                    f"[green]✓ Task '{task_name}' created successfully[/green]"
+                )
+
+            except Exception as e:
+                error_msg = str(e)
+                self.console.print(
+                    f"[red]✗ Failed to create task for {spthy_file.name}:[/red] {error_msg}"
+                )
+                failed_files.append((spthy_file, error_msg))
+                # Continue to next file instead of crashing
+                continue
+
+        return tasks, failed_files
+
+    def _display_failed_files_summary(
+        self, failed_files: List[tuple[Path, str]]
+    ) -> None:
+        """Display a summary of files that were skipped during task creation."""
+        if not failed_files:
+            return
+
+        self.console.print(
+            "\n[bold yellow]Files Skipped During Initialization[/bold yellow]"
+        )
+        self.console.print(
+            "[yellow]The following files could not be processed and were ignored:[/yellow]"
+        )
+
+        for file_path, error_msg in failed_files:
+            self.console.print(f"  • [red]{file_path.name}[/red]: {error_msg}")
+
+        self.console.print(
+            f"\n[yellow]Note: {len(failed_files)} file(s) were skipped, but {len(failed_files) > 0 and 'the remaining' or 'all'} valid tasks were included in the recipe.[/yellow]"
+        )
 
     def _collect_tamarin_options(
         self, context: str, suggested_options: Optional[List[str]] = None
