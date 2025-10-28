@@ -747,20 +747,20 @@ end
 
         # Test with diff operator
         content_with_diff = "rule Test: [ ] -> [ Out(diff(x, y)) ]"
-        assert parser._detect_diff_operator(content_with_diff) is True
+        assert parser.detect_diff_operator(content_with_diff) is True
 
         # Test without diff operator
         content_without_diff = "rule Test: [ ] -> [ Out(x) ]"
-        assert parser._detect_diff_operator(content_without_diff) is False
+        assert parser.detect_diff_operator(content_without_diff) is False
 
         # Test with diff in comments
         content_with_diff_in_comments = (
             "// This has diff( but should not match\nrule Test: [ ] -> [ Out(x) ]"
         )
-        assert parser._detect_diff_operator(content_with_diff_in_comments) is False
+        assert parser.detect_diff_operator(content_with_diff_in_comments) is False
 
         # Test with multiple diff operators
         content_with_multiple_diffs = (
             "rule Test: [ ] -> [ Out(diff(x, y)), diff(z, w) ]"
         )
-        assert parser._detect_diff_operator(content_with_multiple_diffs) is True
+        assert parser.detect_diff_operator(content_with_multiple_diffs) is True
