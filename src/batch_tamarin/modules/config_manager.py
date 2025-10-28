@@ -170,18 +170,19 @@ class ConfigManager:
             executable_tasks: List to append new ExecutableTask instances
         """
         try:
-            # Step 1: Parse all lemmas from the theory file with task-level preprocessor flags
-            parser = LemmaParser(task.preprocess_flags)
-            all_lemmas = parser.parse_lemmas_from_file(theory_file)
+            # Step 1: Parse lemmas for each lemma specification with its specific preprocessor flags
+            lemma_configs = ConfigManager._parse_lemmas_with_specific_flags(
+                task_name, task, recipe, theory_file
+            )
 
-            if not all_lemmas:
+            if not lemma_configs:
                 notification_manager.warning(
-                    f"[ConfigManager] No lemmas found in theory file {theory_file} for task '{task_name}'"
+                    f"[ConfigManager] No lemma configurations generated for task '{task_name}'"
                 )
                 return
 
             notification_manager.debug(
-                f"[ConfigManager] Found {len(all_lemmas)} lemmas in {theory_file} for task '{task_name}': {all_lemmas}"
+                f"[ConfigManager] Generated {len(lemma_configs)} lemma configurations for task '{task_name}'"
             )
         except LemmaParsingError as e:
             error_msg = f"[ConfigManager] Failed to parse lemmas from theory file {theory_file} for task '{task_name}':\n{e}"
@@ -189,11 +190,6 @@ class ConfigManager:
         except Exception as e:
             error_msg = f"[ConfigManager] Unexpected error parsing lemmas from {theory_file} for task '{task_name}': \n{e}"
             raise ConfigError(error_msg) from e
-
-        # Step 2: Filter lemmas based on task configuration and Extract effective configurations for each lemma
-        lemma_configs = ConfigManager._filter_and_configure_lemmas(
-            task_name, task, recipe, all_lemmas
-        )
 
         if not lemma_configs:
             notification_manager.warning(
@@ -224,6 +220,125 @@ class ConfigManager:
             error_msg = f"[ConfigManager] Theory file path {theory_file} is not a file for recipe's task '{task_name}'"
             raise ConfigError(error_msg)
         return theory_file
+
+    @staticmethod
+    def _parse_lemmas_with_specific_flags(
+        task_name: str, task: Task, recipe: TamarinRecipe, theory_file: Path
+    ) -> List[LemmaConfig]:
+        """
+        Parse lemmas for each lemma specification with its specific preprocessor flags.
+
+        This method handles the case where different lemmas require different preprocessor flags
+        by parsing the theory file separately for each lemma specification.
+
+        Args:
+            task_name: Name of the original task
+            task: Task configuration
+            recipe: Full recipe configuration
+            theory_file: Path to the theory file
+
+        Returns:
+            List of LemmaConfig objects with effective configurations
+        """
+        lemma_configs: List[LemmaConfig] = []
+
+        if not task.lemmas:
+            # Scenario A: No lemmas specified - use task-level flags for all lemmas
+            notification_manager.debug(
+                f"[ConfigManager] No lemmas specified for task '{task_name}', using task-level flags"
+            )
+
+            try:
+                parser = LemmaParser(task.preprocess_flags)
+                all_lemmas = parser.parse_lemmas_from_file(theory_file)
+
+                if not all_lemmas:
+                    notification_manager.warning(
+                        f"[ConfigManager] No lemmas found in theory file {theory_file} for task '{task_name}'"
+                    )
+                    return lemma_configs
+
+                for lemma_name in all_lemmas:
+                    lemma_config = ConfigManager._create_lemma_config(
+                        lemma_name, task, recipe, None, task_name
+                    )
+                    lemma_configs.append(lemma_config)
+
+            except LemmaParsingError as e:
+                notification_manager.warning(
+                    f"[ConfigManager] Failed to parse lemmas with task-level flags for task '{task_name}': {e}"
+                )
+        else:
+            # Scenario B: Lemmas specified - parse each with its specific flags
+            notification_manager.debug(
+                f"[ConfigManager] Parsing {len(task.lemmas)} lemma specifications with specific flags for task '{task_name}'"
+            )
+
+            # Check for conflicting lemma specifications (same prefix with different flags)
+            lemma_prefixes = {}
+            for lemma_spec in task.lemmas:
+                prefix = lemma_spec.name
+                flags = (
+                    tuple(lemma_spec.preprocess_flags)
+                    if lemma_spec.preprocess_flags
+                    else tuple(task.preprocess_flags or [])
+                )
+                if prefix in lemma_prefixes and lemma_prefixes[prefix] != flags:
+                    notification_manager.warning(
+                        f"[ConfigManager] Conflicting lemma specifications detected for prefix '{prefix}' in task '{task_name}'. "
+                        f"This will create duplicate tasks with different preprocessor flags. "
+                        f"Consider using more specific prefixes to avoid conflicts."
+                    )
+                lemma_prefixes[prefix] = flags
+
+            for lemma_spec in task.lemmas:
+                # Determine the effective preprocessor flags for this lemma specification
+                effective_flags = (
+                    lemma_spec.preprocess_flags
+                    if lemma_spec.preprocess_flags is not None
+                    else task.preprocess_flags
+                )
+
+                try:
+                    # Parse lemmas with the specific flags for this lemma specification
+                    parser = LemmaParser(effective_flags)
+                    visible_lemmas = parser.parse_lemmas_from_file(theory_file)
+
+                    notification_manager.debug(
+                        f"[ConfigManager] Lemma spec '{lemma_spec.name}' with flags {effective_flags} found {len(visible_lemmas)} lemmas: {visible_lemmas}"
+                    )
+
+                    # Find matching lemmas using prefix matching
+                    matching_lemmas = [
+                        parsed_lemma
+                        for parsed_lemma in visible_lemmas
+                        if lemma_spec.name in parsed_lemma
+                    ]
+
+                    if not matching_lemmas:
+                        notification_manager.warning(
+                            f"[ConfigManager] No lemmas found matching prefix '{lemma_spec.name}' in task '{task_name}' with flags {effective_flags}"
+                        )
+                        continue
+
+                    notification_manager.debug(
+                        f"[ConfigManager] Lemma spec '{lemma_spec.name}' matched {len(matching_lemmas)} lemmas: {matching_lemmas}"
+                    )
+
+                    # Create LemmaConfig for each matching lemma
+                    for matched_lemma_name in matching_lemmas:
+                        lemma_config = ConfigManager._create_lemma_config(
+                            matched_lemma_name, task, recipe, lemma_spec, task_name
+                        )
+                        lemma_configs.append(lemma_config)
+
+                except LemmaParsingError as e:
+                    notification_manager.warning(
+                        f"[ConfigManager] Failed to parse lemmas for lemma spec '{lemma_spec.name}' with flags {effective_flags}: {e}"
+                    )
+                    continue
+
+        return lemma_configs
 
     @staticmethod
     def _filter_and_configure_lemmas(
