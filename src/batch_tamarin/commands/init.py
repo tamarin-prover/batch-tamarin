@@ -407,7 +407,7 @@ class InitCommand:
 
         # Parse lemmas from the file
         try:
-            parser = LemmaParser(preprocess_flags)
+            parser = LemmaParser(preprocess_flags, ignore_preprocessor=True)
             all_lemmas = parser.parse_lemmas_from_file(spthy_file)
 
             if not all_lemmas:
