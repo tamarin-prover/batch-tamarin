@@ -1,0 +1,45 @@
+{
+	"config": {
+		"global_max_cores": "max",
+		"global_max_memory": "max",
+		"default_timeout": 3600,
+		"output_directory": "result"
+	},
+	"tamarin_versions": {
+		"default": {
+			"path": "tamarin-prover"
+		}
+	},
+	"tasks": {
+		"5G_handover": {
+			"theory_file": "examples/__protocols__/wisec21-5G-handover/intra-5G/xn/5G_handover.spthy",
+			"tamarin_versions": ["default"],
+			"output_file_prefix": "5G_handover",
+			"lemmas": [
+				{
+					"name": "executability"
+				},
+				{
+					"name": "executability_hkd_hkd_hkd",
+					"tamarin_versions": ["default"],
+					"preprocess_flags": ["exec_hkd_hkd_hkd"]
+				},
+				{
+					"name": "executability_hkd_hkd_vkd",
+					"tamarin_versions": ["default"],
+					"preprocess_flags": ["exec_hkd_hkd_vkd"]
+				},
+				{
+					"name": "executability_hkd_vkd_hkd",
+					"tamarin_versions": ["default"],
+					"preprocess_flags": ["exec_hkd_vkd_hkd"]
+				},
+				{
+					"name": "executability_hkd_vkd_vkd",
+					"tamarin_versions": ["default"],
+					"preprocess_flags": ["exec_hkd_vkd_vkd"]
+				}
+			]
+		}
+	}
+}
