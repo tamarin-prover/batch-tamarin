@@ -17,10 +17,19 @@ jobs:
         python-version: [3.12, 3.13]
 
     steps:
+      - name: Skip duplicate actions
+        id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: 'same_content_newer'
+          skip_after_successful_duplicate: 'true'
+
       - name: Checkout code
+        if: steps.skip_check.outputs.should_skip != 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
+        if: steps.skip_check.outputs.should_skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -28,9 +37,11 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
+        if: steps.skip_check.outputs.should_skip != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
       - name: Run tests
+        if: steps.skip_check.outputs.should_skip != 'true'
         run: pytest tests/ -v
