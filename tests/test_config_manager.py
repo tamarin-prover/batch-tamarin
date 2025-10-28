@@ -108,11 +108,11 @@ class TestJSONLoading:
         assert any("unexpected_field" in msg for msg in critical_messages)
 
     @pytest.mark.asyncio
-    async def test_load_json_with_invalid_key_patterns(
+    async def test_load_json_with_numeric_key_patterns(
         self, tmp_dir: Path, mock_notifications: Any
     ):
-        """Test loading JSON with invalid key patterns."""
-        invalid_data: Dict[str, Any] = {
+        """Test loading JSON with numeric key patterns (should now be accepted)."""
+        numeric_data: Dict[str, Any] = {
             "config": {
                 "global_max_cores": 8,
                 "global_max_memory": 16,
@@ -120,24 +120,30 @@ class TestJSONLoading:
                 "output_directory": "./test-results",
             },
             "tamarin_versions": {
-                "1invalid_key": {
+                "1version": {
                     "path": "/fake/path"
-                }  # Invalid key (starts with number)
+                }  # Numeric key (should now be accepted)
             },
             "tasks": {
-                "test_task": {
+                "123task": {
                     "theory_file": "/fake/theory.spthy",
-                    "tamarin_versions": ["1invalid_key"],
-                    "output_file_prefix": "test_task",
+                    "tamarin_versions": ["1version"],
+                    "output_file_prefix": "123task",
                 }
             },
         }
 
-        config_file = tmp_dir / "invalid.json"
-        config_file.write_text(json.dumps(invalid_data))
+        config_file = tmp_dir / "numeric.json"
+        config_file.write_text(json.dumps(numeric_data))
 
-        with pytest.raises(ConfigError, match="Invalid JSON structure"):
-            await ConfigManager.load_json_recipe(config_file)
+        # Should now load successfully without validation errors
+        recipe = await ConfigManager.load_json_recipe(config_file)
+
+        # Verify the numeric keys are preserved
+        assert "1version" in recipe.tamarin_versions
+        assert "123task" in recipe.tasks
+        assert recipe.tamarin_versions["1version"].path == "/fake/path"
+        assert recipe.tasks["123task"].theory_file == "/fake/theory.spthy"
 
 
 class TestTaskGeneration:
