@@ -30,17 +30,23 @@ class LemmaParsingError(Exception):
 class LemmaParser:
     """Parser for extracting lemma names from Tamarin theory files."""
 
-    def __init__(self, external_flags: Optional[List[str]] = None) -> None:
+    def __init__(
+        self,
+        external_flags: Optional[List[str]] = None,
+        ignore_preprocessor: bool = False,
+    ) -> None:
         """
         Initialize the parser with the Tamarin grammar.
 
         Args:
             external_flags: External preprocessor flags (e.g., from CLI -D arguments)
+            ignore_preprocessor: If True, parse all lemmas ignoring preprocessor directives
         """
         try:
             self.language = ts_spthy.language()
             self.parser = Parser(self.language)  # type: ignore
             self.external_flags = set(external_flags or [])
+            self.ignore_preprocessor = ignore_preprocessor
         except Exception as e:
             raise LemmaParsingError(f"Failed to initialize Tamarin parser: {e}") from e
 
@@ -101,8 +107,8 @@ class LemmaParser:
                 stripped_line = line.strip()
                 if stripped_line.startswith("#include"):
                     # Extract the included file path
-                    include_path = stripped_line.split("#include", 1)[1].strip().strip(
-                        '"<>'
+                    include_path = (
+                        stripped_line.split("#include", 1)[1].strip().strip('"<>')
                     )
                     include_file = theory_file.parent / include_path
                     if include_file.exists():
@@ -148,7 +154,10 @@ class LemmaParser:
                 active: Whether the current block is active (preprocessor directives)
             """
             # Check for all lemma types - only add if in active block
-            if active and node.type in [
+            # When ignore_preprocessor is True, we treat all blocks as active
+            effective_active = active if not self.ignore_preprocessor else True
+
+            if effective_active and node.type in [
                 "lemma",
                 "diff_lemma",
                 "accountability_lemma",
@@ -160,7 +169,7 @@ class LemmaParser:
                     lemma_names.add(lemma_name)
 
             # Handle preprocessor directives
-            elif node.type == "preprocessor":
+            elif node.type == "preprocessor" and not self.ignore_preprocessor:
                 for child in node.children:
                     if child.type == "define":
                         # Extract defined symbol
@@ -182,9 +191,10 @@ class LemmaParser:
                         traverse_node(child, active)
 
             # For all other nodes, continue normal traversal with current active status
+            # When ignore_preprocessor is True, we always traverse with active=True
             else:
                 for child in node.children:
-                    traverse_node(child, active)
+                    traverse_node(child, effective_active)
 
         traverse_node(node)  # Start traversal from the root node
         return list(lemma_names)

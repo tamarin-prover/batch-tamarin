@@ -425,6 +425,165 @@ end
             theory_file.chmod(0o644)
 
 
+class TestLemmaParserIgnorePreprocessor:
+    """Test lemma parsing with ignore_preprocessor mode."""
+
+    def test_parse_lemmas_ignore_preprocessor_mode(self, tmp_dir: Path) -> None:
+        """Test that ignore_preprocessor=True discovers all lemmas regardless of conditions."""
+        theory_content = """
+theory PreprocessorTheory
+begin
+
+#ifdef FLAG1
+lemma conditional_lemma_1:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+#ifdef FLAG2
+lemma conditional_lemma_2:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+lemma always_present_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "preprocessor_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        # Parse with ignore_preprocessor=True - should find all lemmas
+        parser_ignore = LemmaParser(ignore_preprocessor=True)
+        lemmas_ignore = parser_ignore.parse_lemmas_from_file(theory_file)
+
+        # Parse without flags - should only find always_present_lemma
+        parser_no_flags = LemmaParser()
+        lemmas_no_flags = parser_no_flags.parse_lemmas_from_file(theory_file)
+
+        # Parse with FLAG1 - should find conditional_lemma_1 and always_present_lemma
+        parser_flag1 = LemmaParser(external_flags=["FLAG1"])
+        lemmas_flag1 = parser_flag1.parse_lemmas_from_file(theory_file)
+
+        # Parse with FLAG2 - should find conditional_lemma_2 and always_present_lemma
+        parser_flag2 = LemmaParser(external_flags=["FLAG2"])
+        lemmas_flag2 = parser_flag2.parse_lemmas_from_file(theory_file)
+
+        # Parse with both flags - should find all lemmas
+        parser_both = LemmaParser(external_flags=["FLAG1", "FLAG2"])
+        lemmas_both = parser_both.parse_lemmas_from_file(theory_file)
+
+        # ignore_preprocessor=True should find all lemmas
+        assert len(lemmas_ignore) == 3
+        assert "conditional_lemma_1" in lemmas_ignore
+        assert "conditional_lemma_2" in lemmas_ignore
+        assert "always_present_lemma" in lemmas_ignore
+
+        # No flags should only find the always present lemma
+        assert len(lemmas_no_flags) == 1
+        assert "always_present_lemma" in lemmas_no_flags
+        assert "conditional_lemma_1" not in lemmas_no_flags
+        assert "conditional_lemma_2" not in lemmas_no_flags
+
+        # FLAG1 should find conditional_lemma_1 and always_present_lemma
+        assert len(lemmas_flag1) == 2
+        assert "conditional_lemma_1" in lemmas_flag1
+        assert "always_present_lemma" in lemmas_flag1
+        assert "conditional_lemma_2" not in lemmas_flag1
+
+        # FLAG2 should find conditional_lemma_2 and always_present_lemma
+        assert len(lemmas_flag2) == 2
+        assert "conditional_lemma_2" in lemmas_flag2
+        assert "always_present_lemma" in lemmas_flag2
+        assert "conditional_lemma_1" not in lemmas_flag2
+
+        # Both flags should find all lemmas
+        assert len(lemmas_both) == 3
+        assert "conditional_lemma_1" in lemmas_both
+        assert "conditional_lemma_2" in lemmas_both
+        assert "always_present_lemma" in lemmas_both
+
+    def test_parse_lemmas_ignore_preprocessor_nested_conditions(
+        self, tmp_dir: Path
+    ) -> None:
+        """Test ignore_preprocessor mode with nested preprocessor conditions."""
+        theory_content = """
+theory NestedPreprocessorTheory
+begin
+
+#ifdef FLAG1
+  #ifdef FLAG2
+    lemma nested_conditional_lemma:
+      "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+  #endif
+#endif
+
+lemma normal_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "nested_preprocessor_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        # Parse with ignore_preprocessor=True - should find all lemmas
+        parser_ignore = LemmaParser(ignore_preprocessor=True)
+        lemmas_ignore = parser_ignore.parse_lemmas_from_file(theory_file)
+
+        # Parse without flags - should only find normal_lemma
+        parser_no_flags = LemmaParser()
+        lemmas_no_flags = parser_no_flags.parse_lemmas_from_file(theory_file)
+
+        # ignore_preprocessor=True should find both lemmas
+        assert len(lemmas_ignore) == 2
+        assert "nested_conditional_lemma" in lemmas_ignore
+        assert "normal_lemma" in lemmas_ignore
+
+        # No flags should only find the normal lemma
+        assert len(lemmas_no_flags) == 1
+        assert "normal_lemma" in lemmas_no_flags
+        assert "nested_conditional_lemma" not in lemmas_no_flags
+
+    def test_parse_lemmas_ignore_preprocessor_with_external_flags(
+        self, tmp_dir: Path
+    ) -> None:
+        """Test that ignore_preprocessor=True ignores external flags."""
+        theory_content = """
+theory MixedPreprocessorTheory
+begin
+
+#ifdef FLAG1
+lemma conditional_lemma_1:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+#ifdef FLAG2
+lemma conditional_lemma_2:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+lemma always_present_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "mixed_preprocessor_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        # Parse with ignore_preprocessor=True and external flags - should find all lemmas
+        parser_ignore_with_flags = LemmaParser(
+            external_flags=["FLAG1"], ignore_preprocessor=True
+        )
+        lemmas_ignore_with_flags = parser_ignore_with_flags.parse_lemmas_from_file(
+            theory_file
+        )
+
+        # Should find all lemmas regardless of external flags when ignore_preprocessor=True
+        assert len(lemmas_ignore_with_flags) == 3
+        assert "conditional_lemma_1" in lemmas_ignore_with_flags
+        assert "conditional_lemma_2" in lemmas_ignore_with_flags
+        assert "always_present_lemma" in lemmas_ignore_with_flags
+
+
 class TestLemmaParserIntegration:
     """Integration tests for LemmaParser with real-world scenarios."""
 
