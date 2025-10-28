@@ -69,13 +69,17 @@ class LemmaParser:
                 raise LemmaParsingError(f"Theory file not found: {theory_file}")
 
             # Read the file content with preprocessing for #include directives
-            content = self._preprocess_includes(theory_file)
+            content = self.preprocess_includes(theory_file)
 
             # Parse the content with tree-sitter
             tree = self.parser.parse(content.encode("utf-8"))
 
             # Extract lemma names using tree-sitter
             lemma_names = self._extract_lemma_names(tree.root_node, content)
+
+            # Auto-add Observational_equivalence lemma if diff operator is detected
+            if self.detect_diff_operator(content):
+                lemma_names.append("Observational_equivalence")
 
             return lemma_names
 
@@ -87,7 +91,7 @@ class LemmaParser:
                 f"Failed to parse lemmas from {theory_file}: {e}"
             ) from e
 
-    def _preprocess_includes(self, theory_file: Path) -> str:
+    def preprocess_includes(self, theory_file: Path) -> str:
         """
         Preprocess the theory file to handle #include directives.
 
@@ -128,6 +132,27 @@ class LemmaParser:
             raise LemmaParsingError(
                 f"Failed to preprocess includes in {theory_file}: {e}"
             ) from e
+
+    def detect_diff_operator(self, content: str) -> bool:
+        """
+        Detect if the file content contains diff() operator usage.
+
+        Args:
+            content: File content to analyze
+
+        Returns:
+            True if diff() operator is found, False otherwise
+        """
+        import re
+
+        # Remove comments to avoid false positives
+        content_no_comments = re.sub(
+            r"//.*?$|/\*.*?\*/", "", content, flags=re.MULTILINE | re.DOTALL
+        )
+
+        # Look for diff( pattern - word boundary to avoid false positives
+        diff_pattern = r"\bdiff\s*\("
+        return bool(re.search(diff_pattern, content_no_comments))
 
     def _extract_lemma_names(self, node: Node, content: str) -> List[str]:
         """

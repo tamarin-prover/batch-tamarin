@@ -234,8 +234,20 @@ class InitCommand:
             )
 
             # Collect task-wide parameters
-            tamarin_options = self._collect_tamarin_options(f"task '{task_name}'")
             preprocess_flags = self._collect_preprocess_flags(f"task '{task_name}'")
+
+            # Check for diff operator usage to auto-add --diff flag
+            try:
+                parser = LemmaParser(preprocess_flags, ignore_preprocessor=True)
+                content = parser.preprocess_includes(spthy_file)
+                diff_detected = parser.detect_diff_operator(content)
+                suggested_options = ["--diff"] if diff_detected else None
+            except Exception:
+                suggested_options = None
+
+            tamarin_options = self._collect_tamarin_options(
+                f"task '{task_name}'", suggested_options
+            )
             resources = self._collect_resources(f"task '{task_name}'")
             lemmas = self._collect_lemmas(spthy_file, preprocess_flags, tamarin_aliases)
 
@@ -254,38 +266,60 @@ class InitCommand:
 
         return tasks
 
-    def _collect_tamarin_options(self, context: str) -> Optional[List[str]]:
+    def _collect_tamarin_options(
+        self, context: str, suggested_options: Optional[List[str]] = None
+    ) -> Optional[List[str]]:
         """Collect tamarin command-line options interactively."""
+        # Start with suggested options
+        current_options = suggested_options.copy() if suggested_options else []
+
+        # Show auto-detected options
+        if suggested_options:
+            for option in suggested_options:
+                if option == "--diff":
+                    self.console.print(
+                        f"[green]✓ Auto-added {option} flag for observational equivalence[/green]"
+                    )
+                else:
+                    self.console.print(f"[green]✓ Auto-added {option} option[/green]")
+
         if not Confirm.ask(
-            f"Add tamarin command-line options for {context}?", default=False
+            f"Add additional tamarin command-line options for {context}?", default=False
         ):
-            return None
+            return current_options if current_options else None
 
         self.console.print(
-            "[dim]Enter tamarin options separated by spaces or commas[/dim]"
+            "[dim]Enter additional tamarin options separated by spaces or commas[/dim]"
         )
         self.console.print(
             "[dim]Example: '--heuristic=I --bound=5' or '--heuristic=I, --bound=5'[/dim]"
         )
 
-        options_input = Prompt.ask("Tamarin options", default="")
+        options_input = Prompt.ask("Additional tamarin options", default="")
         if not options_input.strip():
-            return None
+            return current_options if current_options else None
 
         # Split by comma or space, clean up whitespace
         if "," in options_input:
-            options = [opt.strip() for opt in options_input.split(",") if opt.strip()]
+            additional_options = [
+                opt.strip() for opt in options_input.split(",") if opt.strip()
+            ]
         else:
-            options = [opt.strip() for opt in options_input.split() if opt.strip()]
+            additional_options = [
+                opt.strip() for opt in options_input.split() if opt.strip()
+            ]
+
+        # Combine suggested and additional options
+        all_options = current_options + additional_options
 
         # Basic validation - warn if options don't start with - or --
-        for option in options:
+        for option in additional_options:
             if not option.startswith("-"):
                 self.console.print(
                     f"[yellow]Warning:[/yellow] '{option}' doesn't start with '-' or '--'"
                 )
 
-        return options if options else None
+        return all_options if all_options else None
 
     def _collect_preprocess_flags(self, context: str) -> Optional[List[str]]:
         """Collect preprocessor flags interactively."""
@@ -419,6 +453,12 @@ class InitCommand:
             self.console.print(
                 f"[green]Found {len(all_lemmas)} lemmas in {spthy_file.name}[/green]"
             )
+
+            # Check if Observational_equivalence was auto-added due to diff operator detection
+            if "Observational_equivalence" in all_lemmas:
+                self.console.print(
+                    "[green]✓ Detected diff() operator - added Observational_equivalence lemma[/green]"
+                )
 
         except LemmaParsingError as e:
             self.console.print(

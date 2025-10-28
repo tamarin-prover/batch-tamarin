@@ -629,3 +629,138 @@ class TestLemmaParserIntegration:
         lemmas2 = parser2.parse_lemmas_from_file(sample_theory_file)
 
         assert lemmas1 == lemmas2
+
+
+class TestDiffOperatorDetection:
+    """Test diff operator detection functionality."""
+
+    def test_detect_diff_operator_in_rule(self, tmp_dir: Path) -> None:
+        """Test detecting diff operator in rule."""
+        theory_content = """
+theory DiffTheory
+begin
+
+rule TestRule:
+    [ Fr(~x), Fr(~y) ]
+  --[ ]->
+    [ Out(diff(~x, ~y)) ]
+
+lemma test_lemma:
+  "All #i. True @i"
+
+end
+"""
+        theory_file = tmp_dir / "diff_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        parser = LemmaParser()
+        lemmas = parser.parse_lemmas_from_file(theory_file)
+
+        assert len(lemmas) == 2
+        assert "test_lemma" in lemmas
+        assert "Observational_equivalence" in lemmas
+
+    def test_detect_diff_operator_in_lemma(self, tmp_dir: Path) -> None:
+        """Test detecting diff operator in lemma formula."""
+        theory_content = """
+theory DiffInLemma
+begin
+
+rule TestRule:
+    [ Fr(~x) ]
+  --[ ]->
+    [ Out(~x) ]
+
+lemma diff_lemma:
+  "All #i #j. diff(~x, ~y) @ i ==> True @j"
+
+end
+"""
+        theory_file = tmp_dir / "diff_in_lemma.spthy"
+        theory_file.write_text(theory_content)
+
+        parser = LemmaParser()
+        lemmas = parser.parse_lemmas_from_file(theory_file)
+
+        assert len(lemmas) == 2
+        assert "diff_lemma" in lemmas
+        assert "Observational_equivalence" in lemmas
+
+    def test_no_diff_operator_detected(self, tmp_dir: Path) -> None:
+        """Test that no diff operator means no Observational_equivalence lemma."""
+        theory_content = """
+theory NoDiffTheory
+begin
+
+rule TestRule:
+    [ Fr(~x), Fr(~y) ]
+  --[ ]->
+    [ Out(~x) ]
+
+lemma test_lemma:
+  "All #i. True @i"
+
+end
+"""
+        theory_file = tmp_dir / "no_diff_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        parser = LemmaParser()
+        lemmas = parser.parse_lemmas_from_file(theory_file)
+
+        assert len(lemmas) == 1
+        assert "test_lemma" in lemmas
+        assert "Observational_equivalence" not in lemmas
+
+    def test_diff_operator_in_comments_not_detected(self, tmp_dir: Path) -> None:
+        """Test that diff operator in comments doesn't trigger detection."""
+        theory_content = """
+theory DiffInComments
+begin
+
+// This comment contains diff( but should not be detected
+/* This comment also has diff( and should not be detected */
+
+rule TestRule:
+    [ Fr(~x), Fr(~y) ]
+  --[ ]->
+    [ Out(~x) ]
+
+lemma test_lemma:
+  "All #i. True @i"
+
+end
+"""
+        theory_file = tmp_dir / "diff_comments.spthy"
+        theory_file.write_text(theory_content)
+
+        parser = LemmaParser()
+        lemmas = parser.parse_lemmas_from_file(theory_file)
+
+        assert len(lemmas) == 1
+        assert "test_lemma" in lemmas
+        assert "Observational_equivalence" not in lemmas
+
+    def test_detect_diff_operator_direct_method(self, tmp_dir: Path) -> None:
+        """Test the _detect_diff_operator method directly."""
+        parser = LemmaParser()
+
+        # Test with diff operator
+        content_with_diff = "rule Test: [ ] -> [ Out(diff(x, y)) ]"
+        assert parser._detect_diff_operator(content_with_diff) is True
+
+        # Test without diff operator
+        content_without_diff = "rule Test: [ ] -> [ Out(x) ]"
+        assert parser._detect_diff_operator(content_without_diff) is False
+
+        # Test with diff in comments
+        content_with_diff_in_comments = (
+            "// This has diff( but should not match\nrule Test: [ ] -> [ Out(x) ]"
+        )
+        assert parser._detect_diff_operator(content_with_diff_in_comments) is False
+
+        # Test with multiple diff operators
+        content_with_multiple_diffs = (
+            "rule Test: [ ] -> [ Out(diff(x, y)), diff(z, w) ]"
+        )
+        assert parser._detect_diff_operator(content_with_multiple_diffs) is True
