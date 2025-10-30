@@ -1,5 +1,5 @@
 {
-  description = "Tamarin Prover 1.10.0 and batch-tamarin 1.0.0";
+  description = "Tamarin Prover 1.10.0 and batch-tamarin 1.1.0";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/a421ac6595024edcfbb1ef950a3712b89161c359";
@@ -14,14 +14,14 @@
 
         py-tree-sitter-spthy = python.pkgs.buildPythonPackage rec {
           pname = "py-tree-sitter-spthy";
-          version = "1.2.1";
+          version = "1.2.2";
           format = "pyproject";
 
           src = pkgs.fetchFromGitHub {
             owner = "lmandrelli";
             repo = "py-tree-sitter-spthy";
             rev = "v${version}";
-            hash = "sha256-CYDn36QUqDvuSLFSIHdKCtmkcmXJefiy35npNNnKzw4=";
+            hash = "sha256-E3vbeDEiXcGyDVFq28aW7MuaTCLanhaGfnD7nqf9zcA=";
           };
 
           nativeBuildInputs = with python.pkgs; [ setuptools wheel ];
@@ -30,14 +30,14 @@
 
         batch-tamarin = python.pkgs.buildPythonPackage rec {
           pname = "batch-tamarin";
-          version = "1.0.0";
+          version = "1.1.0";
           format = "pyproject";
 
           src = pkgs.fetchFromGitHub {
             owner = "tamarin-prover";
             repo = "batch-tamarin";
             rev = "v${version}";
-            hash = "sha256-z4QTPzfVooTM+C/oZaWYu/QgTcVXeIwU82ZWUZTFzlU=";
+            hash = "sha256-wmfCoY2z7b/wnlqeb1Vc9eHzeWYS+v+n9mWxXzrkJzM=";
           };
 
           nativeBuildInputs = with python.pkgs; [ setuptools wheel build ];
