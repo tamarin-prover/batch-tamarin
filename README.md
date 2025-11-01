@@ -245,16 +245,16 @@ After running batch execution, you can generate comprehensive reports using the 
 
 ```bash
 # Generate a Markdown report with statistics and charts
-batch-tamarin report ./results execution_report.md --format md
+batch-tamarin report ./results --output execution_report.md --format md
 
 # Generate an interactive HTML report
-batch-tamarin report ./results execution_report.html --format html
+batch-tamarin report ./results --output execution_report.html --format html
 
 # Generate a LaTeX report for academic publications
-batch-tamarin report ./results execution_report.tex --format latex
+batch-tamarin report ./results --output execution_report.tex --format tex
 
 # Generate a modern Typst report
-batch-tamarin report ./results execution_report.typ --format typst
+batch-tamarin report ./results --output execution_report.typ --format typ
 ```
 
 **Report Features:**
