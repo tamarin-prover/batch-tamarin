@@ -101,13 +101,13 @@ batch-tamarin init protocol.spthy
 batch-tamarin init protocol1.spthy protocol2.spthy --output my_recipe.json
 
 # Generate comprehensive reports from execution results
-batch-tamarin report ./results report.md --format md
+batch-tamarin report ./results --output report.md --format md
 
 # Generate HTML report with interactive visualizations
-batch-tamarin report ./results report.html --format html
+batch-tamarin report ./results --output report.html --format html
 
 # Generate LaTeX report for academic publications
-batch-tamarin report ./results report.tex --format latex
+batch-tamarin report ./results --output report.tex --format tex
 
 # Clear cached results
 batch-tamarin --rm-cache
@@ -245,16 +245,16 @@ After running batch execution, you can generate comprehensive reports using the 
 
 ```bash
 # Generate a Markdown report with statistics and charts
-batch-tamarin report ./results execution_report.md --format md
+batch-tamarin report ./results --output execution_report.md --format md
 
 # Generate an interactive HTML report
-batch-tamarin report ./results execution_report.html --format html
+batch-tamarin report ./results --output execution_report.html --format html
 
 # Generate a LaTeX report for academic publications
-batch-tamarin report ./results execution_report.tex --format latex
+batch-tamarin report ./results --output execution_report.tex --format tex
 
 # Generate a modern Typst report
-batch-tamarin report ./results execution_report.typ --format typst
+batch-tamarin report ./results --output execution_report.typ --format typ
 ```
 
 **Report Features:**
