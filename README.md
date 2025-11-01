@@ -101,13 +101,13 @@ batch-tamarin init protocol.spthy
 batch-tamarin init protocol1.spthy protocol2.spthy --output my_recipe.json
 
 # Generate comprehensive reports from execution results
-batch-tamarin report ./results report.md --format md
+batch-tamarin report ./results --output report.md --format md
 
 # Generate HTML report with interactive visualizations
-batch-tamarin report ./results report.html --format html
+batch-tamarin report ./results --output report.html --format html
 
 # Generate LaTeX report for academic publications
-batch-tamarin report ./results report.tex --format latex
+batch-tamarin report ./results --output report.tex --format tex
 
 # Clear cached results
 batch-tamarin --rm-cache
