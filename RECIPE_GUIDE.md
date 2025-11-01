@@ -160,9 +160,9 @@ Example: If your `.spthy` file contains lemmas like `authentication_lemma`, `aut
 
 ### Default Resources
 When a task doesn't specify `resources`, the following defaults are used:
-- **Cores**: `global_max_cores` from previously defined `global_config`
-- **Memory**: `global_max_memory`, same method
-- **Timeout**: `default_timeout`, same method
+- 4 **Cores**
+- 16GB **Memory**
+- **Timeout**: `default_timeout`, from your `global_config` section
 
 ## Command Generation
 
