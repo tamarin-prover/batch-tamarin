@@ -9,9 +9,7 @@ from .commands.init import InitCommand
 from .commands.report import ReportCommand
 from .commands.run import RunCommand
 from .model.tamarin_recipe import SchedulingStrategy
-from .modules.cache_manager import CacheManager
 from .utils.notifications import notification_manager
-from .utils.system_resources import get_human_readable_volume_size
 
 app = typer.Typer(help="batch-tamarin")
 app.add_typer(cache_command)
@@ -22,10 +20,7 @@ def main_callback(
     ctx: typer.Context,
     version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
-    ),
-    rm_cache: bool = typer.Option(
-        False, "--rm-cache", help="Remove all cached results"
-    ),
+    )
 ):
     """
     Batch Tamarin - Protocol verification automation tool.
@@ -46,19 +41,6 @@ def main_callback(
         print(
             "Project initiated for an internship at CISPA, under the supervision of Pr.Dr. Cas Cremers."
         )
-        return
-
-    if rm_cache:
-        try:
-            cache_manager = CacheManager()
-            stats = cache_manager.get_stats()
-            cache_manager.clear_cache()
-            # Format volume in human-readable units
-            volume = get_human_readable_volume_size(stats["volume"])
-            print(f"Cleared cache: {stats['size']} entries, {volume}")
-        except Exception as e:
-            print(f"Failed to clear cache: {e}")
-            raise typer.Exit(1)
         return
 
     if ctx.invoked_subcommand is None:
