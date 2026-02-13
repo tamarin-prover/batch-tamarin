@@ -10,7 +10,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -39,7 +39,7 @@ class SuccessfulTaskResult(BaseModel):
     """Result structure for successful tasks."""
 
     task_id: str = Field(..., description="Unique task identifier")
-    warnings: List[str] = Field(
+    warnings: list[str] = Field(
         default_factory=list, description="Warning messages from Tamarin"
     )
     tamarin_timing: float = Field(
@@ -49,13 +49,13 @@ class SuccessfulTaskResult(BaseModel):
         ..., description="Wrapper performance measurements"
     )
     output_spthy: str = Field(..., description="Path to the generated model file")
-    verified_lemma: Dict[str, LemmaResult] = Field(
+    verified_lemma: dict[str, LemmaResult] = Field(
         default_factory=dict, description="Successfully verified lemmas"
     )
-    falsified_lemma: Dict[str, LemmaResult] = Field(
+    falsified_lemma: dict[str, LemmaResult] = Field(
         default_factory=dict, description="Falsified lemmas (counterexamples found)"
     )
-    unterminated_lemma: List[str] = Field(
+    unterminated_lemma: list[str] = Field(
         default_factory=list, description="Lemmas with incomplete analysis"
     )
 
@@ -73,7 +73,7 @@ class FailedTaskResult(BaseModel):
         ..., description="Wrapper performance measurements"
     )
     return_code: int = Field(..., description="Process exit code")
-    last_stderr_lines: List[str] = Field(
+    last_stderr_lines: list[str] = Field(
         default_factory=list, description="Last lines of stderr output"
     )
 
@@ -303,7 +303,7 @@ class OutputManager:
         stdout: str,
         stderr: str,
         duration: float,
-        memory_stats: Optional[MemoryStats],
+        memory_stats: MemoryStats | None,
         output_file_name: str,
     ) -> SuccessfulTaskResult:
         """Parse stdout/stderr from successful Tamarin execution."""
@@ -348,7 +348,7 @@ class OutputManager:
         stdout: str,
         stderr: str,
         duration: float,
-        memory_stats: Optional[MemoryStats],
+        memory_stats: MemoryStats | None,
         return_code: int,
         status: TaskStatus,
     ) -> FailedTaskResult:
@@ -390,11 +390,11 @@ class OutputManager:
 
     def _parse_lemma_results(
         self, output: str
-    ) -> Tuple[Dict[str, LemmaResult], Dict[str, LemmaResult], List[str]]:
+    ) -> tuple[dict[str, LemmaResult], dict[str, LemmaResult], list[str]]:
         """Parse lemma results from Tamarin output."""
-        verified_lemma: Dict[str, LemmaResult] = {}
-        falsified_lemma: Dict[str, LemmaResult] = {}
-        unterminated_lemma: List[str] = []
+        verified_lemma: dict[str, LemmaResult] = {}
+        falsified_lemma: dict[str, LemmaResult] = {}
+        unterminated_lemma: list[str] = []
 
         # Pattern for lemma results
         # Example: "nonce_reuse_key_type (all-traces): analysis incomplete (1 steps)"
@@ -424,9 +424,9 @@ class OutputManager:
 
         return verified_lemma, falsified_lemma, unterminated_lemma
 
-    def _extract_warnings(self, output: str) -> List[str]:
+    def _extract_warnings(self, output: str) -> list[str]:
         """Extract warnings from Tamarin output."""
-        warnings: List[str] = []
+        warnings: list[str] = []
 
         # Look for WARNING: lines
         warning_pattern = r"WARNING:\s*(.+?)(?=\n|$)"
@@ -477,7 +477,7 @@ class OutputManager:
             return "The task exceeded its memory limit. Review the memory limit setting for this task."
         return "An unexpected error occurred, see stderr output below for details."
 
-    def get_output_paths(self) -> Dict[str, Path]:
+    def get_output_paths(self) -> dict[str, Path]:
         """Get output directory paths."""
         if not self._is_setup:
             raise RuntimeError(
@@ -498,7 +498,7 @@ class OutputManager:
 
     def parse_task_result(
         self, task_result: TaskResult, output_file_name: str
-    ) -> Union[SuccessfulTaskResult, FailedTaskResult]:
+    ) -> SuccessfulTaskResult | FailedTaskResult:
         """
         Parse a TaskResult and return the structured result without saving to files.
 

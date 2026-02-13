@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import typer
 
 from . import __author__, __version__
@@ -20,7 +18,7 @@ def main_callback(
     ctx: typer.Context,
     version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
-    )
+    ),
 ):
     """
     Batch Tamarin - Protocol verification automation tool.
@@ -97,10 +95,10 @@ def check(
 
 @app.command()
 def init(
-    spthy_files: List[str] = typer.Argument(
+    spthy_files: list[str] = typer.Argument(
         ..., help="One or more .spthy files to configure"
     ),
-    output: Optional[str] = typer.Option(
+    output: str | None = typer.Option(
         None, "--output", "-o", help="Output file for generated configuration"
     ),
 ) -> None:

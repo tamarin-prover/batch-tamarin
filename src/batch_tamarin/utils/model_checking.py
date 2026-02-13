@@ -7,7 +7,7 @@ without running full proofs, to check for warnings and errors.
 
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from .notifications import notification_manager
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 async def validate_with_tamarin(
-    executable_tasks: List["ExecutableTask"], report: bool = False
-) -> Dict[str, List[str]]:
+    executable_tasks: list["ExecutableTask"], report: bool = False
+) -> dict[str, list[str]]:
     """
     Validate theory files with tamarin executables.
 
@@ -32,10 +32,10 @@ async def validate_with_tamarin(
     Returns:
         Dict mapping tamarin version names to lists of error/warning messages
     """
-    validation_errors: Dict[str, List[str]] = {}
+    validation_errors: dict[str, list[str]] = {}
 
     # Group tasks by unique (tamarin_executable, theory_file) combinations
-    unique_validations: Dict[tuple[str, str], "ExecutableTask"] = {}
+    unique_validations: dict[tuple[str, str], ExecutableTask] = {}
     for task in executable_tasks:
         key = (str(task.tamarin_executable), str(task.theory_file))
         if key not in unique_validations:
@@ -78,7 +78,7 @@ async def validate_with_tamarin(
 
 def parse_tamarin_output(
     output: str, report: bool, task: "ExecutableTask"
-) -> List[str]:
+) -> list[str]:
     """
     Parse tamarin output to extract warnings and errors.
 
@@ -90,7 +90,7 @@ def parse_tamarin_output(
     Returns:
         List of error/warning messages found in the output
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     # Check for WARNING in summary of summaries
     lines = output.split("\n")

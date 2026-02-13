@@ -7,7 +7,6 @@ configuration files from spthy files.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from rich.console import Console
 from rich.markup import escape
@@ -32,7 +31,7 @@ class InitCommand:
     def __init__(self):
         self.console = Console()
 
-    def run(self, spthy_files: List[str], output_path: Optional[str] = None) -> None:
+    def run(self, spthy_files: list[str], output_path: str | None = None) -> None:
         """
         Run the interactive initialization process.
 
@@ -97,9 +96,9 @@ class InitCommand:
             )
             return
 
-    def _validate_spthy_files(self, spthy_files: List[str]) -> List[Path]:
+    def _validate_spthy_files(self, spthy_files: list[str]) -> list[Path]:
         """Validate that spthy files exist and are readable."""
-        validated: List[Path] = []
+        validated: list[Path] = []
         for file_path in spthy_files:
             path = Path(file_path)
             if not path.exists():
@@ -145,7 +144,7 @@ class InitCommand:
                 output_directory="result",
             )
 
-    def _collect_tamarin_versions_with_fallback(self) -> Dict[str, TamarinVersion]:
+    def _collect_tamarin_versions_with_fallback(self) -> dict[str, TamarinVersion]:
         """Collect Tamarin versions with fallbacks for input failures."""
         try:
             return self._collect_tamarin_versions()
@@ -240,7 +239,7 @@ class InitCommand:
             self.console.print(f"[red]Invalid {resource_type} value: {value}[/red]")
             return system_max
 
-    def _collect_tamarin_versions(self) -> Dict[str, TamarinVersion]:
+    def _collect_tamarin_versions(self) -> dict[str, TamarinVersion]:
         """Collect Tamarin version configurations interactively."""
         self.console.print("\n[bold]Tamarin Versions[/bold]")
 
@@ -288,8 +287,8 @@ class InitCommand:
         return versions
 
     def _collect_tasks(
-        self, spthy_files: List[Path], tamarin_aliases: List[str]
-    ) -> tuple[Dict[str, Task], List[tuple[Path, str]]]:
+        self, spthy_files: list[Path], tamarin_aliases: list[str]
+    ) -> tuple[dict[str, Task], list[tuple[Path, str]]]:
         """Collect task configurations for each spthy file.
 
         Returns:
@@ -299,7 +298,7 @@ class InitCommand:
         self.console.print("\n[bold]Tasks Configuration[/bold]")
 
         tasks: dict[str, Task] = {}
-        failed_files: List[tuple[Path, str]] = []
+        failed_files: list[tuple[Path, str]] = []
 
         for spthy_file in spthy_files:
             self.console.print(
@@ -421,7 +420,7 @@ class InitCommand:
         return tasks, failed_files
 
     def _display_failed_files_summary(
-        self, failed_files: List[tuple[Path, str]]
+        self, failed_files: list[tuple[Path, str]]
     ) -> None:
         """Display a summary of files that were skipped during task creation."""
         if not failed_files:
@@ -442,8 +441,8 @@ class InitCommand:
         )
 
     def _collect_tamarin_options(
-        self, context: str, suggested_options: Optional[List[str]] = None
-    ) -> Optional[List[str]]:
+        self, context: str, suggested_options: list[str] | None = None
+    ) -> list[str] | None:
         """Collect tamarin command-line options interactively."""
         # Start with suggested options
         current_options = suggested_options.copy() if suggested_options else []
@@ -496,7 +495,7 @@ class InitCommand:
 
         return all_options if all_options else None
 
-    def _collect_preprocess_flags(self, context: str) -> Optional[List[str]]:
+    def _collect_preprocess_flags(self, context: str) -> list[str] | None:
         """Collect preprocessor flags interactively."""
         if not Confirm.ask(f"Add preprocessor flags for {context}?", default=False):
             return None
@@ -518,7 +517,7 @@ class InitCommand:
             flags = [flag.strip() for flag in flags_input.split() if flag.strip()]
 
         # Clean up flags - remove -D= prefix if user added it
-        cleaned_flags: List[str] = []
+        cleaned_flags: list[str] = []
         for flag in flags:
             if flag.startswith("-D="):
                 cleaned_flags.append(flag[3:])
@@ -529,7 +528,7 @@ class InitCommand:
 
         return cleaned_flags if cleaned_flags else None
 
-    def _collect_resources(self, context: str) -> Optional[Resources]:
+    def _collect_resources(self, context: str) -> Resources | None:
         """Collect resource allocation settings interactively."""
         if not Confirm.ask(
             f"Configure custom resource allocation for {context}?", default=False
@@ -571,7 +570,9 @@ class InitCommand:
             max_memory = (
                 None
                 if not memory_input
-                else int(memory_input) if memory_input else None
+                else int(memory_input)
+                if memory_input
+                else None
             )
         except ValueError:
             self.console.print(
@@ -606,9 +607,9 @@ class InitCommand:
     def _collect_lemmas(
         self,
         spthy_file: Path,
-        preprocess_flags: Optional[List[str]],
-        tamarin_aliases: List[str],
-    ) -> Optional[List[Lemma]]:
+        preprocess_flags: list[str] | None,
+        tamarin_aliases: list[str],
+    ) -> list[Lemma] | None:
         """Collect lemmas for the task using interactive prefix-based selection with per-lemma configuration."""
         if not Confirm.ask("Configure specific lemmas for this task?", default=False):
             self.console.print("[dim]Using all lemmas (default behavior)[/dim]")
@@ -642,7 +643,7 @@ class InitCommand:
             return None
 
         # Interactive lemma selection with per-lemma configuration
-        selected_lemmas: List[Lemma] = []
+        selected_lemmas: list[Lemma] = []
 
         self.console.print("[dim]Enter lemma names or prefixes one at a time[/dim]")
         self.console.print("[dim]Matching lemmas will be shown[/dim]")
@@ -665,7 +666,7 @@ class InitCommand:
 
         return selected_lemmas if selected_lemmas else None
 
-    def _get_lemma_prefix(self, all_lemmas: List[str]) -> Optional[str]:
+    def _get_lemma_prefix(self, all_lemmas: list[str]) -> str | None:
         """Get lemma prefix with immediate matching feedback."""
         while True:
             prefix = Prompt.ask("Lemma name or prefix", default="")
@@ -704,7 +705,7 @@ class InitCommand:
                 return prefix
 
     def _configure_individual_lemma(
-        self, prefix: str, tamarin_aliases: List[str]
+        self, prefix: str, tamarin_aliases: list[str]
     ) -> Lemma:
         """Configure individual lemma settings (options, flags, resources, versions)."""
         self.console.print(f"\n[bold cyan]Configuring lemma '{prefix}'[/bold cyan]")
@@ -745,8 +746,8 @@ class InitCommand:
         )
 
     def _select_tamarin_versions(
-        self, tamarin_aliases: List[str], context: str
-    ) -> List[str]:
+        self, tamarin_aliases: list[str], context: str
+    ) -> list[str]:
         """Select Tamarin versions"""
         if not tamarin_aliases:
             return []

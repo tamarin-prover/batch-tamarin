@@ -8,7 +8,6 @@ with a specific tamarin version, ready for execution by the ProcessManager.
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Set
 
 
 @dataclass
@@ -45,10 +44,10 @@ class ExecutableTask:
     lemma: str
     """Name of the specific lemma to prove"""
 
-    tamarin_options: Optional[List[str]]
+    tamarin_options: list[str] | None
     """Additional command-line options"""
 
-    preprocess_flags: Optional[List[str]]
+    preprocess_flags: list[str] | None
     """Preprocessor flags"""
 
     max_cores: int
@@ -63,7 +62,7 @@ class ExecutableTask:
     traces_dir: Path
     """Directory where trace files should be written"""
 
-    async def to_command(self) -> List[str]:
+    async def to_command(self) -> list[str]:
         """
         Convert this task to a runnable command for ProcessManager.
 
@@ -147,7 +146,7 @@ class TaskResult:
     start_time: float
     end_time: float
     duration: float
-    memory_stats: Optional[MemoryStats] = None
+    memory_stats: MemoryStats | None = None
 
 
 @dataclass
@@ -170,8 +169,8 @@ class ExecutionSummary:
     successful_tasks: int
     failed_tasks: int
     total_duration: float
-    task_results: List[TaskResult]
+    task_results: list[TaskResult]
     cache_entries: int = 0
     cached_tasks: int = 0
     cache_volume: int = 0
-    cached_task_ids: Set[str] = field(default_factory=lambda: set())
+    cached_task_ids: set[str] = field(default_factory=lambda: set())

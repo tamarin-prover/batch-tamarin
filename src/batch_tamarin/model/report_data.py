@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -62,17 +62,13 @@ def parse_timestamp(timestamp_str: str) -> datetime:
 class ReportConfig(BaseModel):
     """Configuration information for the report."""
 
-    global_max_cores: Optional[int] = Field(
-        None, description="Maximum cores configured"
-    )
-    global_max_memory: Optional[int] = Field(
+    global_max_cores: int | None = Field(None, description="Maximum cores configured")
+    global_max_memory: int | None = Field(
         None, description="Maximum memory configured in GB"
     )
-    default_timeout: Optional[int] = Field(
-        None, description="Default timeout in seconds"
-    )
-    output_directory: Optional[str] = Field(None, description="Output directory path")
-    tamarin_versions: Dict[str, Dict[str, str]] = Field(
+    default_timeout: int | None = Field(None, description="Default timeout in seconds")
+    output_directory: str | None = Field(None, description="Output directory path")
+    tamarin_versions: dict[str, dict[str, str]] = Field(
         default_factory=dict, description="Tamarin version configurations"
     )
 
@@ -186,14 +182,14 @@ class TaskResult(BaseModel):
     """Individual task result for template rendering."""
 
     lemma: str = Field(..., description="Lemma name")
-    tamarin_options: List[str] = Field(
+    tamarin_options: list[str] = Field(
         default_factory=list, description="Tamarin options used"
     )
-    cores: Optional[int] = Field(None, description="Cores used")
-    memory: Optional[int] = Field(None, description="Memory used in GB")
-    timeout: Optional[int] = Field(None, description="Timeout used in seconds")
-    options: Optional[str] = Field(None, description="Options string")
-    preprocessor: Optional[str] = Field(None, description="Preprocessor used")
+    cores: int | None = Field(None, description="Cores used")
+    memory: int | None = Field(None, description="Memory used in GB")
+    timeout: int | None = Field(None, description="Timeout used in seconds")
+    options: str | None = Field(None, description="Options string")
+    preprocessor: str | None = Field(None, description="Preprocessor used")
     tamarin_version: str = Field(..., description="Tamarin version used")
     status: str = Field(
         ...,
@@ -202,20 +198,22 @@ class TaskResult(BaseModel):
     peak_memory: float = Field(0.0, description="Peak memory usage in MB")
     runtime: float = Field(0.0, description="Runtime in seconds")
     cache_hit: bool = Field(False, description="Whether result was from cache")
-    error_description: Optional[str] = Field(
+    error_description: str | None = Field(
         None, description="Error description if failed"
     )
-    stderr_lines: List[str] = Field(
+    stderr_lines: list[str] = Field(
         default_factory=list, description="Last stderr lines if failed"
     )
-    error_type: Optional[str] = Field(None, description="Error type classification")
+    error_type: str | None = Field(None, description="Error type classification")
 
 
 class LemmaGroup(BaseModel):
     """Group of results for the same lemma."""
 
     lemma: str = Field(..., description="Lemma name")
-    results: List[TaskResult] = Field(default_factory=list, description="Results for this lemma")  # type: ignore[misc]
+    results: list[TaskResult] = Field(
+        default_factory=list, description="Results for this lemma"
+    )  # type: ignore[misc]
 
 
 class VersionComparison(BaseModel):
@@ -241,26 +239,30 @@ class TaskSummary(BaseModel):
 
     name: str = Field(..., description="Task name")
     theory_file: str = Field(..., description="Theory file path")
-    output_prefix: Optional[str] = Field(
+    output_prefix: str | None = Field(
         None, description="Output file prefix from recipe"
     )
-    results: List[TaskResult] = Field(  # type: ignore
+    results: list[TaskResult] = Field(  # type: ignore
         default_factory=list, description="Task results"
     )
-    lemma_groups: List[LemmaGroup] = Field(default_factory=list, description="Grouped results by lemma")  # type: ignore[misc]
+    lemma_groups: list[LemmaGroup] = Field(
+        default_factory=list, description="Grouped results by lemma"
+    )  # type: ignore[misc]
     total_runtime: float = Field(0.0, description="Total runtime for this task")
     peak_memory: float = Field(0.0, description="Peak memory for this task")
-    execution_timeline_data: List[ExecutionTimelineItem] = Field(default_factory=list, description="Execution timeline with actual timestamps")  # type: ignore[misc]
+    execution_timeline_data: list[ExecutionTimelineItem] = Field(
+        default_factory=list, description="Execution timeline with actual timestamps"
+    )  # type: ignore[misc]
 
     @computed_field
     @property
-    def lemmas(self) -> List[str]:
+    def lemmas(self) -> list[str]:
         """Get list of lemmas in this task."""
         return list(set(result.lemma for result in self.results))
 
     @computed_field
     @property
-    def tamarin_versions(self) -> List[str]:
+    def tamarin_versions(self) -> list[str]:
         """Get list of Tamarin versions used in this task."""
         return list(set(result.tamarin_version for result in self.results))
 
@@ -278,9 +280,9 @@ class TaskSummary(BaseModel):
 
     @computed_field
     @property
-    def version_comparisons(self) -> List[VersionComparison]:
+    def version_comparisons(self) -> list[VersionComparison]:
         """Get version comparison data."""
-        comparisons: List[VersionComparison] = []
+        comparisons: list[VersionComparison] = []
         for result in self.results:
             label = f"{result.lemma}_{result.tamarin_version}"
             comparisons.append(
@@ -292,13 +294,13 @@ class TaskSummary(BaseModel):
 
     @computed_field
     @property
-    def execution_timeline(self) -> List[ExecutionTimelineItem]:
+    def execution_timeline(self) -> list[ExecutionTimelineItem]:
         """Get execution timeline data with actual timestamps."""
         return self.execution_timeline_data
 
     @computed_field
     @property
-    def traces(self) -> List["TraceInfo"]:
+    def traces(self) -> list[TraceInfo]:
         """Get traces for this task (will be populated from ReportData)."""
         return []
 
@@ -309,12 +311,10 @@ class TraceInfo(BaseModel):
     lemma: str = Field(..., description="Lemma name")
     tamarin_version: str = Field(..., description="Tamarin version")
     json_file: str = Field(..., description="JSON trace file path")
-    dot_file: Optional[str] = Field(None, description="DOT trace file path")
-    svg_content: Optional[str] = Field(None, description="SVG trace content")
-    png_file: Optional[Path] = Field(
-        None, description="PNG trace file path (for LaTeX)"
-    )
-    output_prefix: Optional[str] = Field(None, description="Output prefix for the task")
+    dot_file: str | None = Field(None, description="DOT trace file path")
+    svg_content: str | None = Field(None, description="SVG trace content")
+    png_file: Path | None = Field(None, description="PNG trace file path (for LaTeX)")
+    output_prefix: str | None = Field(None, description="Output prefix for the task")
 
 
 class ErrorDetail(BaseModel):
@@ -340,7 +340,9 @@ class LemmaErrorGroup(BaseModel):
     """Group of error results for the same lemma."""
 
     lemma: str = Field(..., description="Lemma name")
-    results: List[TaskResult] = Field(default_factory=list, description="Error results for this lemma")  # type: ignore[misc]
+    results: list[TaskResult] = Field(
+        default_factory=list, description="Error results for this lemma"
+    )  # type: ignore[misc]
 
 
 class ErrorSummaryItem(BaseModel):
@@ -348,7 +350,9 @@ class ErrorSummaryItem(BaseModel):
 
     task_name: str = Field(..., description="Task name")
     total_errors: int = Field(..., description="Total errors in this task")
-    lemma_errors: List[LemmaErrorGroup] = Field(default_factory=list, description="Errors grouped by lemma")  # type: ignore[misc]
+    lemma_errors: list[LemmaErrorGroup] = Field(
+        default_factory=list, description="Errors grouped by lemma"
+    )  # type: ignore[misc]
 
 
 class DetailedError(BaseModel):
@@ -359,7 +363,7 @@ class DetailedError(BaseModel):
     tamarin_version: str = Field(..., description="Tamarin version")
     type: str = Field(..., description="Error type")
     description: str = Field(..., description="Error description")
-    stderr_output: Optional[str] = Field(None, description="Standard error output")
+    stderr_output: str | None = Field(None, description="Standard error output")
 
 
 class ReportData(BaseModel):
@@ -372,23 +376,26 @@ class ReportData(BaseModel):
     batch_execution_date: datetime = Field(..., description="Batch execution date")
     config: ReportConfig = Field(..., description="Configuration information")
     statistics: ReportStatistics = Field(..., description="Global statistics")
-    tasks: List[TaskSummary] = Field(  # type: ignore
+    tasks: list[TaskSummary] = Field(  # type: ignore
         default_factory=list, description="Task summaries"
     )
-    traces: List[TraceInfo] = Field(  # type: ignore
+    traces: list[TraceInfo] = Field(  # type: ignore
         default_factory=list, description="Trace information"
     )
-    error_details: List[ErrorDetail] = Field(  # type: ignore
+    error_details: list[ErrorDetail] = Field(  # type: ignore
         default_factory=list, description="Error details"
     )
     rerun_file: str = Field(default="rerun.json", description="Rerun file name")
-    global_timeline_data: List[ExecutionTimelineItem] = Field(default_factory=list, description="Global execution timeline with actual timestamps")  # type: ignore[misc]
+    global_timeline_data: list[ExecutionTimelineItem] = Field(
+        default_factory=list,
+        description="Global execution timeline with actual timestamps",
+    )  # type: ignore[misc]
 
     @computed_field
     @property
-    def failed_results(self) -> List[TaskResult]:
+    def failed_results(self) -> list[TaskResult]:
         """Get all failed task results."""
-        failed: List[TaskResult] = []
+        failed: list[TaskResult] = []
         for task in self.tasks:
             for result in task.results:
                 if result.status in ["failed", "timeout", "memory_limit"]:
@@ -409,7 +416,7 @@ class ReportData(BaseModel):
 
     @computed_field
     @property
-    def global_timeline(self) -> List[ExecutionTimelineItem]:
+    def global_timeline(self) -> list[ExecutionTimelineItem]:
         """Get global execution timeline with actual timestamps."""
         return self.global_timeline_data
 
@@ -421,19 +428,19 @@ class ReportData(BaseModel):
 
     @computed_field
     @property
-    def error_type_distribution(self) -> List[ErrorTypeDistribution]:
+    def error_type_distribution(self) -> list[ErrorTypeDistribution]:
         """Get error type distribution for charts."""
         if not self.failed_results:
             return []
 
-        error_counts: Dict[str, int] = {}
+        error_counts: dict[str, int] = {}
         total_errors = len(self.failed_results)
 
         for result in self.failed_results:
             error_type = result.error_type or result.status
             error_counts[error_type] = error_counts.get(error_type, 0) + 1
 
-        distribution: List[ErrorTypeDistribution] = []
+        distribution: list[ErrorTypeDistribution] = []
         for error_type, count in error_counts.items():
             percentage: float = (count / total_errors) * 100
             # Map internal error types to display names
@@ -452,9 +459,9 @@ class ReportData(BaseModel):
 
     @computed_field
     @property
-    def error_summary(self) -> List[ErrorSummaryItem]:
+    def error_summary(self) -> list[ErrorSummaryItem]:
         """Get error summary grouped by task and lemma."""
-        error_summary: List[ErrorSummaryItem] = []
+        error_summary: list[ErrorSummaryItem] = []
 
         for task in self.tasks:
             error_results = [
@@ -466,13 +473,13 @@ class ReportData(BaseModel):
                 continue
 
             # Group by lemma
-            lemma_groups: Dict[str, List[TaskResult]] = {}
+            lemma_groups: dict[str, list[TaskResult]] = {}
             for result in error_results:
                 if result.lemma not in lemma_groups:
                     lemma_groups[result.lemma] = []
                 lemma_groups[result.lemma].append(result)
 
-            lemma_error_groups: List[LemmaErrorGroup] = []
+            lemma_error_groups: list[LemmaErrorGroup] = []
             for lemma, results in lemma_groups.items():
                 lemma_error_groups.append(LemmaErrorGroup(lemma=lemma, results=results))
 
@@ -488,9 +495,9 @@ class ReportData(BaseModel):
 
     @computed_field
     @property
-    def detailed_errors(self) -> List[DetailedError]:
+    def detailed_errors(self) -> list[DetailedError]:
         """Get detailed error information."""
-        detailed: List[DetailedError] = []
+        detailed: list[DetailedError] = []
         for result in self.failed_results:
             error_type = result.error_type or result.status
             # Map to display error types
@@ -532,9 +539,9 @@ class ReportData(BaseModel):
             return False
         return len(task.tamarin_versions) > 1
 
-    def get_results_by_lemma(self, lemma: str) -> List[TaskResult]:
+    def get_results_by_lemma(self, lemma: str) -> list[TaskResult]:
         """Get all results for a specific lemma."""
-        results: List[TaskResult] = []
+        results: list[TaskResult] = []
         for task in self.tasks:
             for result in task.results:
                 if result.lemma == lemma:
@@ -544,14 +551,14 @@ class ReportData(BaseModel):
     @classmethod
     def from_batch_and_output_dir(
         cls, batch: Batch, output_dir: Path, format_type: str
-    ) -> "ReportData":
+    ) -> ReportData:
         """Create ReportData from Batch object and output directory."""
         # Extract basic information
         results_directory = str(output_dir.absolute())
 
         # Find the earliest start time from all tasks to determine batch start
-        earliest_start: Optional[datetime] = None
-        all_timestamps: List[datetime] = []
+        earliest_start: datetime | None = None
+        all_timestamps: list[datetime] = []
 
         for rich_task in batch.tasks.values():
             for executable_task in rich_task.subtasks.values():
@@ -640,17 +647,17 @@ class ReportData(BaseModel):
         )
 
         # Build task summaries
-        tasks: List[TaskSummary] = []
-        error_details: List[ErrorDetail] = []
+        tasks: list[TaskSummary] = []
+        error_details: list[ErrorDetail] = []
 
         # Store all timeline items for global timeline
-        all_timeline_items: List[ExecutionTimelineItem] = []
+        all_timeline_items: list[ExecutionTimelineItem] = []
 
         for task_name, rich_task in batch.tasks.items():
-            task_results: List[TaskResult] = []
+            task_results: list[TaskResult] = []
             task_total_runtime = 0.0
             task_peak_memory = 0.0
-            task_timeline_items: List[ExecutionTimelineItem] = []
+            task_timeline_items: list[ExecutionTimelineItem] = []
 
             for subtask_key, executable_task in rich_task.subtasks.items():
                 # Extract lemma and version directly from the task config
@@ -789,13 +796,13 @@ class ReportData(BaseModel):
                     continue
 
             # Group results by lemma for the template
-            lemma_groups: Dict[str, List[TaskResult]] = {}
+            lemma_groups: dict[str, list[TaskResult]] = {}
             for result in task_results:
                 if result.lemma not in lemma_groups:
                     lemma_groups[result.lemma] = []
                 lemma_groups[result.lemma].append(result)
 
-            lemma_group_objects: List[LemmaGroup] = []
+            lemma_group_objects: list[LemmaGroup] = []
             for lemma, results in lemma_groups.items():
                 lemma_group_objects.append(LemmaGroup(lemma=lemma, results=results))
 
@@ -820,11 +827,11 @@ class ReportData(BaseModel):
             tasks.append(task_summary)
 
         # Build trace information using batch data (avoid filename parsing)
-        traces: List[TraceInfo] = []
+        traces: list[TraceInfo] = []
         traces_dir = output_dir / "traces"
         if traces_dir.exists():
             # Build mapping from subtask_key to (lemma, version) for trace lookup
-            subtask_mapping: Dict[str, tuple[str, str]] = {}
+            subtask_mapping: dict[str, tuple[str, str]] = {}
             for task_name, rich_task in batch.tasks.items():
                 for subtask_key, executable_task in rich_task.subtasks.items():
                     subtask_mapping[subtask_key] = (
@@ -905,9 +912,9 @@ class ReportData(BaseModel):
     @classmethod
     def from_execution_report(
         cls, execution_report_path: Path, output_dir: Path, format_type: str
-    ) -> "ReportData":
+    ) -> ReportData:
         """Create ReportData from execution_report.json file."""
-        with open(execution_report_path, "r", encoding="utf-8") as f:
+        with open(execution_report_path, encoding="utf-8") as f:
             batch_data = json.load(f)
 
         batch = Batch.model_validate(batch_data)

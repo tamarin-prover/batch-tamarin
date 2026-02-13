@@ -69,9 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgmp10 \
     zlib1g \
     libnuma1 \
-    python3 \
-    python3-pip \
-    python3-venv \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -80,9 +78,10 @@ RUN groupadd -r tamarin && useradd -r -g tamarin -s /bin/bash -m tamarin
 # Copy built binary from builder stage
 COPY --from=builder --chown=tamarin:tamarin /home/tamarin/.local/bin/tamarin-prover /usr/local/bin/tamarin-prover
 
-# Install batch-tamarin using virtual environment
-RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir batch-tamarin
+# Install batch-tamarin using uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+RUN uv venv /opt/venv --python python3 && \
+    /opt/venv/bin/uv pip install --no-cache-dir batch-tamarin
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Switch to non-root user

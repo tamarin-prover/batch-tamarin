@@ -9,7 +9,7 @@ for parallel Tamarin proof execution.
 import asyncio
 import signal
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from .model.executable_task import (
     ExecutableTask,
@@ -63,28 +63,28 @@ class TaskRunner:
         self.recipe.config.output_directory = str(actual_output_paths["base"])
 
         # Internal state for task management
-        self._pending_tasks: List[ExecutableTask] = []
-        self._running_tasks: Dict[str, asyncio.Task[TaskResult]] = {}
-        self._completed_tasks: Set[str] = set()
-        self._failed_tasks: Set[str] = set()
-        self._task_results: Dict[str, TaskResult] = {}
-        self.completed_tasks: Set[str] = set()
-        self.failed_tasks: Set[str] = set()
-        self.task_results: Dict[str, TaskResult] = {}
+        self._pending_tasks: list[ExecutableTask] = []
+        self._running_tasks: dict[str, asyncio.Task[TaskResult]] = {}
+        self._completed_tasks: set[str] = set()
+        self._failed_tasks: set[str] = set()
+        self._task_results: dict[str, TaskResult] = {}
+        self.completed_tasks: set[str] = set()
+        self.failed_tasks: set[str] = set()
+        self.task_results: dict[str, TaskResult] = {}
 
         # Track shutdown state
         self._shutdown_requested = False
         self._force_shutdown_requested = False
         self._signal_count = 0
-        self._signal_interrupted_tasks: Set[str] = set()
+        self._signal_interrupted_tasks: set[str] = set()
 
         # Task completion event for immediate scheduling (will be set during execution)
-        self._task_completed_event: Optional[asyncio.Event] = None
+        self._task_completed_event: asyncio.Event | None = None
 
         # Store scheduler mode for logging
         self.scheduler = scheduler
 
-    async def execute_all_tasks(self, tasks: List[ExecutableTask]) -> None:
+    async def execute_all_tasks(self, tasks: list[ExecutableTask]) -> None:
         """
         Main orchestration method to coordinate resource allocation and task execution.
 
@@ -174,7 +174,7 @@ class TaskRunner:
             # Restore original signal handler
             signal.signal(signal.SIGINT, original_handler)
 
-    async def _execute_task_pool(self, all_tasks: List[ExecutableTask]) -> None:
+    async def _execute_task_pool(self, all_tasks: list[ExecutableTask]) -> None:
         """
         Internal method to manage task pool execution with event-driven scheduling.
 
@@ -256,7 +256,7 @@ class TaskRunner:
             and not self._force_shutdown_requested
         )
 
-    def _start_schedulable_tasks(self, schedulable_tasks: List[ExecutableTask]) -> None:
+    def _start_schedulable_tasks(self, schedulable_tasks: list[ExecutableTask]) -> None:
         """Start schedulable tasks as background coroutines."""
         if self._shutdown_requested or self._force_shutdown_requested:
             return
@@ -275,10 +275,10 @@ class TaskRunner:
 
                 notification_manager.info(f"[TaskRunner] Started subtask: {task_id}")
 
-    async def _handle_completed_tasks(self, all_tasks: List[ExecutableTask]) -> None:
+    async def _handle_completed_tasks(self, all_tasks: list[ExecutableTask]) -> None:
         """Check for and handle completed tasks."""
         # Check for completed tasks
-        completed_task_ids: List[str] = []
+        completed_task_ids: list[str] = []
         for task_id, asyncio_task in self._running_tasks.items():
             if asyncio_task.done():
                 completed_task_ids.append(task_id)
@@ -291,7 +291,7 @@ class TaskRunner:
                 task_result: TaskResult = await asyncio_task
 
                 # Find the corresponding ExecutableTask
-                corresponding_task: Optional[ExecutableTask] = None
+                corresponding_task: ExecutableTask | None = None
                 for task in all_tasks:
                     if task.task_name == task_id:
                         corresponding_task = task
@@ -486,7 +486,7 @@ class TaskRunner:
         )
 
         # Wait for all running tasks to complete
-        running_tasks: List[asyncio.Task[TaskResult]] = list(
+        running_tasks: list[asyncio.Task[TaskResult]] = list(
             self._running_tasks.values()
         )
         if running_tasks:
@@ -509,7 +509,7 @@ class TaskRunner:
         if not self._running_tasks:
             return
 
-        running_tasks: List[asyncio.Task[TaskResult]] = list(
+        running_tasks: list[asyncio.Task[TaskResult]] = list(
             self._running_tasks.values()
         )
 

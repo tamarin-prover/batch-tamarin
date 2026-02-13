@@ -16,7 +16,7 @@ cache_command = typer.Typer(name="cache", help="Interaction with the cache")
 def clear(
     errors_only: bool = typer.Option(
         False, "--errors-only", "-e", help="Only clear failed/error tasks"
-    )
+    ),
 ) -> None:
     """Clear the cache.
 
@@ -53,4 +53,3 @@ class CacheCommand:
         except Exception as e:
             print(f"Failed to clear cache: {e}")
             raise typer.Exit(1)
-        return

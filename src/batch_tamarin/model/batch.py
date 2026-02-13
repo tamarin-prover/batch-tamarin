@@ -4,7 +4,6 @@ Batch model representing all the context during the execution of the wrapper.
 
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,8 +27,8 @@ class TaskConfig(BaseModel):
     lemma: str = Field(..., description="Lemma ran for this task")
     output_theory_file: Path = Field(..., description="Output theory file path")
     output_trace_file: Path = Field(..., description="Output trace file path")
-    options: Optional[List[str]] = Field(None, description="Options given to this task")
-    preprocessor_flags: Optional[List[str]] = Field(
+    options: list[str] | None = Field(None, description="Options given to this task")
+    preprocessor_flags: list[str] | None = Field(
         None, description="Flags given to the preprocessor"
     )
     resources: Resources = Field(..., description="Resources given to this task")
@@ -50,7 +49,7 @@ class TaskStatus(Enum):
 class TaskExecMetadata(BaseModel):
     """Metadata of execution"""
 
-    command: List[str] = Field(..., description="Command used to execute this task")
+    command: list[str] = Field(..., description="Command used to execute this task")
     status: TaskStatus = Field(..., description="Status of the task execution")
     cache_hit: bool = Field(..., description="Whether the task was cached")
     exec_start: str = Field(..., description="Start timestamp of execution")
@@ -78,7 +77,7 @@ class LemmaResult(Enum):
 class TaskSucceedResult(BaseModel):
     """Result for a successful task"""
 
-    warnings: List[str] = Field(
+    warnings: list[str] = Field(
         default_factory=list, description="Warning messages from Tamarin"
     )
     real_time_tamarin_measure: float = Field(
@@ -110,7 +109,7 @@ class TaskFailedResult(BaseModel):
     return_code: str = Field(default="", description="Return code of the failed task")
     error_type: ErrorType = Field(..., description="Type of error")
     error_description: str = Field(..., description="Deducted error by the wrapper")
-    last_stderr_lines: List[str] = Field(
+    last_stderr_lines: list[str] = Field(
         default_factory=list, description="Last stderr lines"
     )
 
@@ -143,7 +142,7 @@ class RichExecutableTask(BaseModel):
     task_execution_metadata: TaskExecMetadata = Field(
         ..., description="Execution metadata"
     )
-    task_result: Optional[Union[TaskSucceedResult, TaskFailedResult]] = Field(
+    task_result: TaskSucceedResult | TaskFailedResult | None = Field(
         None, description="Result of the task"
     )
 
@@ -156,7 +155,7 @@ class RichTask(BaseModel):
     theory_file: str = Field(
         ..., description="Path to the .spthy theory file to analyze"
     )
-    subtasks: Dict[str, RichExecutableTask] = Field(
+    subtasks: dict[str, RichExecutableTask] = Field(
         ...,
         description="Dictionary of generated executable tasks (lemma--version -> RichExecutableTask)",
     )
@@ -172,13 +171,13 @@ class Batch(BaseModel):
     config: GlobalConfig = Field(
         ..., description="Global configuration, after resolution"
     )
-    tamarin_versions: Dict[str, TamarinVersion] = Field(
+    tamarin_versions: dict[str, TamarinVersion] = Field(
         ..., description="Named aliases for different Tamarin prover executables"
     )
     execution_metadata: ExecMetadata = Field(
         ..., description="Global execution metadata"
     )
-    tasks: Dict[str, RichTask] = Field(
+    tasks: dict[str, RichTask] = Field(
         ...,
         description="Dictionary of original recipe tasks with their generated executable subtasks",
     )

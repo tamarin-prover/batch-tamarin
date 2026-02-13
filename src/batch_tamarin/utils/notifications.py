@@ -5,7 +5,7 @@ This module provides a centralized way to send notifications via Rich formatting
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.highlighter import RegexHighlighter
@@ -485,13 +485,13 @@ class NotificationManager:
         # Error report section (matching HTML structure)
         from typing import Any
 
-        failed_tasks: List[Dict[str, Any]] = []
-        timeout_tasks: List[Dict[str, Any]] = []
-        memory_limit_tasks: List[Dict[str, Any]] = []
+        failed_tasks: list[dict[str, Any]] = []
+        timeout_tasks: list[dict[str, Any]] = []
+        memory_limit_tasks: list[dict[str, Any]] = []
 
         for task_name, rich_task in batch.tasks.items():
             for _subtask_name, rich_executable in rich_task.subtasks.items():
-                task_info: Dict[str, Any] = {
+                task_info: dict[str, Any] = {
                     "task_name": task_name,
                     "rich_executable": rich_executable,
                 }
@@ -507,7 +507,6 @@ class NotificationManager:
                     memory_limit_tasks.append(task_info)
 
         if failed_tasks or timeout_tasks or memory_limit_tasks:
-
             error_components: list[Markdown] = []
 
             # Process all error tasks together with separators
@@ -633,8 +632,8 @@ class NotificationManager:
     def check_report(
         self,
         recipe: TamarinRecipe,
-        executable_tasks: List["ExecutableTask"],
-        tamarin_errors: Optional[Dict[str, List[str]]] = None,
+        executable_tasks: list["ExecutableTask"],
+        tamarin_errors: dict[str, list[str]] | None = None,
     ):
         """
         Display a comprehensive check report for executable tasks.
@@ -703,7 +702,7 @@ class NotificationManager:
                 tasks_by_name[task.original_task_name] = []
             tasks_by_name[task.original_task_name].append(task)
 
-        prev_task_name: Optional[str] = None
+        prev_task_name: str | None = None
         task_groups = list(tasks_by_name.items())
 
         for task_idx, (task_name, task_list) in enumerate(task_groups):
@@ -830,7 +829,7 @@ class NotificationManager:
 
         task_panel = Panel(details_table, title="Task Details", border_style="blue")
 
-        components: List[Any] = [
+        components: list[Any] = [
             Group(*tamarin_path),
             overview_panel,
             task_panel,

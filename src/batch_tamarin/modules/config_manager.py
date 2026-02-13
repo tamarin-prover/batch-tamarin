@@ -2,7 +2,6 @@ import fnmatch
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from pydantic import ValidationError
 
@@ -25,9 +24,9 @@ class LemmaConfig:
     """Configuration for a single lemma after filtering and parameter application."""
 
     lemma_name: str
-    effective_tamarin_versions: List[str]
-    tamarin_options: Optional[List[str]]
-    preprocess_flags: Optional[List[str]]
+    effective_tamarin_versions: list[str]
+    tamarin_options: list[str] | None
+    preprocess_flags: list[str] | None
     max_cores: int
     max_memory: int
     timeout: int
@@ -40,7 +39,7 @@ class ConfigError(Exception):
 class ConfigManager:
     """Manages wrapper configuration serialization and deserialization."""
 
-    task_id_counter: Dict[str, int] = {}
+    task_id_counter: dict[str, int] = {}
 
     @staticmethod
     async def load_json_recipe(config_path: Path) -> TamarinRecipe:
@@ -68,7 +67,7 @@ class ConfigManager:
                     f"[ConfigManager] Configuration path is not a file: {config_path}"
                 )
 
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 json_data = f.read()
 
             recipe = TamarinRecipe.model_validate_json(json_data)
@@ -96,7 +95,7 @@ class ConfigManager:
             raise ConfigError(error_msg) from e
 
     @staticmethod
-    def recipe_to_executable_tasks(recipe: TamarinRecipe) -> List[ExecutableTask]:
+    def recipe_to_executable_tasks(recipe: TamarinRecipe) -> list[ExecutableTask]:
         """
         Convert TamarinRecipe to list of ExecutableTask objects.
 
@@ -109,7 +108,7 @@ class ConfigManager:
         Raises:
             ConfigError: If conversion fails due to validation errors
         """
-        executable_tasks: List[ExecutableTask] = []
+        executable_tasks: list[ExecutableTask] = []
 
         try:
             output_paths = output_manager.get_output_paths()
@@ -151,7 +150,7 @@ class ConfigManager:
         models_dir: Path,
         traces_dir: Path,
         theory_file: Path,
-        executable_tasks: List[ExecutableTask],
+        executable_tasks: list[ExecutableTask],
     ) -> None:
         """
         Create executable tasks by parsing lemmas from theory file and applying filters.
@@ -225,7 +224,7 @@ class ConfigManager:
     @staticmethod
     def _parse_lemmas_with_specific_flags(
         task_name: str, task: Task, recipe: TamarinRecipe, theory_file: Path
-    ) -> List[LemmaConfig]:
+    ) -> list[LemmaConfig]:
         """
         Parse lemmas for each lemma specification with its specific preprocessor flags.
 
@@ -241,7 +240,7 @@ class ConfigManager:
         Returns:
             List of LemmaConfig objects with effective configurations
         """
-        lemma_configs: List[LemmaConfig] = []
+        lemma_configs: list[LemmaConfig] = []
 
         if not task.lemmas:
             # Scenario A: No lemmas specified - use task-level flags for all lemmas
@@ -343,8 +342,8 @@ class ConfigManager:
 
     @staticmethod
     def _filter_and_configure_lemmas(
-        task_name: str, task: Task, recipe: TamarinRecipe, all_lemmas: List[str]
-    ) -> List[LemmaConfig]:
+        task_name: str, task: Task, recipe: TamarinRecipe, all_lemmas: list[str]
+    ) -> list[LemmaConfig]:
         """
         Filter lemmas based on task configuration and create lemma configurations.
 
@@ -357,7 +356,7 @@ class ConfigManager:
         Returns:
             List of LemmaConfig objects with effective configurations
         """
-        lemma_configs: List[LemmaConfig] = []
+        lemma_configs: list[LemmaConfig] = []
 
         if not task.lemmas:
             # Scenario A: No lemmas specified - use all lemmas with task config
@@ -408,7 +407,7 @@ class ConfigManager:
         lemma_name: str,
         task: Task,
         recipe: TamarinRecipe,
-        lemma_spec: Optional[Lemma],
+        lemma_spec: Lemma | None,
         task_name: str,
     ) -> LemmaConfig:
         """
@@ -431,17 +430,17 @@ class ConfigManager:
 
         # Resolve other settings with complete override (no merging)
         if lemma_spec is not None:
-            effective_tamarin_versions: List[str] = (
+            effective_tamarin_versions: list[str] = (
                 lemma_spec.tamarin_versions
                 if lemma_spec.tamarin_versions is not None
                 else task.tamarin_versions
             )
-            tamarin_options: Optional[List[str]] = (
+            tamarin_options: list[str] | None = (
                 lemma_spec.tamarin_options
                 if lemma_spec.tamarin_options is not None
                 else task.tamarin_options
             )
-            preprocess_flags: Optional[List[str]] = (
+            preprocess_flags: list[str] | None = (
                 lemma_spec.preprocess_flags
                 if lemma_spec.preprocess_flags is not None
                 else task.preprocess_flags
@@ -463,8 +462,8 @@ class ConfigManager:
 
     @staticmethod
     def _resolve_resources(
-        lemma_spec: Optional[Lemma], task: Task, recipe: TamarinRecipe, task_name: str
-    ) -> Tuple[int, int, int]:
+        lemma_spec: Lemma | None, task: Task, recipe: TamarinRecipe, task_name: str
+    ) -> tuple[int, int, int]:
         """
         Resolve resources following inheritance chain: lemma → task → global defaults.
 
@@ -536,8 +535,8 @@ class ConfigManager:
         models_dir: Path,
         traces_dir: Path,
         theory_file: Path,
-        lemma_configs: List[LemmaConfig],
-        executable_tasks: List[ExecutableTask],
+        lemma_configs: list[LemmaConfig],
+        executable_tasks: list[ExecutableTask],
     ) -> None:
         """
         Create ExecutableTask instances for each lemma configuration × tamarin version.
@@ -598,7 +597,7 @@ class ConfigManager:
     @staticmethod
     def validate_and_cap_resources(
         max_cores: int, max_memory: int, global_config: GlobalConfig, context_name: str
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Validate and cap resources against global limits."""
         glob_max_cores = resolve_resource_value(global_config.global_max_cores, "cores")
         glob_max_memory = resolve_resource_value(
