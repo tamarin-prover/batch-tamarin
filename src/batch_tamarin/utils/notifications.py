@@ -14,7 +14,10 @@ from rich.theme import Theme
 
 from ..model.batch import Batch, LemmaResult
 from ..model.tamarin_recipe import TamarinRecipe
-from ..utils.system_resources import resolve_resource_value
+from ..utils.system_resources import (
+    get_human_readable_volume_size,
+    resolve_resource_value,
+)
 
 if TYPE_CHECKING:
     from ..model.executable_task import ExecutableTask
@@ -306,11 +309,11 @@ class NotificationManager:
         )
         runtime_table.add_row(
             "Total peak memory used",
-            f"{self._format_memory(batch.execution_metadata.total_memory)}",
+            f"{get_human_readable_volume_size(batch.execution_metadata.total_memory, 'MB')}",
         )
         runtime_table.add_row(
             "Max peak memory used",
-            f"{self._format_memory(batch.execution_metadata.max_memory)}",
+            f"{get_human_readable_volume_size(batch.execution_metadata.max_memory, 'MB')}",
         )
         runtime_table.add_row(
             "Freshly executed tasks",
@@ -387,8 +390,8 @@ class NotificationManager:
                 duration_display = self._format_duration(
                     rich_executable.task_execution_metadata.exec_duration_monotonic
                 )
-                memory_display = self._format_memory(
-                    rich_executable.task_execution_metadata.peak_memory
+                memory_display = get_human_readable_volume_size(
+                    rich_executable.task_execution_metadata.peak_memory, "MB"
                 )
 
                 cache_display = (
@@ -626,48 +629,6 @@ class NotificationManager:
             hours = int(seconds // 3600)
             minutes = int((seconds % 3600) // 60)
             return f"{hours}h {minutes}m"
-
-    def _format_memory(self, memory_mb: float) -> str:
-        """
-        Format memory usage in human-readable format.
-        Automatically switches between MB and GB based on size.
-
-        Args:
-            memory_mb: Memory usage in megabytes
-
-        Returns:
-            Formatted memory string (e.g., "256 MB" or "1.5 GB")
-        """
-        if memory_mb < 1024:
-            return f"{memory_mb:.1f} MB"
-        else:
-            memory_gb = memory_mb / 1024
-            return f"{memory_gb:.1f} GB"
-
-    def _format_bytes(self, size_bytes: int) -> str:
-        """
-        Format bytes in human-readable format.
-
-        Args:
-            size_bytes: Size in bytes
-
-        Returns:
-            Formatted size string (e.g., "256 bytes", "1.5 kB", "2.0 MB", "1.2 GB")
-        """
-        if size_bytes == 0:
-            return "0 bytes"
-
-        volume = float(size_bytes)
-        unit = "bytes"
-        for unit in ["bytes", "kB", "MB", "GB"]:
-            if volume < 1024 or unit == "GB":
-                break
-            volume /= 1024
-
-        if unit == "bytes":
-            return f"{int(volume)} {unit}"
-        else:
-            return f"{volume:.1f} {unit}"
 
     def check_report(
         self,

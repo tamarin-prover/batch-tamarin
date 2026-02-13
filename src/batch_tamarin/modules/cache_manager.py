@@ -12,7 +12,7 @@ from typing import Dict, Optional
 
 from diskcache import Cache  # type: ignore
 
-from ..model.executable_task import ExecutableTask, TaskResult
+from ..model.executable_task import ExecutableTask, TaskResult, TaskStatus
 from ..utils.notifications import notification_manager
 
 
@@ -86,9 +86,36 @@ class CacheManager:
         # Store in cache
         self.cache[key] = cached_data
 
-    def clear_cache(self) -> None:
-        """Clear all cached results."""
-        self.cache.clear()
+    def clear_cache(self, errors_only: bool = False) -> None:
+        """
+        Clear all cached results.
+
+        Args:
+            errors_only (bool, optional): Clear only failed/error tasks. Defaults to False.
+        """
+
+        if not errors_only:
+            self.cache.clear()
+        else:
+            for key in self.cache:
+                value = self.cache.get(key)
+                if value.task_result.status in [
+                    TaskStatus.FAILED,
+                    TaskStatus.SIGNAL_INTERRUPTED,
+                    TaskStatus.MEMORY_LIMIT_EXCEEDED,
+                    TaskStatus.TIMEOUT,
+                ]:
+                    self._delete_cache_entry(key)
+
+    def _delete_cache_entry(self, key: str) -> None:
+        """
+        Deletes a single cache entry by key.
+
+        Args:
+            key (str): The key of the entry to delete
+        """
+
+        self.cache.delete(key=key)
 
     def get_stats(self) -> dict[str, int]:
         """

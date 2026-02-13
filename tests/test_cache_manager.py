@@ -27,9 +27,25 @@ def cache_manager(tmp_dir: Path, monkeypatch: MonkeyPatch) -> CacheManager:
         return CacheManager()
 
 
-@pytest.fixture
-def sample_task(sample_theory_file: Path, tmp_dir: Path) -> ExecutableTask:
-    """Create a sample ExecutableTask for testing."""
+def create_executable_task(
+    sample_theory_file: Path,
+    tmp_dir: Path,
+    task_name: str = "test_task_001",
+    lemma_name: str = "test_lemma",
+) -> ExecutableTask:
+    """
+    Creates an executable task mock.
+
+    Args:
+        sample_theory_file (Path): The sample theory file path
+        tmp_dir (Path): The temporary directory
+        task_name (str, optional): The name of the task. Defaults to "test_task_001".
+        lemma_name (str, optional): The name of the lemma. Defaults to "test_lemma".
+
+    Returns:
+        ExecutableTask: The generated executable task
+    """
+
     tamarin_exe = tmp_dir / "tamarin-prover"
     tamarin_exe.write_text("#!/bin/bash\necho 'mock tamarin'")
     tamarin_exe.chmod(0o755)
@@ -39,19 +55,40 @@ def sample_task(sample_theory_file: Path, tmp_dir: Path) -> ExecutableTask:
     traces_dir.mkdir(exist_ok=True)
 
     return ExecutableTask(
-        task_name="test_task_001",
-        original_task_name="test_task_001",
+        task_name=task_name,
+        original_task_name=task_name,
         tamarin_version_name="stable",
         theory_file=sample_theory_file,
         tamarin_executable=tamarin_exe,
         output_file=output_file,
-        lemma="test_lemma",
+        lemma=lemma_name,
         tamarin_options=["--heuristic=S"],
         preprocess_flags=["FLAG1"],
         max_cores=4,
         max_memory=8,
         task_timeout=1800,
         traces_dir=traces_dir,
+    )
+
+
+@pytest.fixture
+def sample_task(sample_theory_file: Path, tmp_dir: Path) -> ExecutableTask:
+    """Create a sample ExecutableTask for testing."""
+
+    return create_executable_task(
+        sample_theory_file=sample_theory_file, tmp_dir=tmp_dir
+    )
+
+
+@pytest.fixture
+def sample_task_2(sample_theory_file: Path, tmp_dir: Path) -> ExecutableTask:
+    """Create a sample ExecutableTask for testing."""
+
+    return create_executable_task(
+        sample_theory_file=sample_theory_file,
+        tmp_dir=tmp_dir,
+        task_name="test_task_002",
+        lemma_name="test_lemma_2",
     )
 
 
@@ -63,6 +100,21 @@ def sample_result() -> TaskResult:
         status=TaskStatus.COMPLETED,
         return_code=0,
         stdout="Analysis completed successfully",
+        stderr="",
+        start_time=1000.0,
+        end_time=1120.5,
+        duration=120.5,
+    )
+
+
+@pytest.fixture
+def sample_error_result() -> TaskResult:
+    """Create a sample error TaskResult for testing."""
+    return TaskResult(
+        task_id="test_task_002",
+        status=TaskStatus.MEMORY_LIMIT_EXCEEDED,
+        return_code=0,
+        stdout="Memory limit exceeded",
         stderr="",
         start_time=1000.0,
         end_time=1120.5,
@@ -235,6 +287,38 @@ class TestCacheManager:
         cache_manager.store_result(sample_task, sample_result)
 
         # Check stats after storage
+        stats = cache_manager.get_stats()
+        assert stats["size"] == 1
+
+    def test_cache_clear_only_errors(
+        self,
+        cache_manager: CacheManager,
+        sample_task: ExecutableTask,
+        sample_task_2: ExecutableTask,
+        sample_error_result: TaskResult,
+        sample_result: TaskResult,
+    ):
+        """Test cache clearing functionality."""
+        # Store result
+        cache_manager.store_result(sample_task_2, sample_error_result)
+        cache_manager.store_result(sample_task, sample_result)
+
+        # Verify it's cached
+        cached_result = cache_manager.get_cached_result(sample_task_2)
+        assert cached_result is not None
+
+        # Clear cache
+        cache_manager.clear_cache(errors_only=True)
+
+        # Verify error is gone
+        cached_result = cache_manager.get_cached_result(sample_task_2)
+        assert cached_result is None
+
+        # Verify completed is not gone
+        cached_result = cache_manager.get_cached_result(sample_task)
+        assert cached_result is not None
+
+        # Verify stats are reset
         stats = cache_manager.get_stats()
         assert stats["size"] == 1
 

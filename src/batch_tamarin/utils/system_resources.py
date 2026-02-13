@@ -138,3 +138,31 @@ def resolve_executable_path(path_or_command: str) -> Path:
         raise FileNotFoundError(f"Command '{path_or_command}' not found in PATH")
 
     return Path(resolved_command)
+
+
+def get_human_readable_volume_size(
+    volume_size: int | float, start_unit: str = "bytes"
+) -> str:
+    """
+    Converts a volume size in bytes into a human-readable unit.
+
+    Args:
+        volume_size (int | float): The volume size in bytes
+        start_unit (str):  One of: 'bytes', 'kB', 'MB', 'GB'
+
+    Returns:
+        str: The human-readable volume size with unit
+    """
+
+    units: list[str] = ["bytes", "kB", "MB", "GB"]
+
+    if start_unit not in units:
+        raise ValueError(f"The value for start_unit must be one of {units}")
+    index = units.index(start_unit)
+
+    for unit in units[index:]:
+        if volume_size < 1024 or unit == "GB":
+            break
+        volume_size /= 1024
+
+    return f"{volume_size:.2f} {unit}"
