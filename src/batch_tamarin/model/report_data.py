@@ -213,7 +213,7 @@ class LemmaGroup(BaseModel):
     lemma: str = Field(..., description="Lemma name")
     results: list[TaskResult] = Field(
         default_factory=list, description="Results for this lemma"
-    )  # type: ignore[misc]
+    )
 
 
 class VersionComparison(BaseModel):
@@ -242,17 +242,15 @@ class TaskSummary(BaseModel):
     output_prefix: str | None = Field(
         None, description="Output file prefix from recipe"
     )
-    results: list[TaskResult] = Field(  # type: ignore
-        default_factory=list, description="Task results"
-    )
+    results: list[TaskResult] = Field(default_factory=list, description="Task results")
     lemma_groups: list[LemmaGroup] = Field(
         default_factory=list, description="Grouped results by lemma"
-    )  # type: ignore[misc]
+    )
     total_runtime: float = Field(0.0, description="Total runtime for this task")
     peak_memory: float = Field(0.0, description="Peak memory for this task")
     execution_timeline_data: list[ExecutionTimelineItem] = Field(
         default_factory=list, description="Execution timeline with actual timestamps"
-    )  # type: ignore[misc]
+    )
 
     @computed_field
     @property
@@ -342,7 +340,7 @@ class LemmaErrorGroup(BaseModel):
     lemma: str = Field(..., description="Lemma name")
     results: list[TaskResult] = Field(
         default_factory=list, description="Error results for this lemma"
-    )  # type: ignore[misc]
+    )
 
 
 class ErrorSummaryItem(BaseModel):
@@ -352,7 +350,7 @@ class ErrorSummaryItem(BaseModel):
     total_errors: int = Field(..., description="Total errors in this task")
     lemma_errors: list[LemmaErrorGroup] = Field(
         default_factory=list, description="Errors grouped by lemma"
-    )  # type: ignore[misc]
+    )
 
 
 class DetailedError(BaseModel):
@@ -376,20 +374,18 @@ class ReportData(BaseModel):
     batch_execution_date: datetime = Field(..., description="Batch execution date")
     config: ReportConfig = Field(..., description="Configuration information")
     statistics: ReportStatistics = Field(..., description="Global statistics")
-    tasks: list[TaskSummary] = Field(  # type: ignore
-        default_factory=list, description="Task summaries"
-    )
-    traces: list[TraceInfo] = Field(  # type: ignore
+    tasks: list[TaskSummary] = Field(default_factory=list, description="Task summaries")
+    traces: list[TraceInfo] = Field(
         default_factory=list, description="Trace information"
     )
-    error_details: list[ErrorDetail] = Field(  # type: ignore
+    error_details: list[ErrorDetail] = Field(
         default_factory=list, description="Error details"
     )
     rerun_file: str = Field(default="rerun.json", description="Rerun file name")
     global_timeline_data: list[ExecutionTimelineItem] = Field(
         default_factory=list,
         description="Global execution timeline with actual timestamps",
-    )  # type: ignore[misc]
+    )
 
     @computed_field
     @property

@@ -28,15 +28,13 @@ class TestSignalHandling:
         task_manager = TaskManager()
 
         # Add tasks with different statuses
-        task_manager._task_status["completed_task"] = (  # type: ignore
-            TaskStatus.COMPLETED
-        )
-        task_manager._task_status["failed_task"] = TaskStatus.FAILED  # type: ignore
-        task_manager._task_status["signal_interrupted_task"] = (  # type: ignore
+        task_manager._task_status["completed_task"] = TaskStatus.COMPLETED
+        task_manager._task_status["failed_task"] = TaskStatus.FAILED
+        task_manager._task_status["signal_interrupted_task"] = (
             TaskStatus.SIGNAL_INTERRUPTED
         )
-        task_manager._task_status["timeout_task"] = TaskStatus.TIMEOUT  # type: ignore
-        task_manager._task_status["memory_exceeded_task"] = (  # type: ignore
+        task_manager._task_status["timeout_task"] = TaskStatus.TIMEOUT
+        task_manager._task_status["memory_exceeded_task"] = (
             TaskStatus.MEMORY_LIMIT_EXCEEDED
         )
 
@@ -88,13 +86,11 @@ class TestSignalHandling:
         )
 
         # Add results to task manager
-        task_manager._task_results["completed_task"] = (  # type: ignore
-            completed_result
-        )
-        task_manager._task_results["signal_interrupted_task"] = (  # type: ignore
+        task_manager._task_results["completed_task"] = completed_result
+        task_manager._task_results["signal_interrupted_task"] = (
             signal_interrupted_result
         )
-        task_manager._task_results["failed_task"] = failed_result  # type: ignore
+        task_manager._task_results["failed_task"] = failed_result
 
         summary = task_manager.generate_execution_summary()
 
@@ -107,21 +103,19 @@ class TestSignalHandling:
         task_manager = TaskManager()
 
         # Add tasks with different statuses
-        task_manager._task_status["running_task"] = TaskStatus.RUNNING  # type: ignore
-        task_manager._task_status["pending_task"] = TaskStatus.PENDING  # type: ignore
-        task_manager._task_status["completed_task"] = (  # type: ignore
-            TaskStatus.COMPLETED
-        )
-        task_manager._task_status["signal_interrupted_task"] = (  # type: ignore
+        task_manager._task_status["running_task"] = TaskStatus.RUNNING
+        task_manager._task_status["pending_task"] = TaskStatus.PENDING
+        task_manager._task_status["completed_task"] = TaskStatus.COMPLETED
+        task_manager._task_status["signal_interrupted_task"] = (
             TaskStatus.SIGNAL_INTERRUPTED
         )
-        task_manager._task_status["failed_task"] = TaskStatus.FAILED  # type: ignore
+        task_manager._task_status["failed_task"] = TaskStatus.FAILED
 
         # Clear completed tasks
         task_manager.clear_completed_tasks()
 
         # Should only have running and pending tasks left
-        remaining_tasks = list(task_manager._task_status.keys())  # type: ignore
+        remaining_tasks = list(task_manager._task_status.keys())
         assert "running_task" in remaining_tasks
         assert "pending_task" in remaining_tasks
         assert "completed_task" not in remaining_tasks

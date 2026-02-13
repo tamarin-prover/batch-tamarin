@@ -10,7 +10,7 @@ All external dependencies are mocked for CI compatibility.
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -29,7 +29,7 @@ from batch_tamarin.runner import TaskRunner
 
 
 @pytest.fixture
-def mock_recipe_data() -> Dict[str, Any]:
+def mock_recipe_data() -> dict[str, Any]:
     """Create mock recipe data for testing."""
     return {
         "config": {
@@ -52,13 +52,13 @@ def mock_recipe_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_recipe(mock_recipe_data: Dict[str, Any]) -> TamarinRecipe:
+def mock_recipe(mock_recipe_data: dict[str, Any]) -> TamarinRecipe:
     """Create mock TamarinRecipe for testing."""
     return TamarinRecipe.model_validate(mock_recipe_data)
 
 
 @pytest.fixture
-def mock_executable_tasks() -> List[ExecutableTask]:
+def mock_executable_tasks() -> list[ExecutableTask]:
     """Create mock ExecutableTask list for testing."""
     return [
         ExecutableTask(
@@ -95,7 +95,7 @@ def mock_executable_tasks() -> List[ExecutableTask]:
 
 
 @pytest.fixture
-def mock_task_results() -> List[TaskResult]:
+def mock_task_results() -> list[TaskResult]:
     """Create mock TaskResult list for testing."""
     return [
         TaskResult(
@@ -147,17 +147,17 @@ class TestTaskRunnerInitialization:
         assert runner.recipe == mock_recipe
         assert runner.resource_manager is not None
         assert runner.task_manager is not None
-        assert runner._pending_tasks == []  # type: ignore
-        assert runner._running_tasks == {}  # type: ignore
-        assert runner._completed_tasks == set()  # type: ignore
-        assert runner._failed_tasks == set()  # type: ignore
-        assert runner._task_results == {}  # type: ignore
+        assert runner._pending_tasks == []
+        assert runner._running_tasks == {}
+        assert runner._completed_tasks == set()
+        assert runner._failed_tasks == set()
+        assert runner._task_results == {}
         assert runner.completed_tasks == set()
         assert runner.failed_tasks == set()
         assert runner.task_results == {}
-        assert not runner._shutdown_requested  # type: ignore
-        assert not runner._force_shutdown_requested  # type: ignore
-        assert runner._signal_count == 0  # type: ignore
+        assert not runner._shutdown_requested
+        assert not runner._force_shutdown_requested
+        assert runner._signal_count == 0
 
         # Verify managers were initialized
         mock_resource_manager.assert_called_once_with(
@@ -235,7 +235,7 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
+        mock_executable_tasks: list[ExecutableTask],
     ):
         """Test execute_all_tasks with actual tasks."""
         # Mock managers
@@ -252,11 +252,11 @@ class TestTaskRunnerExecution:
             await runner.execute_all_tasks(mock_executable_tasks)
 
             # Verify initialization
-            assert runner._pending_tasks == mock_executable_tasks  # type: ignore
-            assert runner._running_tasks == {}  # type: ignore
-            assert runner._completed_tasks == set()  # type: ignore
-            assert runner._failed_tasks == set()  # type: ignore
-            assert runner._task_results == {}  # type: ignore
+            assert runner._pending_tasks == mock_executable_tasks
+            assert runner._running_tasks == {}
+            assert runner._completed_tasks == set()
+            assert runner._failed_tasks == set()
+            assert runner._task_results == {}
             assert runner.completed_tasks == set()
 
             # Verify notifications
@@ -274,7 +274,7 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
+        mock_executable_tasks: list[ExecutableTask],
     ):
         """Test _execute_task_pool with task completion."""
         # Mock managers
@@ -283,7 +283,7 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = mock_executable_tasks.copy()  # type: ignore
+        runner._pending_tasks = mock_executable_tasks.copy()
 
         # Mock the helper methods
         with patch.object(runner, "_should_continue_execution") as mock_should_continue:
@@ -306,12 +306,10 @@ class TestTaskRunnerExecution:
 
                                     # Mock resource manager
                                     mock_resource_mgr = Mock()
-                                    mock_resource_mgr.get_next_schedulable_tasks.return_value = (
-                                        []
-                                    )
+                                    mock_resource_mgr.get_next_schedulable_tasks.return_value = []
                                     runner.resource_manager = mock_resource_mgr
 
-                                    await runner._execute_task_pool(  # type: ignore
+                                    await runner._execute_task_pool(
                                         mock_executable_tasks
                                     )
 
@@ -340,10 +338,10 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = ["task1", "task2"]  # type: ignore
-        runner._running_tasks = {}  # type: ignore
+        runner._pending_tasks = ["task1", "task2"]  # type: ignore[assignment]
+        runner._running_tasks = {}
 
-        assert runner._should_continue_execution() is True  # type: ignore
+        assert runner._should_continue_execution() is True
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -361,10 +359,10 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = []  # type: ignore
-        runner._running_tasks = {"task1": Mock()}  # type: ignore
+        runner._pending_tasks = []
+        runner._running_tasks = {"task1": Mock()}
 
-        assert runner._should_continue_execution() is True  # type: ignore
+        assert runner._should_continue_execution() is True
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -382,10 +380,10 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = []  # type: ignore
-        runner._running_tasks = {}  # type: ignore
+        runner._pending_tasks = []
+        runner._running_tasks = {}
 
-        assert runner._should_continue_execution() is False  # type: ignore
+        assert runner._should_continue_execution() is False
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -399,7 +397,7 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
+        mock_executable_tasks: list[ExecutableTask],
     ):
         """Test _start_schedulable_tasks with available resources."""
         # Mock resource manager
@@ -411,7 +409,7 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = mock_executable_tasks.copy()  # type: ignore
+        runner._pending_tasks = mock_executable_tasks.copy()
 
         # Mock _execute_single_task and asyncio.create_task
         with patch.object(
@@ -423,13 +421,13 @@ class TestTaskRunnerExecution:
                 mock_task_obj = Mock()
                 mock_create_task.return_value = mock_task_obj
 
-                runner._start_schedulable_tasks(mock_executable_tasks)  # type: ignore
+                runner._start_schedulable_tasks(mock_executable_tasks)
 
                 # Should start all schedulable tasks
                 assert mock_resource_mgr.allocate_resources.call_count == 2
                 assert mock_create_task.call_count == 2
-                assert len(runner._pending_tasks) == 0  # type: ignore
-                assert len(runner._running_tasks) == 2  # type: ignore
+                assert len(runner._pending_tasks) == 0
+                assert len(runner._running_tasks) == 2
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -442,7 +440,7 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
+        mock_executable_tasks: list[ExecutableTask],
     ):
         """Test _start_schedulable_tasks with no available resources."""
         # Mock resource manager to deny allocation
@@ -454,13 +452,13 @@ class TestTaskRunnerExecution:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._pending_tasks = mock_executable_tasks.copy()  # type: ignore
+        runner._pending_tasks = mock_executable_tasks.copy()
 
-        runner._start_schedulable_tasks(mock_executable_tasks)  # type: ignore
+        runner._start_schedulable_tasks(mock_executable_tasks)
 
         # Should not start any tasks
-        assert len(runner._pending_tasks) == 2  # type: ignore
-        assert len(runner._running_tasks) == 0  # type: ignore
+        assert len(runner._pending_tasks) == 2
+        assert len(runner._running_tasks) == 0
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -471,8 +469,8 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
-        mock_task_results: List[TaskResult],
+        mock_executable_tasks: list[ExecutableTask],
+        mock_task_results: list[TaskResult],
     ):
         """Test _handle_completed_tasks with completed tasks."""
         mock_resource_manager.return_value = Mock()
@@ -492,21 +490,21 @@ class TestTaskRunnerExecution:
         mock_task2 = Mock()
         mock_task2.done.return_value = False
 
-        runner._running_tasks = {  # type: ignore
+        runner._running_tasks = {
             "task1": mock_task1,
             "task2": mock_task2,
         }
 
         # Mock _handle_task_completion
         with patch.object(runner, "_handle_task_completion") as mock_handle:
-            await runner._handle_completed_tasks(mock_executable_tasks)  # type: ignore
+            await runner._handle_completed_tasks(mock_executable_tasks)
 
             # Should handle only completed task
             mock_handle.assert_called_once_with(
                 mock_executable_tasks[0], mock_task_results[0]
             )
-            assert "task1" not in runner._running_tasks  # type: ignore
-            assert "task2" in runner._running_tasks  # type: ignore
+            assert "task1" not in runner._running_tasks
+            assert "task2" in runner._running_tasks
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -518,8 +516,8 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
-        mock_task_results: List[TaskResult],
+        mock_executable_tasks: list[ExecutableTask],
+        mock_task_results: list[TaskResult],
     ):
         """Test _execute_single_task execution."""
         mock_resource_manager.return_value = Mock()
@@ -534,7 +532,7 @@ class TestTaskRunnerExecution:
         runner = TaskRunner(mock_recipe)
 
         task = mock_executable_tasks[0]
-        result = await runner._execute_single_task(task)  # type: ignore
+        result = await runner._execute_single_task(task)
 
         assert result == mock_task_results[0]
         mock_task_mgr.run_executable_task.assert_called_once_with(task)
@@ -550,8 +548,8 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
-        mock_task_results: List[TaskResult],
+        mock_executable_tasks: list[ExecutableTask],
+        mock_task_results: list[TaskResult],
     ):
         """Test _handle_task_completion with successful task."""
         # Mock resource manager
@@ -566,11 +564,11 @@ class TestTaskRunnerExecution:
 
         task = mock_executable_tasks[0]
         task_result = mock_task_results[0]  # Successful result
-        runner._handle_task_completion(task, task_result)  # type: ignore
+        runner._handle_task_completion(task, task_result)
 
-        assert "task1" in runner._completed_tasks  # type: ignore
-        assert "task1" not in runner._failed_tasks  # type: ignore
-        assert runner._task_results["task1"] == task_result  # type: ignore
+        assert "task1" in runner._completed_tasks
+        assert "task1" not in runner._failed_tasks
+        assert runner._task_results["task1"] == task_result
         assert runner.task_results["task1"] == task_result
 
         mock_resource_mgr.release_resources.assert_called_once_with(task)
@@ -586,8 +584,8 @@ class TestTaskRunnerExecution:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
-        mock_task_results: List[TaskResult],
+        mock_executable_tasks: list[ExecutableTask],
+        mock_task_results: list[TaskResult],
     ):
         """Test _handle_task_completion with failed task."""
         # Mock resource manager
@@ -602,11 +600,11 @@ class TestTaskRunnerExecution:
 
         task = mock_executable_tasks[1]
         task_result = mock_task_results[1]  # Failed result
-        runner._handle_task_completion(task, task_result)  # type: ignore
+        runner._handle_task_completion(task, task_result)
 
-        assert "task2" in runner._failed_tasks  # type: ignore
-        assert "task2" not in runner._completed_tasks  # type: ignore
-        assert runner._task_results["task2"] == task_result  # type: ignore
+        assert "task2" in runner._failed_tasks
+        assert "task2" not in runner._completed_tasks
+        assert runner._task_results["task2"] == task_result
         assert runner.task_results["task2"] == task_result
 
         mock_resource_mgr.release_resources.assert_called_once_with(task)
@@ -638,11 +636,11 @@ class TestTaskRunnerExecution:
         runner = TaskRunner(mock_recipe)
 
         # Set up some task state
-        runner._pending_tasks = ["task1"]  # type: ignore
-        runner._running_tasks = {"task2": Mock()}  # type: ignore
-        runner._completed_tasks = {"task3"}  # type: ignore
-        runner._failed_tasks = {"task4"}  # type: ignore
-        runner._display_progress_update()  # type: ignore
+        runner._pending_tasks = ["task1"]  # type: ignore[assignment]
+        runner._running_tasks = {"task2": Mock()}
+        runner._completed_tasks = {"task3"}
+        runner._failed_tasks = {"task4"}
+        runner._display_progress_update()
 
         # Should have called info notifications
         assert mock_notification.info.call_count >= 2
@@ -669,18 +667,18 @@ class TestTaskRunnerShutdown:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._shutdown_requested = True  # type: ignore
+        runner._shutdown_requested = True
 
         # Mock running tasks
         mock_task1 = AsyncMock()
         mock_task2 = AsyncMock()
-        runner._running_tasks = {  # type: ignore
+        runner._running_tasks = {
             "task1": mock_task1,
             "task2": mock_task2,
         }
 
         with patch.object(runner, "_cleanup_running_tasks") as mock_cleanup:
-            await runner._handle_shutdown()  # type: ignore
+            await runner._handle_shutdown()
 
             mock_cleanup.assert_called_once()
 
@@ -702,18 +700,18 @@ class TestTaskRunnerShutdown:
         mock_output_manager.initialize = Mock()
 
         runner = TaskRunner(mock_recipe)
-        runner._force_shutdown_requested = True  # type: ignore
+        runner._force_shutdown_requested = True
 
         # Mock running tasks
         mock_task1 = AsyncMock()
         mock_task2 = AsyncMock()
-        runner._running_tasks = {  # type: ignore
+        runner._running_tasks = {
             "task1": mock_task1,
             "task2": mock_task2,
         }
 
         with patch.object(runner, "_force_kill_all_tasks") as mock_force_kill:
-            await runner._handle_shutdown()  # type: ignore
+            await runner._handle_shutdown()
 
             mock_force_kill.assert_called_once()
 
@@ -746,7 +744,7 @@ class TestTaskRunnerShutdown:
         mock_task1 = asyncio.create_task(task1())
         mock_task2 = asyncio.create_task(task2())
 
-        runner._running_tasks = {  # type: ignore
+        runner._running_tasks = {
             "task1": mock_task1,
             "task2": mock_task2,
         }
@@ -754,10 +752,10 @@ class TestTaskRunnerShutdown:
         # Let the tasks complete
         await asyncio.sleep(0)
 
-        await runner._cleanup_running_tasks()  # type: ignore
+        await runner._cleanup_running_tasks()
 
-        assert len(runner._running_tasks) == 0  # type: ignore
-        assert len(runner._pending_tasks) == 0  # type: ignore
+        assert len(runner._running_tasks) == 0
+        assert len(runner._pending_tasks) == 0
 
     @patch("batch_tamarin.runner.output_manager")
     @patch("batch_tamarin.runner.TaskManager")
@@ -790,7 +788,7 @@ class TestTaskRunnerShutdown:
         mock_task2.done.return_value = False
         mock_task2.cancel = Mock()
 
-        runner._running_tasks = {  # type: ignore
+        runner._running_tasks = {
             "task1": mock_task1,
             "task2": mock_task2,
         }
@@ -802,14 +800,14 @@ class TestTaskRunnerShutdown:
                 {mock_task1, mock_task2},
             )  # completed, pending
 
-            await runner._force_kill_all_tasks()  # type: ignore
+            await runner._force_kill_all_tasks()
 
             # Tasks should be cancelled since they were in pending set
             mock_task1.cancel.assert_called_once()
             mock_task2.cancel.assert_called_once()
             mock_process_manager.kill_all_processes.assert_called_once()
-            assert len(runner._running_tasks) == 0  # type: ignore
-            assert len(runner._pending_tasks) == 0  # type: ignore
+            assert len(runner._running_tasks) == 0
+            assert len(runner._pending_tasks) == 0
 
 
 class TestTaskRunnerErrorHandling:
@@ -826,7 +824,7 @@ class TestTaskRunnerErrorHandling:
         mock_task_manager: Mock,
         mock_output_manager: Mock,
         mock_recipe: TamarinRecipe,
-        mock_executable_tasks: List[ExecutableTask],
+        mock_executable_tasks: list[ExecutableTask],
     ):
         """Test _execute_single_task with exception during execution."""
         mock_resource_manager.return_value = Mock()
@@ -848,7 +846,7 @@ class TestTaskRunnerErrorHandling:
             mock_loop.return_value.time.return_value = 1000.0
 
             # Should not raise exception, but return error result
-            result = await runner._execute_single_task(task)  # type: ignore
+            result = await runner._execute_single_task(task)
 
             assert result.status == TaskStatus.FAILED
             assert result.return_code == -1

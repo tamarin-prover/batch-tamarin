@@ -9,7 +9,7 @@ unique cache keys.
 import hashlib
 from pathlib import Path
 
-from diskcache import Cache  # type: ignore
+from diskcache import Cache
 
 from ..model.executable_task import ExecutableTask, TaskResult, TaskStatus
 from ..utils.notifications import notification_manager
@@ -49,7 +49,7 @@ class CacheManager:
             TaskResult if cache hit, None if cache miss
         """
         key = self._generate_key(task)
-        cached_data: CachedTaskData | None = self.cache.get(key)  # type: ignore[assignment]
+        cached_data: CachedTaskData | None = self.cache.get(key)
 
         if cached_data is None:
             return None
@@ -124,8 +124,8 @@ class CacheManager:
             Dictionary with cache size and volume information
         """
         # Type ignore for diskcache inconsistent type annotations
-        cache_size: int = len(self.cache)  # type: ignore[assignment]
-        cache_volume: int = self.cache.volume()  # type: ignore[assignment]
+        cache_size: int = len(self.cache)
+        cache_volume: int = self.cache.volume()
         return {"size": cache_size, "volume": cache_volume}
 
     def _collect_task_files(self, task: ExecutableTask) -> dict[str, bytes]:

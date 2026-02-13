@@ -119,7 +119,7 @@ class TestOutputManagerInitialization:
         manager = OutputManager()
 
         # Reset initialization state for testing
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         output_dir = tmp_dir / "test_output"
         manager.initialize(output_dir, bypass=True)
@@ -139,7 +139,7 @@ class TestOutputManagerInitialization:
         manager = OutputManager()
 
         # Set as already initialized
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
         original_output_dir = manager.output_dir
 
         # Should not change state
@@ -155,7 +155,7 @@ class TestOutputManagerDirectoryManagement:
     def test_create_directories(self, mock_notification: Mock, tmp_dir: Path):
         """Test directory creation."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         output_dir = tmp_dir / "test_output"
 
@@ -172,14 +172,14 @@ class TestOutputManagerDirectoryManagement:
     ):
         """Test handling of non-existent directory."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         output_dir = tmp_dir / "nonexistent"
         manager.output_dir = output_dir
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Should not raise exception for non-existent directory
-        manager._handle_existing_directory()  # type: ignore
+        manager._handle_existing_directory()
 
     @patch("batch_tamarin.modules.output_manager.notification_manager")
     def test_handle_existing_directory_file(
@@ -187,17 +187,17 @@ class TestOutputManagerDirectoryManagement:
     ):
         """Test handling when output path is a file."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Create a file instead of directory
         output_file = tmp_dir / "output_file.txt"
         output_file.write_text("test content")
 
         manager.output_dir = output_file
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         with pytest.raises(RuntimeError, match="Output path is not a directory"):
-            manager._handle_existing_directory()  # type: ignore
+            manager._handle_existing_directory()
 
     @patch("batch_tamarin.modules.output_manager.notification_manager")
     def test_handle_existing_directory_not_empty_wipe(
@@ -205,7 +205,7 @@ class TestOutputManagerDirectoryManagement:
     ):
         """Test handling of non-empty directory with wipe confirmation."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Create non-empty directory
         output_dir = tmp_dir / "test_output"
@@ -213,13 +213,13 @@ class TestOutputManagerDirectoryManagement:
         (output_dir / "existing_file.txt").write_text("content")
 
         manager.output_dir = output_dir
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Mock user confirmation to wipe
         mock_notification.prompt_user.return_value = True
 
         with patch("batch_tamarin.modules.output_manager.shutil.rmtree"):
-            manager._handle_existing_directory()  # type: ignore
+            manager._handle_existing_directory()
 
             mock_notification.prompt_user.assert_called_once()
             mock_notification.info.assert_called_once()
@@ -231,7 +231,7 @@ class TestOutputManagerDirectoryManagement:
     ):
         """Test handling of non-empty directory without wipe confirmation."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Create non-empty directory
         output_dir = tmp_dir / "test_output"
@@ -243,7 +243,7 @@ class TestOutputManagerDirectoryManagement:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Mock user confirmation to not wipe
         mock_notification.prompt_user.return_value = False
@@ -251,7 +251,7 @@ class TestOutputManagerDirectoryManagement:
         # Mock datetime for timestamp
         mock_datetime.now.return_value.strftime.return_value = "01-01-23_12-00-00"
 
-        manager._handle_existing_directory()  # type: ignore
+        manager._handle_existing_directory()
 
         mock_notification.prompt_user.assert_called_once()
         mock_notification.info.assert_called_once()
@@ -265,7 +265,7 @@ class TestOutputManagerDirectoryManagement:
     ):
         """Test error handling during directory wipe."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Create non-empty directory
         output_dir = tmp_dir / "test_output"
@@ -273,7 +273,7 @@ class TestOutputManagerDirectoryManagement:
         (output_dir / "existing_file.txt").write_text("content")
 
         manager.output_dir = output_dir
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Mock user confirmation to wipe
         mock_notification.prompt_user.return_value = True
@@ -284,20 +284,20 @@ class TestOutputManagerDirectoryManagement:
 
         with patch.object(Path, "unlink", side_effect=mock_unlink_side_effect):
             with pytest.raises(RuntimeError, match="Failed to wipe output directory"):
-                manager._handle_existing_directory()  # type: ignore
+                manager._handle_existing_directory()
 
     def test_handle_existing_directory_not_initialized(self):
         """Test error when trying to handle directory before initialization."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         with pytest.raises(RuntimeError, match="OutputManager not initialized"):
-            manager._handle_existing_directory()  # type: ignore
+            manager._handle_existing_directory()
 
     def test_get_output_paths(self, tmp_dir: Path):
         """Test getting output paths."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         output_dir = tmp_dir / "test_output"
         manager.output_dir = output_dir
@@ -305,7 +305,7 @@ class TestOutputManagerDirectoryManagement:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         paths = manager.get_output_paths()
 
@@ -327,7 +327,7 @@ class TestOutputManagerProcessing:
     ):
         """Test processing successful task result."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -336,7 +336,7 @@ class TestOutputManagerProcessing:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         with patch.object(manager, "_process_successful_task") as mock_process:
             manager.process_task_result(sample_task_result_success, "test_output.spthy")
@@ -354,7 +354,7 @@ class TestOutputManagerProcessing:
     ):
         """Test processing failed task result."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -363,7 +363,7 @@ class TestOutputManagerProcessing:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         with patch.object(manager, "_process_failed_task") as mock_process:
             manager.process_task_result(sample_task_result_failed, "test_output.spthy")
@@ -378,7 +378,7 @@ class TestOutputManagerProcessing:
     ):
         """Test processing task result when not initialized."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         with pytest.raises(RuntimeError, match="OutputManager not initialized"):
             manager.process_task_result(sample_task_result_success, "test_output.spthy")
@@ -392,7 +392,7 @@ class TestOutputManagerProcessing:
     ):
         """Test processing successful task with file creation."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -401,7 +401,7 @@ class TestOutputManagerProcessing:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Create directories
         manager.success_dir.mkdir(parents=True)
@@ -417,7 +417,7 @@ class TestOutputManagerProcessing:
                 mock_file = Mock()
                 mock_open.return_value.__enter__.return_value = mock_file
 
-                manager._process_successful_task(  # type: ignore
+                manager._process_successful_task(
                     sample_task_result_success, "test_output.json", "test_output.spthy"
                 )
 
@@ -441,7 +441,7 @@ class TestOutputManagerProcessing:
     ):
         """Test processing failed task with file creation."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -450,7 +450,7 @@ class TestOutputManagerProcessing:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Create directories
         manager.failed_dir.mkdir(parents=True)
@@ -466,7 +466,7 @@ class TestOutputManagerProcessing:
                 mock_file = Mock()
                 mock_open.return_value.__enter__.return_value = mock_file
 
-                manager._process_failed_task(  # type: ignore
+                manager._process_failed_task(
                     sample_task_result_failed, "test_output.json"
                 )
 
@@ -489,12 +489,12 @@ class TestOutputManagerParsing:
     def test_parse_successful_output(self, sample_successful_tamarin_output: str):
         """Test parsing successful tamarin output."""
         manager = OutputManager()
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
         manager.models_dir = Path("/mock/models")
 
         memory_stats = MemoryStats(peak_memory_mb=512.0, avg_memory_mb=256.0)
 
-        result = manager._parse_successful_output(  # type: ignore
+        result = manager._parse_successful_output(
             "test_task",
             sample_successful_tamarin_output,
             "",
@@ -518,7 +518,7 @@ class TestOutputManagerParsing:
 
         memory_stats = MemoryStats(peak_memory_mb=256.0, avg_memory_mb=128.0)
 
-        result = manager._parse_failed_output(  # type: ignore
+        result = manager._parse_failed_output(
             "test_task",
             "",
             sample_failed_tamarin_output,
@@ -549,9 +549,7 @@ some output
 processing time: 15.123s
 """
 
-        timing = manager._extract_tamarin_timing(  # type: ignore
-            output_with_timing
-        )  # type: ignore
+        timing = manager._extract_tamarin_timing(output_with_timing)
 
         assert timing == 15.123
 
@@ -561,9 +559,7 @@ processing time: 15.123s
 
         output_without_timing = "some output without timing"
 
-        timing = manager._extract_tamarin_timing(  # type: ignore
-            output_without_timing
-        )  # type: ignore
+        timing = manager._extract_tamarin_timing(output_without_timing)
 
         assert timing == 0.0
 
@@ -580,7 +576,7 @@ analyzed: examples/protocol.spthy
   lemma4 (all-traces): analysis incomplete (1 steps)
 """
 
-        verified, falsified, unterminated = manager._parse_lemma_results(  # type: ignore
+        verified, falsified, unterminated = manager._parse_lemma_results(
             output_with_lemmas
         )
 
@@ -604,7 +600,7 @@ analyzed: examples/protocol.spthy
 
         output_without_lemmas = "some output without lemmas"
 
-        verified, falsified, unterminated = manager._parse_lemma_results(  # type: ignore
+        verified, falsified, unterminated = manager._parse_lemma_results(
             output_without_lemmas
         )
 
@@ -623,7 +619,7 @@ WARNING: Another warning
 Normal output
 """
 
-        warnings = manager._extract_warnings(output_with_warnings)  # type: ignore
+        warnings = manager._extract_warnings(output_with_warnings)
 
         assert len(warnings) == 2
         assert "Some warning message" in warnings
@@ -635,7 +631,7 @@ Normal output
 
         output_without_warnings = "normal output without warnings"
 
-        warnings = manager._extract_warnings(output_without_warnings)  # type: ignore
+        warnings = manager._extract_warnings(output_without_warnings)
 
         assert warnings == []
 
@@ -651,7 +647,7 @@ tamarin-prover: error while parsing file 'examples/protocol.spthy' at line 15, c
 Error: Protocol parsing failed
 """
 
-        error_desc = manager._handle_error_description(  # type: ignore
+        error_desc = manager._handle_error_description(
             stderr_with_error, "", 1, TaskStatus.FAILED
         )
 
@@ -661,9 +657,7 @@ Error: Protocol parsing failed
         """Test handling timeout error description."""
         manager = OutputManager()
 
-        error_desc = manager._handle_error_description(  # type: ignore
-            "", "", -1, TaskStatus.TIMEOUT
-        )
+        error_desc = manager._handle_error_description("", "", -1, TaskStatus.TIMEOUT)
 
         assert "timed out" in error_desc
 
@@ -671,7 +665,7 @@ Error: Protocol parsing failed
         """Test handling memory limit error description."""
         manager = OutputManager()
 
-        error_desc = manager._handle_error_description(  # type: ignore
+        error_desc = manager._handle_error_description(
             "", "", -1, TaskStatus.MEMORY_LIMIT_EXCEEDED
         )
 
@@ -680,7 +674,7 @@ Error: Protocol parsing failed
     def test_parse_task_result_success(self, sample_task_result_success: TaskResult):
         """Test parsing successful task result."""
         manager = OutputManager()
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
         manager.models_dir = Path("/mock/models")
 
         result = manager.parse_task_result(
@@ -693,7 +687,7 @@ Error: Protocol parsing failed
     def test_parse_task_result_failed(self, sample_task_result_failed: TaskResult):
         """Test parsing failed task result."""
         manager = OutputManager()
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         result = manager.parse_task_result(
             sample_task_result_failed, "test_output.spthy"
@@ -715,7 +709,7 @@ class TestOutputManagerErrorHandling:
     ):
         """Test error handling during file writing."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -724,7 +718,7 @@ class TestOutputManagerErrorHandling:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         # Mock successful result
         mock_result = Mock()
@@ -733,9 +727,9 @@ class TestOutputManagerErrorHandling:
         with patch.object(manager, "_parse_successful_output") as mock_parse:
             mock_parse.return_value = mock_result
 
-            with patch("builtins.open", side_effect=IOError("Permission denied")):
+            with patch("builtins.open", side_effect=OSError("Permission denied")):
                 # Should not raise exception, but log error
-                manager._process_successful_task(  # type: ignore
+                manager._process_successful_task(
                     sample_task_result_success, "test_output.json", "test_output.spthy"
                 )
 
@@ -750,7 +744,7 @@ class TestOutputManagerErrorHandling:
     ):
         """Test error handling during output parsing."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         # Setup manager
         output_dir = tmp_dir / "test_output"
@@ -759,13 +753,13 @@ class TestOutputManagerErrorHandling:
         manager.failed_dir = output_dir / "failed"
         manager.models_dir = output_dir / "proofs"
         manager.traces_dir = output_dir / "traces"
-        manager._is_setup = True  # type: ignore
+        manager._is_setup = True
 
         with patch.object(
             manager, "_parse_successful_output", side_effect=Exception("Parse error")
         ):
             # Should not raise exception, but log error
-            manager._process_successful_task(  # type: ignore
+            manager._process_successful_task(
                 sample_task_result_success, "test_output.json", "test_output.spthy"
             )
 
@@ -780,7 +774,7 @@ processing time: invalidXs
 some other output
 """
 
-        timing = manager._extract_tamarin_timing(output_malformed)  # type: ignore
+        timing = manager._extract_tamarin_timing(output_malformed)
 
         # Should handle malformed data gracefully
         assert timing == 0.0
@@ -797,7 +791,7 @@ analyzed: examples/protocol.spthy
   lemma2 (all-traces): verified (5 steps)
 """
 
-        verified, _falsified, _unterminated = manager._parse_lemma_results(  # type: ignore
+        verified, _falsified, _unterminated = manager._parse_lemma_results(
             output_malformed
         )
 
@@ -808,7 +802,7 @@ analyzed: examples/protocol.spthy
     def test_get_output_paths_not_initialized(self):
         """Test get_output_paths when not initialized."""
         manager = OutputManager()
-        manager._is_setup = False  # type: ignore
+        manager._is_setup = False
 
         with pytest.raises(RuntimeError, match="OutputManager not initialized"):
             manager.get_output_paths()

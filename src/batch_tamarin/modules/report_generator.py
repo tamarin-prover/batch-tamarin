@@ -57,17 +57,17 @@ class ReportGenerator:
         )
 
         # Add custom filters to both environments
-        filters: dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore
+        filters: dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore[assignment]
         filters["latex_escape"] = self._latex_escape
-        filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
-        filters["relative_from_report"] = self._relative_from_report  # type: ignore
-        filters["hyphenate"] = self._hyphenate  # type: ignore
+        filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore[assignment]
+        filters["relative_from_report"] = self._relative_from_report
+        filters["hyphenate"] = self._hyphenate
 
-        latex_filters: dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
+        latex_filters: dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore[assignment]
         latex_filters["latex_escape"] = self._latex_escape
-        latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
-        latex_filters["relative_from_report"] = self._relative_from_report  # type: ignore
-        latex_filters["hyphenate"] = self._hyphenate  # type: ignore
+        latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore[assignment]
+        latex_filters["relative_from_report"] = self._relative_from_report
+        latex_filters["hyphenate"] = self._hyphenate
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -145,9 +145,7 @@ class ReportGenerator:
             return []
 
         # Get task's lemmas
-        task_lemmas = (  # type: ignore
-            set(task.lemmas) if hasattr(task, "lemmas") else set()
-        )
+        task_lemmas = set(task.lemmas) if hasattr(task, "lemmas") else set()
 
         # Filter traces by lemma first
         lemma_filtered_traces = [

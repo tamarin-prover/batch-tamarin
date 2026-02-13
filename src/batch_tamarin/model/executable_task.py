@@ -76,6 +76,8 @@ class ExecutableTask:
             Specific lemma: ["tamarin-prover", "+RTS", "-N4", "-RTS", "protocols/complex.spthy", "--prove=secrecy",
                            "--diff", "-D=GoodKeysOnly", "--output-json=traces/task1.json", "--output-dot=traces/task1.dot", "--output=results_stable.txt"]
         """
+        from ..utils.compatibility_filter import compatibility_filter  # noqa: PLC0415
+
         command = [str(self.tamarin_executable)]
 
         # Add Haskell RTS flags for performance limiting
@@ -105,9 +107,6 @@ class ExecutableTask:
 
         # Add output file
         command.append(f"--output={self.output_file}")
-
-        # Apply compatibility filtering based on tamarin version
-        from ..utils.compatibility_filter import compatibility_filter
 
         filtered_command = await compatibility_filter(command, self.tamarin_executable)
 
@@ -173,4 +172,4 @@ class ExecutionSummary:
     cache_entries: int = 0
     cached_tasks: int = 0
     cache_volume: int = 0
-    cached_task_ids: set[str] = field(default_factory=lambda: set())
+    cached_task_ids: set[str] = field(default_factory=set)

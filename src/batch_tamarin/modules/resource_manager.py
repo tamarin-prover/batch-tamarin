@@ -70,7 +70,7 @@ class ResourceManager:
                     )
 
         # Same goes for memory limits
-        system_memory_gb = int(psutil.virtual_memory().total / (1024**3))  # type: ignore
+        system_memory_gb = int(psutil.virtual_memory().total / (1024**3))
 
         if global_max_memory > system_memory_gb:
             notification_manager.warning(

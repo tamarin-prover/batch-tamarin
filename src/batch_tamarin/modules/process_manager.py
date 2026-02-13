@@ -22,7 +22,7 @@ class ProcessInfo:
     """Information about a running process."""
 
     process: asyncio.subprocess.Process
-    task: asyncio.Task  # type: ignore
+    task: asyncio.Task
     path: Path
     command: list[str]
     start_time: float
@@ -247,7 +247,7 @@ class ProcessManager:
                     try:
                         children: list[psutil.Process] = psutil_process.children(
                             recursive=True
-                        )  # type: ignore
+                        )
                         for child in children:
                             child_memory = child.memory_info()
                             child_rss = float(getattr(child_memory, "rss", 0))
@@ -342,8 +342,8 @@ class ProcessManager:
                     await process.wait()
 
             # Cancel the task if it still exists
-            if not process_info.task.done():  # type: ignore
-                process_info.task.cancel()  # type: ignore
+            if not process_info.task.done():
+                process_info.task.cancel()
 
         except Exception as e:
             notification_manager.error(

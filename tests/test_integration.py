@@ -7,8 +7,9 @@ to ExecutableTask generation, ensuring all components work together correctly.
 
 # pyright: basic
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any
 
 import pytest
 
@@ -18,7 +19,7 @@ from batch_tamarin.modules.config_manager import ConfigManager
 
 @pytest.mark.asyncio
 async def test_minimal_recipe_end_to_end(
-    minimal_recipe_data: Dict[str, Any],
+    minimal_recipe_data: dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
     setup_output_manager: Any,
@@ -71,7 +72,7 @@ async def test_minimal_recipe_end_to_end(
 
 @pytest.mark.asyncio
 async def test_complex_recipe_end_to_end(
-    complex_recipe_data: Dict[str, Any],
+    complex_recipe_data: dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
     setup_output_manager: Any,
@@ -135,7 +136,7 @@ async def test_complex_recipe_end_to_end(
 
 @pytest.mark.asyncio
 async def test_resource_inheritance_and_capping(
-    complex_recipe_data: Dict[str, Any],
+    complex_recipe_data: dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
     setup_output_manager: Any,
@@ -185,7 +186,7 @@ async def test_resource_inheritance_and_capping(
 
 @pytest.mark.asyncio
 async def test_unique_task_id_generation(
-    minimal_recipe_data: Dict[str, Any],
+    minimal_recipe_data: dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
     setup_output_manager: Any,
@@ -217,7 +218,7 @@ async def test_unique_task_id_generation(
 
 @pytest.mark.asyncio
 async def test_lemma_prefix_matching(
-    complex_recipe_data: Dict[str, Any],
+    complex_recipe_data: dict[str, Any],
     create_json_file: Callable[..., Path],
     mock_notifications: Any,
     setup_output_manager: Any,

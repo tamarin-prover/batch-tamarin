@@ -65,11 +65,11 @@ class TestTaskManagerInitialization:
         """Test TaskManager initializes with correct default state."""
         task_manager = TaskManager()
 
-        assert task_manager._task_status == {}  # type:ignore
-        assert task_manager._task_results == {}  # type:ignore
-        assert task_manager._task_start_times == {}  # type:ignore
-        assert task_manager._cached_tasks == set()  # type:ignore
-        assert task_manager._cache_manager is not None  # type:ignore
+        assert task_manager._task_status == {}
+        assert task_manager._task_results == {}
+        assert task_manager._task_start_times == {}
+        assert task_manager._cached_tasks == set()
+        assert task_manager._cache_manager is not None
 
     def test_task_manager_is_singleton_like(self):
         """Test that TaskManager instances can be created independently."""
@@ -80,8 +80,8 @@ class TestTaskManagerInitialization:
         assert task_manager1 is not task_manager2
 
         # But each should have its own state
-        task_manager1._task_status["test"] = TaskStatus.RUNNING  # type:ignore
-        assert "test" not in task_manager2._task_status  # type:ignore
+        task_manager1._task_status["test"] = TaskStatus.RUNNING
+        assert "test" not in task_manager2._task_status
 
 
 class TestTaskExecution:
@@ -120,7 +120,7 @@ class TestTaskExecution:
         mock_output_manager.process_task_result = Mock()
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -128,12 +128,12 @@ class TestTaskExecution:
 
         # Mock cache manager to return None (no cache hit)
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
             with patch.object(
-                task_manager._cache_manager, "store_result"  # type:ignore
+                task_manager._cache_manager, "store_result"
             ) as mock_store:
                 result = await task_manager.run_executable_task(mock_executable_task)
 
@@ -149,11 +149,8 @@ class TestTaskExecution:
 
         # Verify tracking
 
-        assert (
-            task_manager._task_status["test_task"]  # type:ignore
-            == TaskStatus.COMPLETED
-        )
-        assert task_manager._task_results["test_task"] == result  # type:ignore
+        assert task_manager._task_status["test_task"] == TaskStatus.COMPLETED
+        assert task_manager._task_results["test_task"] == result
 
         # Verify cache was used
         mock_store.assert_called_once()
@@ -194,7 +191,7 @@ class TestTaskExecution:
         mock_output_manager.process_task_result = Mock()
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -202,13 +199,11 @@ class TestTaskExecution:
 
         # Mock cache manager to return None (no cache hit)
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
-            with patch.object(
-                task_manager._cache_manager, "store_result"  # type:ignore
-            ):
+            with patch.object(task_manager._cache_manager, "store_result"):
                 result = await task_manager.run_executable_task(mock_executable_task)
 
         # Verify result
@@ -219,11 +214,8 @@ class TestTaskExecution:
         assert result.stderr == "error output"
 
         # Verify tracking
-        assert (
-            task_manager._task_status["test_task"]  # type:ignore
-            == TaskStatus.FAILED
-        )
-        assert task_manager._task_results["test_task"] == result  # type:ignore
+        assert task_manager._task_status["test_task"] == TaskStatus.FAILED
+        assert task_manager._task_results["test_task"] == result
 
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
@@ -257,7 +249,7 @@ class TestTaskExecution:
         mock_output_manager.is_initialized.return_value = False
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -265,7 +257,7 @@ class TestTaskExecution:
 
         # Mock cache manager to return None (no cache hit)
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
@@ -308,7 +300,7 @@ class TestTaskExecution:
         mock_output_manager.is_initialized.return_value = False
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -316,7 +308,7 @@ class TestTaskExecution:
 
         # Mock cache manager to return None (no cache hit)
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
@@ -359,7 +351,7 @@ class TestTaskExecution:
         mock_output_manager.is_initialized.return_value = False
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -367,7 +359,7 @@ class TestTaskExecution:
 
         # Mock cache manager to return None (no cache hit)
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
@@ -396,7 +388,7 @@ class TestCacheManagement:
 
         # Mock cache manager to return cached result
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=mock_task_result,
         ):
@@ -404,15 +396,9 @@ class TestCacheManagement:
 
         # Verify we got the cached result
         assert result == mock_task_result
-        assert (
-            task_manager._task_status["test_task"]  # type:ignore
-            == TaskStatus.COMPLETED
-        )
-        assert (
-            task_manager._task_results["test_task"]  # type:ignore
-            == mock_task_result
-        )
-        assert "test_task" in task_manager._cached_tasks  # type:ignore
+        assert task_manager._task_status["test_task"] == TaskStatus.COMPLETED
+        assert task_manager._task_results["test_task"] == mock_task_result
+        assert "test_task" in task_manager._cached_tasks
 
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.process_manager")
@@ -446,7 +432,7 @@ class TestCacheManagement:
         mock_output_manager.is_initialized.return_value = False
 
         # Mock task.to_command()
-        mock_executable_task.to_command = AsyncMock(
+        mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
             return_value=["tamarin-prover", "theory.spthy", "--prove=test_lemma"]
         )
 
@@ -454,21 +440,19 @@ class TestCacheManagement:
 
         # Mock cache manager
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             return_value=None,
         ):
             with patch.object(
-                task_manager._cache_manager, "store_result"  # type:ignore
+                task_manager._cache_manager, "store_result"
             ) as mock_store:
                 result = await task_manager.run_executable_task(mock_executable_task)
 
         # Verify cache was checked and result was stored
         mock_store.assert_called_once()
         assert result.status == TaskStatus.COMPLETED
-        assert (
-            "test_task" not in task_manager._cached_tasks  # type:ignore
-        )  # No cache hit
+        assert "test_task" not in task_manager._cached_tasks  # No cache hit
 
     @patch("batch_tamarin.modules.task_manager.output_manager")
     @patch("batch_tamarin.modules.task_manager.notification_manager")
@@ -483,7 +467,7 @@ class TestCacheManagement:
 
         # Mock cache manager to raise exception
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_cached_result",
             side_effect=Exception("Cache error"),
         ):
@@ -494,7 +478,7 @@ class TestCacheManagement:
                 mock_process_manager.run_command = AsyncMock(
                     return_value=(0, "success", "", None)
                 )
-                mock_executable_task.to_command = AsyncMock(
+                mock_executable_task.to_command = AsyncMock(  # type: ignore[assignment]
                     return_value=["tamarin-prover", "theory.spthy"]
                 )
                 mock_output_manager.is_initialized.return_value = False
@@ -543,14 +527,12 @@ class TestProgressReporting:
         task_manager = TaskManager()
 
         # Add tasks in various states
-        task_manager._task_status["task1"] = TaskStatus.PENDING  # type:ignore
-        task_manager._task_status["task2"] = TaskStatus.RUNNING  # type:ignore
-        task_manager._task_status["task3"] = TaskStatus.COMPLETED  # type:ignore
-        task_manager._task_status["task4"] = TaskStatus.FAILED  # type:ignore
-        task_manager._task_status["task5"] = TaskStatus.TIMEOUT  # type:ignore
-        task_manager._task_status["task6"] = (  # type:ignore
-            TaskStatus.MEMORY_LIMIT_EXCEEDED
-        )
+        task_manager._task_status["task1"] = TaskStatus.PENDING
+        task_manager._task_status["task2"] = TaskStatus.RUNNING
+        task_manager._task_status["task3"] = TaskStatus.COMPLETED
+        task_manager._task_status["task4"] = TaskStatus.FAILED
+        task_manager._task_status["task5"] = TaskStatus.TIMEOUT
+        task_manager._task_status["task6"] = TaskStatus.MEMORY_LIMIT_EXCEEDED
 
         progress = task_manager.get_execution_progress()
 
@@ -572,15 +554,15 @@ class TestProgressReporting:
         # Update task status
         task_manager.update_task_status("task1", TaskStatus.RUNNING)
 
-        assert task_manager._task_status["task1"] == TaskStatus.RUNNING  # type:ignore
-        assert task_manager._task_start_times["task1"] == 2000.0  # type:ignore
+        assert task_manager._task_status["task1"] == TaskStatus.RUNNING
+        assert task_manager._task_start_times["task1"] == 2000.0
 
         # Update to completed
         task_manager.update_task_status("task1", TaskStatus.COMPLETED)
 
-        assert task_manager._task_status["task1"] == TaskStatus.COMPLETED  # type:ignore
+        assert task_manager._task_status["task1"] == TaskStatus.COMPLETED
         # Start time should remain unchanged
-        assert task_manager._task_start_times["task1"] == 2000.0  # type:ignore
+        assert task_manager._task_start_times["task1"] == 2000.0
 
     @patch("batch_tamarin.modules.task_manager.time.time")
     def test_update_task_status_no_duplicate_start_time(self, mock_time: Mock):
@@ -598,12 +580,12 @@ class TestProgressReporting:
         task_manager = TaskManager()
 
         # Set initial start time
-        task_manager._task_start_times["task1"] = 1900.0  # type:ignore
+        task_manager._task_start_times["task1"] = 1900.0
 
         # Update to running should not overwrite start time
         task_manager.update_task_status("task1", TaskStatus.RUNNING)
 
-        assert task_manager._task_start_times["task1"] == 1900.0  # type:ignore
+        assert task_manager._task_start_times["task1"] == 1900.0
 
 
 class TestExecutionSummary:
@@ -660,15 +642,15 @@ class TestExecutionSummary:
 
         # Add results to task manager
         for result in task_results:
-            task_manager._task_results[result.task_id] = result  # type:ignore
-            task_manager._task_status[result.task_id] = result.status  # type:ignore
+            task_manager._task_results[result.task_id] = result
+            task_manager._task_status[result.task_id] = result.status
 
         # Add some cached tasks
-        task_manager._cached_tasks.add("task1")  # type:ignore
+        task_manager._cached_tasks.add("task1")
 
         # Mock cache manager stats
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_stats",
             return_value={"size": 5, "volume": 1024},
         ):
@@ -699,11 +681,11 @@ class TestExecutionSummary:
             end_time=1010.0,
             duration=10.0,
         )
-        task_manager._task_results["task1"] = task_result  # type:ignore
+        task_manager._task_results["task1"] = task_result
 
         # Mock cache manager to raise exception
         with patch.object(
-            task_manager._cache_manager,  # type:ignore
+            task_manager._cache_manager,
             "get_stats",
             side_effect=Exception("Cache error"),
         ):
@@ -746,8 +728,8 @@ class TestTaskStatusManagement:
             duration=15.0,
         )
 
-        task_manager._task_results["task1"] = result1  # type:ignore
-        task_manager._task_results["task2"] = result2  # type:ignore
+        task_manager._task_results["task1"] = result1
+        task_manager._task_results["task2"] = result2
 
         results = task_manager.get_task_results()
 
@@ -756,14 +738,14 @@ class TestTaskStatusManagement:
         assert results["task2"] == result2
 
         # Should be a copy, not the original
-        assert results is not task_manager._task_results  # type:ignore
+        assert results is not task_manager._task_results
 
     def test_get_task_status(self):
         """Test getting status of specific task."""
         task_manager = TaskManager()
 
         # Add task status
-        task_manager._task_status["task1"] = TaskStatus.RUNNING  # type:ignore
+        task_manager._task_status["task1"] = TaskStatus.RUNNING
 
         status = task_manager.get_task_status("task1")
         assert status == TaskStatus.RUNNING
@@ -780,20 +762,18 @@ class TestTaskStatusManagement:
         task_manager = TaskManager()
 
         # Add various task statuses
-        task_manager._task_status["pending"] = TaskStatus.PENDING  # type:ignore
-        task_manager._task_status["running"] = TaskStatus.RUNNING  # type:ignore
-        task_manager._task_status["completed"] = TaskStatus.COMPLETED  # type:ignore
-        task_manager._task_status["failed"] = TaskStatus.FAILED  # type:ignore
-        task_manager._task_status["timeout"] = TaskStatus.TIMEOUT  # type:ignore
-        task_manager._task_status["memory"] = (  # type:ignore
-            TaskStatus.MEMORY_LIMIT_EXCEEDED
-        )
+        task_manager._task_status["pending"] = TaskStatus.PENDING
+        task_manager._task_status["running"] = TaskStatus.RUNNING
+        task_manager._task_status["completed"] = TaskStatus.COMPLETED
+        task_manager._task_status["failed"] = TaskStatus.FAILED
+        task_manager._task_status["timeout"] = TaskStatus.TIMEOUT
+        task_manager._task_status["memory"] = TaskStatus.MEMORY_LIMIT_EXCEEDED
 
         # Add corresponding results and start times
-        for task_id in task_manager._task_status:  # type:ignore
-            task_manager._task_results[task_id] = TaskResult(  # type:ignore
+        for task_id in task_manager._task_status:
+            task_manager._task_results[task_id] = TaskResult(
                 task_id=task_id,
-                status=task_manager._task_status[task_id],  # type:ignore
+                status=task_manager._task_status[task_id],
                 return_code=0,
                 stdout="",
                 stderr="",
@@ -801,23 +781,23 @@ class TestTaskStatusManagement:
                 end_time=1010.0,
                 duration=10.0,
             )
-            task_manager._task_start_times[task_id] = 1000.0  # type:ignore
+            task_manager._task_start_times[task_id] = 1000.0
 
         # Clear completed tasks
         task_manager.clear_completed_tasks()
 
         # Should only have pending and running tasks left
-        assert len(task_manager._task_status) == 2  # type:ignore
-        assert "pending" in task_manager._task_status  # type:ignore
-        assert "running" in task_manager._task_status  # type:ignore
-        assert "completed" not in task_manager._task_status  # type:ignore
-        assert "failed" not in task_manager._task_status  # type:ignore
-        assert "timeout" not in task_manager._task_status  # type:ignore
-        assert "memory" not in task_manager._task_status  # type:ignore
+        assert len(task_manager._task_status) == 2
+        assert "pending" in task_manager._task_status
+        assert "running" in task_manager._task_status
+        assert "completed" not in task_manager._task_status
+        assert "failed" not in task_manager._task_status
+        assert "timeout" not in task_manager._task_status
+        assert "memory" not in task_manager._task_status
 
         # Check that results and start times were also cleared
-        assert len(task_manager._task_results) == 2  # type:ignore
-        assert len(task_manager._task_start_times) == 2  # type:ignore
+        assert len(task_manager._task_results) == 2
+        assert len(task_manager._task_start_times) == 2
 
     def test_clear_completed_tasks_empty(self):
         """Test clearing completed tasks when none exist."""
@@ -826,6 +806,6 @@ class TestTaskStatusManagement:
         # Should not raise exception
         task_manager.clear_completed_tasks()
 
-        assert len(task_manager._task_status) == 0  # type:ignore
-        assert len(task_manager._task_results) == 0  # type:ignore
-        assert len(task_manager._task_start_times) == 0  # type:ignore
+        assert len(task_manager._task_status) == 0
+        assert len(task_manager._task_results) == 0
+        assert len(task_manager._task_start_times) == 0

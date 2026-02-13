@@ -5,6 +5,7 @@ This module uses tree-sitter-spthy to parse Tamarin Security Protocol Theory (.s
 and extract all lemma declarations to enable fine-grained task creation.
 """
 
+import re
 from pathlib import Path
 from types import FunctionType
 
@@ -43,7 +44,7 @@ class LemmaParser:
         """
         try:
             self.language = ts_spthy.language()
-            self.parser = Parser(self.language)  # type: ignore
+            self.parser = Parser(self.language)
             self.external_flags = set(external_flags or [])
             self.ignore_preprocessor = ignore_preprocessor
         except Exception as e:
@@ -142,8 +143,6 @@ class LemmaParser:
         Returns:
             True if diff() operator is found, False otherwise
         """
-        import re
-
         # Remove comments to avoid false positives
         content_no_comments = re.sub(
             r"//.*?$|/\*.*?\*/", "", content, flags=re.MULTILINE | re.DOTALL
@@ -301,7 +300,7 @@ class LemmaParser:
         """
         try:
             for child in define_node.children:
-                if child.type == "ident" or child.type == "identifier":
+                if child.type in {"ident", "identifier"}:
                     # Use byte-based slicing to handle UTF-8 encoding correctly
                     symbol_text = (
                         content.encode("utf-8")[child.start_byte : child.end_byte]
@@ -330,11 +329,7 @@ class LemmaParser:
         try:
             # Find the condition node
             for child in ifdef_node.children:
-                if (
-                    child.type == "condition"
-                    or child.type == "ident"
-                    or child.type == "identifier"
-                ):
+                if child.type in {"condition", "ident", "identifier"}:
                     # Use byte-based slicing to handle UTF-8 encoding correctly
                     condition_text = (
                         content.encode("utf-8")[child.start_byte : child.end_byte]

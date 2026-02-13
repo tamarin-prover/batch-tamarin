@@ -147,7 +147,7 @@ class TaskManager:
             self._task_results[task_id] = task_result
 
             # Store results in cache, except for signal-interrupted tasks
-            if status != TaskStatus.SIGNAL_INTERRUPTED:  # type: ignore
+            if status != TaskStatus.SIGNAL_INTERRUPTED:
                 try:
                     self._cache_manager.store_result(task, task_result)
                     notification_manager.debug(

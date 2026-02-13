@@ -4,7 +4,9 @@ Tests for report generator functionality.
 
 # pyright: basic
 
+import shutil
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +14,7 @@ import pytest
 
 from batch_tamarin.model.batch import (
     Batch,
+    ErrorType,
     ExecMetadata,
     GlobalConfig,
     LemmaResult,
@@ -21,11 +24,19 @@ from batch_tamarin.model.batch import (
     TamarinVersion,
     TaskConfig,
     TaskExecMetadata,
+    TaskFailedResult,
     TaskStatus,
     TaskSucceedResult,
 )
-from batch_tamarin.model.report_data import ReportData
+from batch_tamarin.model.report_data import (
+    ReportData,
+    TaskResult,
+    TaskSummary,
+    TraceInfo,
+)
+from batch_tamarin.modules.report_charts import GanttChart
 from batch_tamarin.modules.report_generator import ReportGenerator
+from batch_tamarin.utils.dot_utils import get_svg_content, is_dot_file_empty
 
 
 class TestReportGenerator:
@@ -45,8 +56,6 @@ class TestReportGenerator:
 
     def teardown_method(self):
         """Clean up test fixtures."""
-        import shutil
-
         shutil.rmtree(self.temp_dir)
 
     def create_sample_batch(self) -> Batch:
@@ -171,20 +180,20 @@ class TestReportGenerator:
         generator = ReportGenerator()
 
         # Test individual characters
-        assert generator._latex_escape("&") == "\\&"  # type: ignore
-        assert generator._latex_escape("%") == "\\%"  # type: ignore
-        assert generator._latex_escape("$") == "\\$"  # type: ignore
-        assert generator._latex_escape("#") == "\\#"  # type: ignore
-        assert generator._latex_escape("^") == "\\textasciicircum{}"  # type: ignore
-        assert generator._latex_escape("_") == "\\_"  # type: ignore
-        assert generator._latex_escape("{") == "\\{"  # type: ignore
-        assert generator._latex_escape("}") == "\\}"  # type: ignore
-        assert generator._latex_escape("~") == "\\textasciitilde{}"  # type: ignore
-        assert generator._latex_escape("\\") == "\\textbackslash{}"  # type: ignore
+        assert generator._latex_escape("&") == "\\&"
+        assert generator._latex_escape("%") == "\\%"
+        assert generator._latex_escape("$") == "\\$"
+        assert generator._latex_escape("#") == "\\#"
+        assert generator._latex_escape("^") == "\\textasciicircum{}"
+        assert generator._latex_escape("_") == "\\_"
+        assert generator._latex_escape("{") == "\\{"
+        assert generator._latex_escape("}") == "\\}"
+        assert generator._latex_escape("~") == "\\textasciitilde{}"
+        assert generator._latex_escape("\\") == "\\textbackslash{}"
 
         # Test a complex string
         test_string = "Test & 100%"
-        escaped = generator._latex_escape(test_string)  # type: ignore
+        escaped = generator._latex_escape(test_string)
         assert "\\&" in escaped
         assert "\\%" in escaped
 
@@ -261,7 +270,7 @@ class TestReportGenerator:
         )
 
         # Generate charts
-        charts = generator._generate_charts(report_data)  # type: ignore
+        charts = generator._generate_charts(report_data)
 
         # Verify charts were created
         assert charts.success_rate is not None
@@ -279,10 +288,10 @@ class TestReportGenerator:
         report_data = ReportData.from_batch_and_output_dir(
             batch, self.results_dir, "md"
         )
-        charts = generator._generate_charts(report_data)  # type: ignore
+        charts = generator._generate_charts(report_data)
 
         # Prepare context
-        context = generator._prepare_template_context(  # type: ignore
+        context = generator._prepare_template_context(
             report_data, charts, self.results_dir, "1.0.0"
         )
 
@@ -337,8 +346,6 @@ class TestReportGenerator:
         batch.execution_metadata.total_failures = 2
 
         # Add failed task result
-        from batch_tamarin.model.batch import ErrorType, TaskFailedResult
-
         failed_result = TaskFailedResult(
             error_type=ErrorType.TIMEOUT,
             error_description="Task timed out",
@@ -351,7 +358,7 @@ class TestReportGenerator:
         report_data = ReportData.from_batch_and_output_dir(
             batch, self.results_dir, "md"
         )
-        charts = generator._generate_charts(report_data)  # type: ignore
+        charts = generator._generate_charts(report_data)
 
         # Verify error types chart is created when there are errors
         if report_data.error_details:
@@ -389,7 +396,7 @@ class TestReportGenerator:
         report_data = ReportData.from_batch_and_output_dir(
             batch, self.results_dir, "md"
         )
-        charts = generator._generate_charts(report_data)  # type: ignore
+        charts = generator._generate_charts(report_data)
 
         # Charts should be None when there's no data
         assert charts.success_rate is None
@@ -401,10 +408,6 @@ class TestReportGenerator:
 
     def test_gantt_chart_timeline_generation(self):
         """Test that Gantt chart generates proper timeline data."""
-        from datetime import datetime, timedelta
-
-        from batch_tamarin.modules.report_charts import GanttChart
-
         # Create timeline data with actual timestamps
         base_time = datetime(2024, 1, 1, 10, 0, 0)
         timeline_data = [
@@ -439,8 +442,6 @@ class TestReportGenerator:
 
     def test_dot_file_validation(self):
         """Test DOT file validation and SVG generation."""
-        from batch_tamarin.utils.dot_utils import get_svg_content, is_dot_file_empty
-
         # Create a non-empty DOT file
         dot_file = self.results_dir / "test.dot"
         dot_content = """
@@ -505,10 +506,10 @@ digraph test {
         report_data = ReportData.from_batch_and_output_dir(
             batch, self.results_dir, "md"
         )
-        charts = generator._generate_charts(report_data)  # type: ignore
+        charts = generator._generate_charts(report_data)
 
         # Prepare context
-        context = generator._prepare_template_context(  # type: ignore
+        context = generator._prepare_template_context(
             report_data, charts, self.results_dir, "1.0.0"
         )
 
@@ -519,8 +520,6 @@ digraph test {
 
     def test_filter_traces_by_task(self):
         """Test trace filtering by task lemmas and output prefix."""
-        from batch_tamarin.model.report_data import TaskResult, TaskSummary, TraceInfo
-
         generator = ReportGenerator()
 
         # Create TaskResult objects for the lemmas
@@ -528,12 +527,12 @@ digraph test {
             lemma="lemma1",
             tamarin_version="stable",
             status="verified",
-        )  # type: ignore
+        )
         result2 = TaskResult(
             lemma="lemma2",
             tamarin_version="dev",
             status="verified",
-        )  # type: ignore
+        )
 
         # Create a mock task with specific lemmas and output_prefix
         mock_task = TaskSummary(
@@ -554,31 +553,29 @@ digraph test {
                 tamarin_version="stable",
                 json_file="task_prefix--lemma1--stable.json",
                 output_prefix="task_prefix",
-            ),  # type: ignore
+            ),
             TraceInfo(
                 lemma="lemma2",
                 tamarin_version="dev",
                 json_file="task_prefix--lemma2--dev.json",
                 output_prefix="task_prefix",
-            ),  # type: ignore
+            ),
             TraceInfo(
                 lemma="lemma1",
                 tamarin_version="stable",
                 json_file="other_prefix--lemma1--stable.json",
                 output_prefix="other_prefix",
-            ),  # type: ignore
+            ),
             TraceInfo(
                 lemma="lemma3",
                 tamarin_version="stable",
                 json_file="task_prefix--lemma3--stable.json",
                 output_prefix="task_prefix",
-            ),  # type: ignore
+            ),
         ]
 
         # Filter traces
-        filtered_traces = generator._filter_traces_by_task(  # type: ignore
-            traces, mock_task
-        )
+        filtered_traces = generator._filter_traces_by_task(traces, mock_task)
 
         # Should return only traces that match both lemmas (lemma1, lemma2) and output_prefix (task_prefix)
         assert len(filtered_traces) == 2
@@ -590,12 +587,12 @@ digraph test {
             lemma="lemma1",
             tamarin_version="stable",
             status="verified",
-        )  # type: ignore
+        )
         result4 = TaskResult(
             lemma="lemma3",
             tamarin_version="stable",
             status="verified",
-        )  # type: ignore
+        )
 
         mock_task_no_prefix = TaskSummary(
             name="test_task_no_prefix",
@@ -608,7 +605,7 @@ digraph test {
             execution_timeline_data=[],
         )
 
-        filtered_traces_no_prefix = generator._filter_traces_by_task(  # type: ignore
+        filtered_traces_no_prefix = generator._filter_traces_by_task(
             traces, mock_task_no_prefix
         )
 

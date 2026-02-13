@@ -5,7 +5,9 @@ This module provides utilities for validating and converting DOT files
 to SVG format for inclusion in reports.
 """
 
+import json
 import subprocess
+import types
 from pathlib import Path
 from typing import Any
 
@@ -13,12 +15,12 @@ from ..utils.notifications import notification_manager
 
 # Try to import graphviz for fallback DOT rendering
 try:
-    import graphviz  # type: ignore
+    import graphviz
 
     HAS_GRAPHVIZ = True
 except ImportError:
-    graphviz = None
-    HAS_GRAPHVIZ = False  # type: ignore
+    graphviz: types.ModuleType | None = None
+    HAS_GRAPHVIZ = False
 
 
 def is_dot_file_empty(dot_file: Path) -> bool:
@@ -46,10 +48,14 @@ def is_dot_file_empty(dot_file: Path) -> bool:
         meaningful_lines: list[str] = []
 
         for line in lines:
-            line = line.strip()
+            stripped_line = line.strip()
             # Skip empty lines and comments
-            if line and not line.startswith("//") and not line.startswith("#"):
-                meaningful_lines.append(line)
+            if (
+                stripped_line
+                and not stripped_line.startswith("//")
+                and not stripped_line.startswith("#")
+            ):
+                meaningful_lines.append(stripped_line)
 
         # If we only have basic DOT structure without nodes/edges, consider it empty
         if len(meaningful_lines) <= 2:  # Just 'digraph {' and '}'
@@ -105,6 +111,7 @@ def convert_dot_to_format(
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
 
         if result.returncode == 0:
@@ -276,8 +283,6 @@ def is_json_trace_empty(json_file: Path) -> bool:
         return True
 
     try:
-        import json
-
         content = json_file.read_text(encoding="utf-8").strip()
         if not content:
             return True
@@ -286,8 +291,8 @@ def is_json_trace_empty(json_file: Path) -> bool:
 
         # Check if it's the empty trace structure
         if isinstance(data, dict) and "graphs" in data:
-            graphs = data.get("graphs", [])  # type: ignore
-            return len(graphs) == 0  # type: ignore
+            graphs = data.get("graphs", [])
+            return len(graphs) == 0
 
         return False
 

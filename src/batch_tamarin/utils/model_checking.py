@@ -54,6 +54,7 @@ async def validate_with_tamarin(
                 text=True,
                 timeout=60,  # 1 minute timeout for validation
                 cwd=Path.cwd(),
+                check=False,
             )
 
             # Parse output for warnings and errors

@@ -407,7 +407,7 @@ end
             # Check if file permissions are actually enforced in this environment
             # In Docker/CI environments running as root, chmod 000 might not prevent reading
             try:
-                with open(theory_file, "r") as f:
+                with open(theory_file) as f:
                     f.read()
                 # If we can read the file, permissions aren't enforced in this environment
                 pytest.skip(

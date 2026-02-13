@@ -45,12 +45,12 @@ rule test_rule:
             assert isinstance(tasks, dict), "tasks should be a dictionary"
             assert isinstance(failed_files, list), "failed_files should be a list"
             assert len(tasks) == 1, f"Expected 1 task, got {len(tasks)}"
-            assert (
-                len(failed_files) == 0
-            ), f"Expected 0 failed files, got {len(failed_files)}"
-            assert (
-                "test_task" in tasks
-            ), "Task should be created with the specified name"
+            assert len(failed_files) == 0, (
+                f"Expected 0 failed files, got {len(failed_files)}"
+            )
+            assert "test_task" in tasks, (
+                "Task should be created with the specified name"
+            )
 
     def test_collect_tasks_handles_task_creation_failure(self):
         """Test that _collect_tasks handles Task creation failures gracefully."""
@@ -107,9 +107,9 @@ rule test_rule:
             assert len(failed_files) == 1, "One file should have failed"
             assert "valid_task" in tasks, "Valid task should be created"
             assert failed_files[0][0] == invalid_file, "Failed file should be recorded"
-            assert (
-                "Simulated task creation failure" in failed_files[0][1]
-            ), "Error message should be recorded"
+            assert "Simulated task creation failure" in failed_files[0][1], (
+                "Error message should be recorded"
+            )
 
             # Verify appropriate messages were printed
             print_calls = [str(call) for call in mock_print.call_args_list]
@@ -197,9 +197,9 @@ rule test_rule:
             no_tasks_message = any(
                 "No valid tasks were created" in call for call in calls
             )
-            assert (
-                no_tasks_message
-            ), "Should inform user when no valid tasks are created"
+            assert no_tasks_message, (
+                "Should inform user when no valid tasks are created"
+            )
 
     def test_run_with_mixed_success_and_failure(self):
         """Test run() with some successful and some failed tasks."""
@@ -341,9 +341,9 @@ rule test_rule:
                         fallback_message = any(
                             "input cancellation" in call for call in calls
                         )
-                        assert (
-                            fallback_message
-                        ), f"Should show fallback message. Got calls: {calls}"
+                        assert fallback_message, (
+                            f"Should show fallback message. Got calls: {calls}"
+                        )
 
     def test_validate_spthy_files_with_nonexistent_files(self):
         """Test file validation with nonexistent files."""
@@ -359,9 +359,9 @@ rule test_rule:
 
         # Should only return the existing file
         assert len(validated) == 1, "Only existing files should be validated"
-        assert str(existing_file) in [
-            str(v) for v in validated
-        ], "Existing file should be in validated list"
+        assert str(existing_file) in [str(v) for v in validated], (
+            "Existing file should be in validated list"
+        )
 
     def test_collect_tasks_with_empty_tamarin_versions(self):
         """Test task collection with empty tamarin versions list."""

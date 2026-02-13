@@ -9,7 +9,7 @@ CI compatibility.
 # pyright: basic
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 from batch_tamarin.model.executable_task import ExecutableTask
@@ -30,14 +30,14 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ) -> None:
         """Test ResourceManager initialization with resources within system limits."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)  # 64GB in bytes
         # Return input unchanged
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -62,13 +62,13 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test ResourceManager initialization when cores exceed system limits and user accepts fallback."""
         # Mock system resources - fewer cores than requested
         mock_cpu_count.return_value = 4
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)  # 64GB in bytes
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
         mock_notification.prompt_user.return_value = True  # User accepts fallback
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -91,13 +91,13 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test ResourceManager initialization when cores exceed system limits and user rejects fallback."""
         # Mock system resources - fewer cores than requested
         mock_cpu_count.return_value = 4
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)  # 64GB in bytes
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
         mock_notification.prompt_user.return_value = False  # User rejects fallback
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -120,13 +120,13 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test ResourceManager initialization when memory exceeds system limits and user accepts fallback."""
         # Mock system resources - less memory than requested
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=8 * 1024**3)  # 8GB in bytes
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
         mock_notification.prompt_user.return_value = True  # User accepts fallback
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -149,13 +149,13 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test ResourceManager initialization when both cores and memory exceed system limits."""
         # Mock system resources - both below requested
         mock_cpu_count.return_value = 4
         mock_virtual_memory.return_value = Mock(total=8 * 1024**3)  # 8GB in bytes
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
         mock_notification.prompt_user.side_effect = [
             True,
             False,
@@ -182,7 +182,7 @@ class TestResourceManagerInitialization:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test ResourceManager initialization with resource value resolution."""
         # Mock system resources
@@ -224,14 +224,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test successful resource allocation."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -273,14 +273,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource allocation failure due to insufficient cores."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -320,14 +320,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource allocation failure due to insufficient memory."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -367,14 +367,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource allocation failure when task already has resources allocated."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -419,14 +419,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test successful resource release."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -472,14 +472,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource release when task was not allocated."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -520,14 +520,14 @@ class TestResourceAllocation:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test that resource release prevents negative allocation values."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -576,14 +576,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test successful task scheduling check."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -617,14 +617,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test task scheduling check with insufficient resources."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -658,13 +658,13 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test scheduling with empty pending tasks list."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -683,14 +683,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test FIFO (First-In-First-Out) task scheduling algorithm."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe, SchedulingStrategy.FIFO)
@@ -746,14 +746,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test SJF (Shortest Job First) task scheduling algorithm."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe, SchedulingStrategy.SJF)
@@ -830,14 +830,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test LJF (Longest Job First) task scheduling algorithm."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe, SchedulingStrategy.LJF)
@@ -893,14 +893,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test partial task selection when not all tasks fit."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -976,14 +976,14 @@ class TestTaskScheduling:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test scheduling when no tasks can be scheduled."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -1043,13 +1043,13 @@ class TestResourceQueries:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test resource queries in initial state."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -1069,14 +1069,14 @@ class TestResourceQueries:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource queries after allocation."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)
@@ -1114,14 +1114,14 @@ class TestResourceQueries:
         mock_virtual_memory: Mock,
         mock_cpu_count: Mock,
         mock_resolve: Mock,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         tmp_dir: Path,
     ):
         """Test resource queries with multiple allocations."""
         # Mock system resources
         mock_cpu_count.return_value = 16
         mock_virtual_memory.return_value = Mock(total=64 * 1024**3)
-        mock_resolve.side_effect = lambda x, _: x  # type: ignore
+        mock_resolve.side_effect = lambda x, _: x
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         resource_manager = ResourceManager(recipe)

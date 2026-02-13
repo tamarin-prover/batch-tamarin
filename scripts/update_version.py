@@ -1,22 +1,25 @@
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-import toml
+try:
+    import tomllib  # type: ignore[import]
+except ImportError:
+    import toml as tomllib  # type: ignore[import]
 
 
 def update_version() -> None:
     # Read pyproject.toml
     pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
-    with open(pyproject_path, "r") as f:
-        data: Dict[str, Any] = toml.load(f)  # type: ignore
+    with open(pyproject_path) as f:
+        data: dict[str, Any] = tomllib.load(f)
 
     # Extract metadata
-    version: str = data["project"]["version"]  # type: ignore
-    authors: List[Dict[str, str]] = data["project"]["authors"]  # type: ignore
+    version: str = data["project"]["version"]
+    authors: list[dict[str, str]] = data["project"]["authors"]
 
     # Format authors string
-    authors_str: str = ", ".join([f"{a['name']} <{a['email']}>" for a in authors])  # type: ignore
+    authors_str: str = ", ".join([f"{a['name']} <{a['email']}>" for a in authors])
 
     # Update __init__.py
     init_path = Path(__file__).parent.parent / "src" / "batch_tamarin" / "__init__.py"
@@ -35,7 +38,7 @@ __all__ = ["app"]
     # Update README.md badge version
     # README.md is in the project root, not in scripts/
     readme_path = Path(__file__).parent.parent / "README.md"
-    with open(readme_path, "r") as f:
+    with open(readme_path) as f:
         readme_content = f.read()
 
     # Regex to match the release badge and update the version (robust to color and whitespace)

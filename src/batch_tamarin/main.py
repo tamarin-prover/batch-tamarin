@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import typer
 
 from . import __author__, __version__
@@ -140,8 +142,6 @@ def report(
     execution statistics, performance metrics, error analysis, and trace
     visualizations.
     """
-    from pathlib import Path
-
     try:
         results_path = Path(results_directory)
         output_path = Path(output)
