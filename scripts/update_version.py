@@ -11,7 +11,7 @@ except ImportError:
 def update_version() -> None:
     # Read pyproject.toml
     pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
-    with open(pyproject_path) as f:
+    with open(pyproject_path, "rb") as f:
         data: dict[str, Any] = tomllib.load(f)
 
     # Extract metadata
@@ -51,6 +51,30 @@ __all__ = ["app"]
 
     with open(readme_path, "w") as f:
         f.write(new_readme_content)
+
+    # Update nix dockerfiles
+    nix_dockerfiles_dir = (
+        Path(__file__).parent.parent
+        / "examples"
+        / "__dockerfiles__"
+        / "with-batch-tamarin"
+    )
+    for nix_file in nix_dockerfiles_dir.glob("*.nix"):
+        with open(nix_file) as f:
+            nix_content = f.read()
+
+        # Update the batch-tamarin version in the nix file
+        version_pattern = r'(batch-tamarin = python\.pkgs\.buildPythonPackage rec \{\s*pname = "batch-tamarin";\s*version = ")[^"]+(";)'
+        new_nix_content = re.sub(version_pattern, rf"\g<1>{version}\g<2>", nix_content)
+
+        # Also update description line (e.g., "Tamarin Prover X.Y.Z and batch-tamarin 1.1.0")
+        desc_pattern = (
+            r'(description = "Tamarin Prover [\d.]+ and batch-tamarin )[^"]+(";)'
+        )
+        new_nix_content = re.sub(desc_pattern, rf"\g<1>{version}\g<2>", new_nix_content)
+
+        with open(nix_file, "w") as f:
+            f.write(new_nix_content)
 
 
 if __name__ == "__main__":
