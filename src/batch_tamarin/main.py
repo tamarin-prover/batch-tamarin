@@ -1,8 +1,9 @@
 from pathlib import Path
 
 import typer
+from rich import print as rprint
 
-from . import __author__, __version__
+from . import __author__, __contributors__, __version__
 from .commands.cache import cache_command
 from .commands.check import CheckCommand
 from .commands.init import InitCommand
@@ -26,20 +27,25 @@ def main_callback(
     Batch Tamarin - Protocol verification automation tool.
     """
     if version:
-        print(
-            r"""
-██████╗  █████╗ ████████╗ ██████╗██╗  ██╗    ████████╗ █████╗ ███╗   ███╗ █████╗ ██████╗ ██╗███╗   ██╗
-██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║    ╚══██╔══╝██╔══██╗████╗ ████║██╔══██╗██╔══██╗██║████╗  ██║
-██████╔╝███████║   ██║   ██║     ███████║       ██║   ███████║██╔████╔██║███████║██████╔╝██║██╔██╗ ██║
-██╔══██╗██╔══██║   ██║   ██║     ██╔══██║       ██║   ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██║██║╚██╗██║
-██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║       ██║   ██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║██║ ╚████║
-╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝       ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+        rprint(
+            r"""[gold3]
+██████╗  █████╗ ████████╗ ██████╗██╗  ██╗       ████████╗ █████╗ ███╗   ███╗ █████╗ ██████╗ ██╗███╗   ██╗
+██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║       ╚══██╔══╝██╔══██╗████╗ ████║██╔══██╗██╔══██╗██║████╗  ██║
+██████╔╝███████║   ██║   ██║     ███████║          ██║   ███████║██╔████╔██║███████║██████╔╝██║██╔██╗ ██║
+██╔══██╗██╔══██║   ██║   ██║     ██╔══██║  ████╗   ██║   ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██║██║╚██╗██║
+██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║  ╚═══╝   ██║   ██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║██║ ╚████║
+╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝          ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝[/gold3]
             """
         )
-        print(f"Running v{__version__}")
-        print(f"Authored by: {__author__}")
+        rprint(f"Running [bold cyan]v{__version__}[/bold cyan]\n")
+        rprint(f"Authored by: {__author__}")
         print(
             "Project initiated for an internship at CISPA, under the supervision of Pr.Dr. Cas Cremers."
+        )
+        print(
+            "Special thanks to the contributors who support this project: "
+            + ", ".join(__contributors__)
+            + "."
         )
         return
 
