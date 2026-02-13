@@ -1,6 +1,6 @@
 # Batch Tamarin (`batch-tamarin`) : Tamarin Python Wrapper
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) [![Release](https://img.shields.io/badge/release-1.1.1-forestgreen)](https://github.com/tamarin-prover/batch-tamarin/releases) [![PyPI version](https://img.shields.io/pypi/v/batch-tamarin.svg?color=blue)](https://pypi.org/project/batch-tamarin/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-gold.svg)](https://github.com/tamarin-prover/batch-tamarin/blob/main/LICENSE) [![Release](https://img.shields.io/badge/release-1.1.2-forestgreen)](https://github.com/tamarin-prover/batch-tamarin/releases) [![PyPI version](https://img.shields.io/pypi/v/batch-tamarin.svg?color=blue)](https://pypi.org/project/batch-tamarin/)
 
 A Python wrapper for Tamarin Prover that enables batch execution of protocol verification tasks with JSON configuration files, comprehensive reporting, and validation tools.
 
@@ -58,6 +58,9 @@ A Python wrapper for Tamarin Prover that enables batch execution of protocol ver
 
 ```bash
 pip install batch-tamarin
+
+# Or using uv (faster)
+uv pip install batch-tamarin
 ```
 
 ### From local package
@@ -65,7 +68,10 @@ pip install batch-tamarin
 Get the latest release from this github repo.
 
 ```bash
-pip install pip install ./batch_tamarin-0.1.1-py3-none-any.whl
+pip install ./batch_tamarin-0.1.1-py3-none-any.whl
+
+# Or using uv (faster)
+uv pip install ./batch_tamarin-0.1.1-py3-none-any.whl
 ```
 
 ## Usage
@@ -279,10 +285,10 @@ A macOS or Linux environment is highly recommended, as tamarin-prover is only ru
 
 2. **Set up development environment** (see options below)
 
-3. **Install pre-commit hooks**:
+3. **Install pre-commit hooks** (uses ruff for formatting/linting):
 
     ```bash
-    ./setup-hooks.sh
+    uv run pre-commit install
     ```
 
 4. **Make your changes** and commit them
@@ -307,15 +313,25 @@ batch-tamarin --version
 #### Using Python Virtual Environment (still pretty easy)
 
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install development dependencies
-pip install -r requirements.txt
+# Create virtual environment and install all dependencies (including dev)
+uv sync --extra dev
 
 # The package is installed in editable mode automatically
 batch-tamarin --version
+```
+
+#### Using uv directly (without venv)
+
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Run commands without creating a venv
+uv run --extra dev batch-tamarin --version
+uv run --extra dev pytest
 ```
 
 ### Testing During Development
@@ -325,17 +341,32 @@ batch-tamarin --version
 The project uses pytest for testing. To run the test suite:
 
 ```bash
-# Run all tests
-pytest
+# Run all tests (uses uv to run in the project environment)
+uv run pytest
 
 # Run with verbose output
-pytest -v
+uv run pytest -v
 
 # Run specific test file
-pytest tests/test_config_manager.py
+uv run pytest tests/test_config_manager.py
+```
 
-# Run with coverage report
-pytest --cov=src/batch_tamarin
+#### Code Quality
+
+The project uses [ruff](https://astral.sh/ruff) for linting and formatting:
+
+```bash
+# Check code for issues
+ruff check src/
+
+# Automatically fix issues
+ruff check src/ --fix
+
+# Format code
+ruff format src/
+
+# Check formatting without applying
+ruff format --check src/
 ```
 
 #### Testing the Package Installation
@@ -343,12 +374,12 @@ pytest --cov=src/batch_tamarin
 Since the package uses proper Python packaging structure, you cannot run `python src/batch_tamarin/main.py` directly. Use one of these methods:
 
 ```bash
-# Method 1 (Recommended): Use the CLI command (after pip install -e .)
+# Method 1 (Recommended): Use the CLI command (after uv sync --extra dev)
 batch-tamarin --help
 
 # Method 2: Test built package (Useful before publishing)
-python -m build
-pip install dist/batch_tamarin-*.whl
+uv build
+uv pip install dist/batch_tamarin-*.whl
 ```
 
 ## Packaging/Publishing
@@ -361,7 +392,7 @@ rm -rf dist/ build/ **/*.egg-info/ # Be careful, it's still a rm -rf command
 # Might fail because of *.egg-info pattern, you might want to remove it
 
 # Build wheel and source distribution
-python -m build
+uv build
 ```
 
 ### Publishing

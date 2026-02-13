@@ -49,7 +49,7 @@ class TestReportData:
             pytest.skip("Example file not found")
 
         # Load batch from JSON
-        with open(example_report_path, "r", encoding="utf-8") as f:
+        with open(example_report_path, encoding="utf-8") as f:
             batch_data = json.load(f)
         batch = Batch.model_validate(batch_data)
 

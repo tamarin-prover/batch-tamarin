@@ -1,5 +1,5 @@
 {
-  description = "Tamarin Prover 1.10.0 and batch-tamarin 1.1.0";
+  description = "Tamarin Prover 1.10.0 and batch-tamarin 1.1.2";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/a421ac6595024edcfbb1ef950a3712b89161c359";
@@ -30,7 +30,7 @@
 
         batch-tamarin = python.pkgs.buildPythonPackage rec {
           pname = "batch-tamarin";
-          version = "1.1.0";
+          version = "1.1.2";
           format = "pyproject";
 
           src = pkgs.fetchFromGitHub {

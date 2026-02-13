@@ -7,6 +7,7 @@ retrieval, key generation, and cache management operations.
 
 # pyright: basic
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
@@ -134,8 +135,8 @@ class TestCacheManager:
         self, cache_manager: CacheManager, sample_task: ExecutableTask
     ):
         """Test that cache key generation is consistent for identical tasks."""
-        key1 = cache_manager._generate_key(sample_task)  # type: ignore
-        key2 = cache_manager._generate_key(sample_task)  # type: ignore
+        key1 = cache_manager._generate_key(sample_task)
+        key2 = cache_manager._generate_key(sample_task)
         assert key1 == key2
         assert len(key1) == 64  # SHA256 produces 64-character hex string
 
@@ -166,8 +167,8 @@ class TestCacheManager:
             traces_dir=sample_task.traces_dir,
         )
 
-        key1 = cache_manager._generate_key(task1)  # type: ignore
-        key2 = cache_manager._generate_key(task2)  # type: ignore
+        key1 = cache_manager._generate_key(task1)
+        key2 = cache_manager._generate_key(task2)
         assert key1 != key2
 
     def test_generate_cache_key_file_content_sensitivity(
@@ -220,8 +221,8 @@ class TestCacheManager:
             traces_dir=traces_dir,
         )
 
-        key1 = cache_manager._generate_key(task1)  # type: ignore
-        key2 = cache_manager._generate_key(task2)  # type: ignore
+        key1 = cache_manager._generate_key(task1)
+        key2 = cache_manager._generate_key(task2)
         assert key1 != key2
 
     def test_cache_store_and_retrieve(
@@ -369,7 +370,7 @@ class TestCacheManager:
         mock_hasher.hexdigest.return_value = "mocked_hash"
 
         # Generate key (which triggers file hashing)
-        cache_manager._generate_key(sample_task)  # type: ignore
+        cache_manager._generate_key(sample_task)
 
         # Verify chunked reading was used (should be multiple chunks for a large file)
         assert mock_hasher.update.call_count >= 1  # At least one chunk should be read
@@ -407,35 +408,40 @@ class TestCacheManager:
         )
 
         # Test different tamarin_executable
-        from dataclasses import replace
-
         task_diff_exe = replace(base_task, tamarin_executable=tamarin_exe2)
-        assert cache_manager._generate_key(  # type: ignore
-            # type: ignore
-            base_task
-        ) != cache_manager._generate_key(  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
             task_diff_exe
         )
 
         # Test different tamarin_options
         task_diff_options = replace(base_task, tamarin_options=["--heuristic=O"])
-        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(task_diff_options)  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
+            task_diff_options
+        )
 
         # Test different preprocess_flags
         task_diff_flags = replace(base_task, preprocess_flags=["FLAG2"])
-        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(task_diff_flags)  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
+            task_diff_flags
+        )
 
         # Test different max_cores
         task_diff_cores = replace(base_task, max_cores=8)
-        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(task_diff_cores)  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
+            task_diff_cores
+        )
 
         # Test different max_memory
         task_diff_memory = replace(base_task, max_memory=16)
-        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(task_diff_memory)  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
+            task_diff_memory
+        )
 
         # Test different task_timeout
         task_diff_timeout = replace(base_task, task_timeout=3600)
-        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(task_diff_timeout)  # type: ignore
+        assert cache_manager._generate_key(base_task) != cache_manager._generate_key(
+            task_diff_timeout
+        )
 
     def test_cache_handles_missing_file(
         self, cache_manager: CacheManager, tmp_dir: Path
@@ -469,7 +475,7 @@ class TestCacheManager:
 
         # Should raise FileNotFoundError when trying to generate key
         with pytest.raises(FileNotFoundError):
-            cache_manager._generate_key(task)  # type: ignore
+            cache_manager._generate_key(task)
 
     def test_cache_persistence_across_instances(
         self, tmp_dir: Path, sample_task: ExecutableTask, sample_result: TaskResult

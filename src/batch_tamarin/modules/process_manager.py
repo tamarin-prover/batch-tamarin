@@ -9,7 +9,7 @@ import asyncio
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import psutil
 
@@ -22,9 +22,9 @@ class ProcessInfo:
     """Information about a running process."""
 
     process: asyncio.subprocess.Process
-    task: asyncio.Task  # type: ignore
+    task: asyncio.Task
     path: Path
-    command: List[str]
+    command: list[str]
     start_time: float
 
 
@@ -37,17 +37,17 @@ class ProcessManager:
     """
 
     def __init__(self):
-        self._active_processes: Dict[str, ProcessInfo] = {}
+        self._active_processes: dict[str, ProcessInfo] = {}
         self._process_counter = 0
-        self._memory_exceeded_processes: Dict[str, bool] = {}
+        self._memory_exceeded_processes: dict[str, bool] = {}
 
     async def run_command(
         self,
         executable: Path,
-        args: List[str],
+        args: list[str],
         timeout: float = 30.0,
-        memory_limit_mb: Optional[float] = None,
-    ) -> tuple[int, str, str, Optional[MemoryStats]]:
+        memory_limit_mb: float | None = None,
+    ) -> tuple[int, str, str, MemoryStats | None]:
         """
         Launch a command in a non-blocking manner with memory monitoring.
 
@@ -206,9 +206,9 @@ class ProcessManager:
     async def _monitor_memory(
         self,
         process: asyncio.subprocess.Process,
-        memory_limit_mb: Optional[float] = None,
-        process_id: Optional[str] = None,
-    ) -> Optional[MemoryStats]:
+        memory_limit_mb: float | None = None,
+        process_id: str | None = None,
+    ) -> MemoryStats | None:
         """
         Monitor memory usage of a process during execution.
 
@@ -245,7 +245,9 @@ class ProcessManager:
 
                     # Also include memory from child processes
                     try:
-                        children: List[psutil.Process] = psutil_process.children(recursive=True)  # type: ignore
+                        children: list[psutil.Process] = psutil_process.children(
+                            recursive=True
+                        )
                         for child in children:
                             child_memory = child.memory_info()
                             child_rss = float(getattr(child_memory, "rss", 0))
@@ -340,8 +342,8 @@ class ProcessManager:
                     await process.wait()
 
             # Cancel the task if it still exists
-            if not process_info.task.done():  # type: ignore
-                process_info.task.cancel()  # type: ignore
+            if not process_info.task.done():
+                process_info.task.cancel()
 
         except Exception as e:
             notification_manager.error(
@@ -371,9 +373,9 @@ class ProcessManager:
         """Return the number of active processes."""
         return len(self._active_processes)
 
-    def get_active_processes_info(self) -> Dict[str, Dict[str, Any]]:
+    def get_active_processes_info(self) -> dict[str, dict[str, Any]]:
         """Return information about active processes."""
-        result: Dict[str, Dict[str, Any]] = {}
+        result: dict[str, dict[str, Any]] = {}
         current_time = asyncio.get_event_loop().time()
 
         for process_id, info in self._active_processes.items():

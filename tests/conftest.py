@@ -9,11 +9,14 @@ the batch-tamarin package, including mock data and helper utilities.
 
 import json
 import tempfile
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Tuple
+from typing import Any
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
+
+from batch_tamarin.modules.output_manager import output_manager
 
 
 @pytest.fixture
@@ -62,7 +65,7 @@ def sample_tamarin_executable(tmp_dir: Path) -> Path:
 @pytest.fixture
 def minimal_recipe_data(
     sample_theory_file: Path, sample_tamarin_executable: Path
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create minimal valid recipe data."""
     return {
         "config": {
@@ -85,7 +88,7 @@ def minimal_recipe_data(
 @pytest.fixture
 def complex_recipe_data(
     sample_theory_file: Path, sample_tamarin_executable: Path
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create complex recipe data with multiple configurations."""
     return {
         "config": {
@@ -131,7 +134,7 @@ def complex_recipe_data(
 @pytest.fixture
 def inheritance_recipe_data(
     sample_theory_file: Path, sample_tamarin_executable: Path
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create recipe data with inheritance."""
     return {
         "config": {
@@ -160,7 +163,7 @@ def inheritance_recipe_data(
 
 
 @pytest.fixture
-def invalid_recipe_data() -> Dict[str, Any]:
+def invalid_recipe_data() -> dict[str, Any]:
     """Create invalid recipe data for testing error handling."""
     return {
         "config": {
@@ -184,7 +187,7 @@ def invalid_recipe_data() -> Dict[str, Any]:
 def create_json_file(tmp_dir: Path) -> Callable[..., Path]:
     """Helper function to create JSON config files."""
 
-    def _create_json_file(data: Dict[str, Any], filename: str = "config.json") -> Path:
+    def _create_json_file(data: dict[str, Any], filename: str = "config.json") -> Path:
         file_path = tmp_dir / filename
         file_path.write_text(json.dumps(data, indent=2))
         return file_path
@@ -198,7 +201,7 @@ def mock_notifications(monkeypatch: MonkeyPatch):
 
     class MockNotificationManager:
         def __init__(self) -> None:
-            self.messages: List[Tuple[str, str]] = []
+            self.messages: list[tuple[str, str]] = []
 
         def debug(self, message: str) -> None:
             self.messages.append(("debug", message))
@@ -236,9 +239,7 @@ def setup_output_manager(tmp_dir: Path, monkeypatch: MonkeyPatch) -> Any:
     output_dir.mkdir(exist_ok=True)
 
     # Mock the output manager's get_output_paths to use our temp directory
-    from batch_tamarin.modules.output_manager import output_manager
-
-    def mock_get_output_paths() -> Dict[str, Path]:
+    def mock_get_output_paths() -> dict[str, Path]:
         models_dir = output_dir / "models"
         success_dir = output_dir / "success"
         failed_dir = output_dir / "failed"

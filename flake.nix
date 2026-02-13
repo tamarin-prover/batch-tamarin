@@ -30,16 +30,13 @@
 
         # Extract development dependencies
         devDeps = with python.pkgs; [
-          black
-          isort
-          autoflake
+          ruff
           pytest
           pytest-asyncio
           build
           twine
           setuptools
           wheel
-          pip
           pre-commit-hooks
         ];
 
@@ -84,6 +81,7 @@
           buildInputs = with pkgs; [
             devPythonEnv
             pre-commit
+            uv
 
             # Tamarin dependencies
             maude
@@ -99,18 +97,12 @@
             export DEV_ROOT="$PWD/.dev"
             mkdir -p "$DEV_ROOT"
 
-            # Set up Python environment for editable installs
-            export PYTHONPATH="$PWD/src:$DEV_ROOT/lib/python${python.pythonVersion}/site-packages:$PYTHONPATH"
-            export PIP_PREFIX="$DEV_ROOT"
-            export PIP_USER=false
-            export PIP_NO_BUILD_ISOLATION=false
-
             # Add local bin to PATH
             export PATH="$DEV_ROOT/bin:$PATH"
 
-            # Install py-tree-sitter-spthy via pip if not already installed
-            echo "📦 Installing py-tree-sitter-spthy via pip..."
-            pip install "py-tree-sitter-spthy>=1.2.2"
+            # Install dependencies via uv
+            echo "📦 Installing dependencies via uv..."
+            uv sync --extra dev
 
             echo "🚀 Batch Tamarin development environment"
             echo "📦 Python ${python.version} with dependencies available"
@@ -118,20 +110,19 @@
             echo "📁 Development root: $DEV_ROOT"
             echo ""
             echo "🔧 Setup:"
-            echo "  pip install -e .             # Install package in editable mode"
+            echo "  uv sync --extra dev    # Sync all dependencies (including dev)"
+            echo "  uv sync               # Sync only runtime dependencies"
             echo ""
             echo "🔧 Development commands:"
-            echo "  python -m build              # Build package"
-            echo "  python -m twine upload dist/* # Upload to PyPI"
-            echo "  black src/                   # Format code"
-            echo "  isort src/                   # Sort imports"
-            echo "  autoflake --recursive src/   # Remove unused imports"
-            echo "  pytest                       # Run tests"
-            echo "  batch-tamarin --help       # Test CLI (after editable install)"
+            echo "  uv build              # Build package"
+            echo "  uv run pytest         # Run tests"
+            echo "  ruff check src/       # Lint code"
+            echo "  ruff format src/      # Format code"
+            echo "  batch-tamarin --help # Test CLI (after editable install)"
             echo ""
             echo "🔧 Pre-commit setup:"
-            echo "  pre-commit install          # Set up pre-commit hook (run once)"
-            echo "  pre-commit run -a           # Run all hooks"
+            echo "  pre-commit install    # Set up pre-commit hook (run once)"
+            echo "  pre-commit run -a     # Run all hooks"
           '';
         };
 
@@ -144,6 +135,7 @@
               setuptools
               wheel
             ]))
+            uv
           ];
         };
       });

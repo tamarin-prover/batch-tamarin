@@ -7,7 +7,6 @@ Tamarin proof execution.
 """
 
 import os
-from typing import Dict, List
 
 import psutil
 
@@ -71,7 +70,7 @@ class ResourceManager:
                     )
 
         # Same goes for memory limits
-        system_memory_gb = int(psutil.virtual_memory().total / (1024**3))  # type: ignore
+        system_memory_gb = int(psutil.virtual_memory().total / (1024**3))
 
         if global_max_memory > system_memory_gb:
             notification_manager.warning(
@@ -103,7 +102,7 @@ class ResourceManager:
         # Track which tasks have resources allocated
         # Key: task identifier (task_name + tamarin_version_name)
         # Value: tuple of (cores, memory) allocated to that task
-        self.task_allocations: Dict[str, tuple[int, int]] = {}
+        self.task_allocations: dict[str, tuple[int, int]] = {}
 
         notification_manager.debug(
             f"[ResourceManager] Initialized: {global_max_cores} cores, {global_max_memory}GB memory"
@@ -205,8 +204,8 @@ class ResourceManager:
         )
 
     def get_next_schedulable_tasks(
-        self, pending_tasks: List[ExecutableTask]
-    ) -> List[ExecutableTask]:
+        self, pending_tasks: list[ExecutableTask]
+    ) -> list[ExecutableTask]:
         """
         Implement task scheduling algorithm based on selected strategy.
 
@@ -239,7 +238,7 @@ class ResourceManager:
             # Fallback to FIFO
             sorted_tasks = pending_tasks.copy()
 
-        schedulable_tasks: List[ExecutableTask] = []
+        schedulable_tasks: list[ExecutableTask] = []
         remaining_cores = self.get_available_cores()
         remaining_memory = self.get_available_memory()
 
@@ -249,7 +248,6 @@ class ResourceManager:
                 task.max_cores <= remaining_cores
                 and task.max_memory <= remaining_memory
             ):
-
                 schedulable_tasks.append(task)
                 remaining_cores -= task.max_cores
                 remaining_memory -= task.max_memory

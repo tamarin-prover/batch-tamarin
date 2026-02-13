@@ -10,34 +10,15 @@ repos:
       - id: debug-statements
       - id: check-docstring-first
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
   - repo: local
     hooks:
-      - id: black
-        name: black
-        entry: black
-        language: system
-        files: \.py$
-        args: [--line-length=88]
-
-      - id: isort
-        name: isort
-        entry: isort
-        language: system
-        files: \.py$
-        args: [--profile=black, --line-length=88]
-
-      - id: autoflake
-        name: autoflake
-        entry: autoflake
-        language: system
-        files: \.py$
-        args:
-          - --in-place
-          - --remove-all-unused-imports
-          - --remove-unused-variables
-          - --remove-duplicate-keys
-          - --expand-star-imports
-
       - id: update-version
         name: Update version metadata
         entry: python scripts/update_version.py

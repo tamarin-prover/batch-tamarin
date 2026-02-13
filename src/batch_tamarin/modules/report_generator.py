@@ -6,9 +6,10 @@ results using Jinja2 templates and various output formats.
 """
 
 import os
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -20,7 +21,7 @@ from .report_charts import ChartCollection
 class ReportGenerator:
     """Service for generating comprehensive execution reports."""
 
-    def __init__(self, template_dir: Optional[Path] = None):
+    def __init__(self, template_dir: Path | None = None):
         """
         Initialize the report generator.
 
@@ -56,17 +57,17 @@ class ReportGenerator:
         )
 
         # Add custom filters to both environments
-        filters: Dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore
+        filters: dict[str, Callable[[Any], str]] = self.env.filters  # type: ignore[assignment]
         filters["latex_escape"] = self._latex_escape
-        filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
-        filters["relative_from_report"] = self._relative_from_report  # type: ignore
-        filters["hyphenate"] = self._hyphenate  # type: ignore
+        filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore[assignment]
+        filters["relative_from_report"] = self._relative_from_report
+        filters["hyphenate"] = self._hyphenate
 
-        latex_filters: Dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore
+        latex_filters: dict[str, Callable[[Any], str]] = self.latex_env.filters  # type: ignore[assignment]
         latex_filters["latex_escape"] = self._latex_escape
-        latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore
-        latex_filters["relative_from_report"] = self._relative_from_report  # type: ignore
-        latex_filters["hyphenate"] = self._hyphenate  # type: ignore
+        latex_filters["filter_traces_by_task"] = self._filter_traces_by_task  # type: ignore[assignment]
+        latex_filters["relative_from_report"] = self._relative_from_report
+        latex_filters["hyphenate"] = self._hyphenate
 
     def _latex_escape(self, text: str) -> str:
         """Escape special LaTeX characters."""
@@ -87,7 +88,7 @@ class ReportGenerator:
         }
 
         # Process character by character to avoid double-escaping
-        result: List[str] = []
+        result: list[str] = []
         for char in text:
             if char in latex_chars:
                 result.append(latex_chars[char])
@@ -113,7 +114,7 @@ class ReportGenerator:
             return text
 
         # Add hyphen every max_length characters
-        result: List[str] = []
+        result: list[str] = []
         for i in range(0, len(text), max_length):
             chunk = text[i : i + max_length]
             result.append(chunk)
@@ -138,15 +139,13 @@ class ReportGenerator:
             # If we can't make it relative, return the original path
             return file_path
 
-    def _filter_traces_by_task(self, traces: List[Any], task: Any) -> List[Any]:
+    def _filter_traces_by_task(self, traces: list[Any], task: Any) -> list[Any]:
         """Filter traces by task's lemmas and output_prefix."""
         if not traces or not task:
             return []
 
         # Get task's lemmas
-        task_lemmas = (  # type: ignore
-            set(task.lemmas) if hasattr(task, "lemmas") else set()
-        )
+        task_lemmas = set(task.lemmas) if hasattr(task, "lemmas") else set()
 
         # Filter traces by lemma first
         lemma_filtered_traces = [
@@ -188,7 +187,7 @@ class ReportGenerator:
         results_directory: Path,
         output_path: Path,
         format_type: str,
-        version: Optional[str] = None,
+        version: str | None = None,
     ) -> None:
         """
         Generate a comprehensive report from execution results.
@@ -260,7 +259,7 @@ class ReportGenerator:
         charts.set_cache_hit_rate(report_data.statistics.cache_hits, cache_misses)
 
         # Runtime per task chart
-        task_runtimes: Dict[str, float] = {}
+        task_runtimes: dict[str, float] = {}
         for task in report_data.tasks:
             if task.results:
                 avg_runtime = sum(result.runtime for result in task.results) / len(
@@ -270,7 +269,7 @@ class ReportGenerator:
         charts.set_runtime_per_task(task_runtimes)
 
         # Memory per task chart
-        task_memory: Dict[str, float] = {}
+        task_memory: dict[str, float] = {}
         for task in report_data.tasks:
             if task.results:
                 avg_memory = sum(result.peak_memory for result in task.results) / len(
@@ -280,7 +279,7 @@ class ReportGenerator:
         charts.set_memory_per_task(task_memory)
 
         # Execution timeline chart
-        timeline_data: List[tuple[str, datetime, datetime]] = []
+        timeline_data: list[tuple[str, datetime, datetime]] = []
         base_time = datetime.now()  # Use a base time for relative positioning
         current_offset = 0
 
@@ -296,7 +295,7 @@ class ReportGenerator:
         charts.set_execution_timeline(timeline_data)
 
         # Error types chart (only if there are errors)
-        error_types: Dict[str, Union[int, float]] = {}
+        error_types: dict[str, int | float] = {}
         if report_data.error_details:
             for error in report_data.error_details:
                 error_type = error.type if error.type else "Unknown"
@@ -310,8 +309,8 @@ class ReportGenerator:
         report_data: ReportData,
         charts: ChartCollection,
         results_directory: Path,
-        version: Optional[str],
-    ) -> Dict[str, Any]:
+        version: str | None,
+    ) -> dict[str, Any]:
         """Prepare context for template rendering."""
         return {
             "report_data": report_data,
@@ -321,7 +320,7 @@ class ReportGenerator:
             "version": version,
         }
 
-    def validate_results_directory(self, results_directory: Path) -> Dict[str, bool]:
+    def validate_results_directory(self, results_directory: Path) -> dict[str, bool]:
         """
         Validate that the results directory has the expected structure.
 
@@ -345,9 +344,9 @@ class ReportGenerator:
         template_path = self.template_dir / template_name
         return template_path.exists()
 
-    def get_available_formats(self) -> List[str]:
+    def get_available_formats(self) -> list[str]:
         """Get list of available output formats."""
-        formats: List[str] = []
+        formats: list[str] = []
         for template_file in self.template_dir.glob("report.*.j2"):
             # Extract format from filename (e.g., "report.md.j2" -> "md")
             format_type = template_file.stem.split(".", 1)[1]

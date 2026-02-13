@@ -4,12 +4,18 @@ Notification management system for the batch Tamarin.
 This module provides a centralized way to send notifications via Rich formatting.
 """
 
+import sys
+from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
-from rich.console import Console
+from rich.columns import Columns
+from rich.console import Console, Group
 from rich.highlighter import RegexHighlighter
+from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.table import Table
 from rich.theme import Theme
 
 from ..model.batch import Batch, LemmaResult
@@ -123,8 +129,6 @@ class NotificationManager:
         self.notify(message, "critical")
         # Critical errors should stop execution immediately
         # Use sys.exit for more reliable termination in async contexts
-        import sys
-
         sys.exit(1)
 
     def success(self, message: str):
@@ -253,12 +257,6 @@ class NotificationManager:
         if not batch.tasks:
             return
 
-        from rich.columns import Columns
-        from rich.console import Group
-        from rich.markdown import Markdown
-        from rich.panel import Panel
-        from rich.table import Table
-
         # Overview metrics table (matching HTML summary)
         overview_table = Table(show_header=True, header_style="bold magenta")
         overview_table.add_column("Metric", style="cyan")
@@ -352,7 +350,7 @@ class NotificationManager:
                     if rich_executable.task_result and hasattr(
                         rich_executable.task_result, "lemma_result"
                     ):
-                        lemma_result = rich_executable.task_result.lemma_result  # type: ignore
+                        lemma_result = rich_executable.task_result.lemma_result
                         if lemma_result == LemmaResult.VERIFIED:
                             status_display = "[#28a745]✅ Verified[/#28a745]"
                         elif lemma_result == LemmaResult.FALSIFIED:
@@ -483,15 +481,13 @@ class NotificationManager:
         components: list[Panel | str] = [settings_panel, execution_panel]
 
         # Error report section (matching HTML structure)
-        from typing import Any
-
-        failed_tasks: List[Dict[str, Any]] = []
-        timeout_tasks: List[Dict[str, Any]] = []
-        memory_limit_tasks: List[Dict[str, Any]] = []
+        failed_tasks: list[dict[str, Any]] = []
+        timeout_tasks: list[dict[str, Any]] = []
+        memory_limit_tasks: list[dict[str, Any]] = []
 
         for task_name, rich_task in batch.tasks.items():
             for _subtask_name, rich_executable in rich_task.subtasks.items():
-                task_info: Dict[str, Any] = {
+                task_info: dict[str, Any] = {
                     "task_name": task_name,
                     "rich_executable": rich_executable,
                 }
@@ -507,7 +503,6 @@ class NotificationManager:
                     memory_limit_tasks.append(task_info)
 
         if failed_tasks or timeout_tasks or memory_limit_tasks:
-
             error_components: list[Markdown] = []
 
             # Process all error tasks together with separators
@@ -633,8 +628,8 @@ class NotificationManager:
     def check_report(
         self,
         recipe: TamarinRecipe,
-        executable_tasks: List["ExecutableTask"],
-        tamarin_errors: Optional[Dict[str, List[str]]] = None,
+        executable_tasks: list["ExecutableTask"],
+        tamarin_errors: dict[str, list[str]] | None = None,
     ):
         """
         Display a comprehensive check report for executable tasks.
@@ -643,13 +638,7 @@ class NotificationManager:
             executable_tasks: List of ExecutableTask objects
             tamarin_errors: Optional dict of tamarin validation errors/warnings
         """
-        from typing import Any
-
-        from rich.columns import Columns
-        from rich.console import Group
-        from rich.markdown import Markdown
-        from rich.panel import Panel
-        from rich.table import Table
+        from ..model.executable_task import ExecutableTask  # noqa: PLC0415
 
         # Summary table
         summary_table = Table(show_header=True, header_style="bold magenta")
@@ -693,17 +682,13 @@ class NotificationManager:
         details_table.add_column("Preprocessor flags", style="magenta")
 
         # Group tasks by original task name and lemma for proper formatting
-        from collections import defaultdict
-
-        from ..model.executable_task import ExecutableTask
-
         tasks_by_name: dict[str, list[ExecutableTask]] = {}
         for task in executable_tasks:
             if task.original_task_name not in tasks_by_name:
                 tasks_by_name[task.original_task_name] = []
             tasks_by_name[task.original_task_name].append(task)
 
-        prev_task_name: Optional[str] = None
+        prev_task_name: str | None = None
         task_groups = list(tasks_by_name.items())
 
         for task_idx, (task_name, task_list) in enumerate(task_groups):
@@ -830,7 +815,7 @@ class NotificationManager:
 
         task_panel = Panel(details_table, title="Task Details", border_style="blue")
 
-        components: List[Any] = [
+        components: list[Any] = [
             Group(*tamarin_path),
             overview_panel,
             task_panel,

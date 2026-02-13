@@ -1,8 +1,9 @@
-from typing import List, Optional
+from pathlib import Path
 
 import typer
+from rich import print as rprint
 
-from . import __author__, __version__
+from . import __author__, __contributors__, __version__
 from .commands.cache import cache_command
 from .commands.check import CheckCommand
 from .commands.init import InitCommand
@@ -20,26 +21,31 @@ def main_callback(
     ctx: typer.Context,
     version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
-    )
+    ),
 ):
     """
     Batch Tamarin - Protocol verification automation tool.
     """
     if version:
-        print(
-            r"""
-██████╗  █████╗ ████████╗ ██████╗██╗  ██╗    ████████╗ █████╗ ███╗   ███╗ █████╗ ██████╗ ██╗███╗   ██╗
-██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║    ╚══██╔══╝██╔══██╗████╗ ████║██╔══██╗██╔══██╗██║████╗  ██║
-██████╔╝███████║   ██║   ██║     ███████║       ██║   ███████║██╔████╔██║███████║██████╔╝██║██╔██╗ ██║
-██╔══██╗██╔══██║   ██║   ██║     ██╔══██║       ██║   ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██║██║╚██╗██║
-██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║       ██║   ██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║██║ ╚████║
-╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝       ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+        rprint(
+            r"""[gold3]
+██████╗  █████╗ ████████╗ ██████╗██╗  ██╗       ████████╗ █████╗ ███╗   ███╗ █████╗ ██████╗ ██╗███╗   ██╗
+██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║       ╚══██╔══╝██╔══██╗████╗ ████║██╔══██╗██╔══██╗██║████╗  ██║
+██████╔╝███████║   ██║   ██║     ███████║          ██║   ███████║██╔████╔██║███████║██████╔╝██║██╔██╗ ██║
+██╔══██╗██╔══██║   ██║   ██║     ██╔══██║  ████╗   ██║   ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██║██║╚██╗██║
+██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║  ╚═══╝   ██║   ██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║██║ ╚████║
+╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝          ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝[/gold3]
             """
         )
-        print(f"Running v{__version__}")
-        print(f"Authored by: {__author__}")
+        rprint(f"Running [bold cyan]v{__version__}[/bold cyan]\n")
+        rprint(f"Authored by: {__author__}")
         print(
             "Project initiated for an internship at CISPA, under the supervision of Pr.Dr. Cas Cremers."
+        )
+        print(
+            "Special thanks to the contributors who support this project: "
+            + ", ".join(__contributors__)
+            + "."
         )
         return
 
@@ -97,10 +103,10 @@ def check(
 
 @app.command()
 def init(
-    spthy_files: List[str] = typer.Argument(
+    spthy_files: list[str] = typer.Argument(
         ..., help="One or more .spthy files to configure"
     ),
-    output: Optional[str] = typer.Option(
+    output: str | None = typer.Option(
         None, "--output", "-o", help="Output file for generated configuration"
     ),
 ) -> None:
@@ -142,8 +148,6 @@ def report(
     execution statistics, performance metrics, error analysis, and trace
     visualizations.
     """
-    from pathlib import Path
-
     try:
         results_path = Path(results_directory)
         output_path = Path(output)

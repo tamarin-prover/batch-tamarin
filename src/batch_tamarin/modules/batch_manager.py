@@ -7,7 +7,7 @@ operations and generates execution reports from TaskRunner results.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import jinja2
 
@@ -16,9 +16,6 @@ from ..model.batch import (
     ErrorType,
     ExecMetadata,
     LemmaResult,
-)
-from ..model.batch import Resources as BatchResources
-from ..model.batch import (
     RichExecutableTask,
     RichTask,
     TaskConfig,
@@ -27,6 +24,7 @@ from ..model.batch import (
     TaskStatus,
     TaskSucceedResult,
 )
+from ..model.batch import Resources as BatchResources
 from ..model.executable_task import (
     ExecutableTask,
     TaskResult,
@@ -62,7 +60,7 @@ class BatchManager:
         self.recipe_name = recipe_name
 
     async def generate_execution_report(
-        self, runner: TaskRunner, executable_tasks: List[ExecutableTask]
+        self, runner: TaskRunner, executable_tasks: list[ExecutableTask]
     ) -> None:
         """
         Generate execution report from runner results.
@@ -117,7 +115,7 @@ class BatchManager:
         )
 
         # Resolve tamarin versions
-        resolved_tamarin_versions: Dict[str, TamarinVersion] = {}
+        resolved_tamarin_versions: dict[str, TamarinVersion] = {}
         for version_name, version_info in self.recipe.tamarin_versions.items():
             resolved_version = version_info.model_copy()
 
@@ -140,7 +138,7 @@ class BatchManager:
         )
 
     def _populate_batch_with_results(
-        self, batch: Batch, runner: TaskRunner, executable_tasks: List[ExecutableTask]
+        self, batch: Batch, runner: TaskRunner, executable_tasks: list[ExecutableTask]
     ) -> None:
         """Populate batch with execution results."""
         # Update global execution metadata
@@ -177,13 +175,13 @@ class BatchManager:
 
     def _create_rich_tasks_from_executable_tasks(
         self,
-        executable_tasks: List[ExecutableTask],
+        executable_tasks: list[ExecutableTask],
         runner: TaskRunner,
         execution_summary: ExecutionSummary,
-    ) -> Dict[str, RichTask]:
+    ) -> dict[str, RichTask]:
         """Create RichTask objects from executable tasks and results."""
         # Group tasks by original task name
-        task_groups: Dict[str, List[ExecutableTask]] = {}
+        task_groups: dict[str, list[ExecutableTask]] = {}
         for executable_task in executable_tasks:
             # Use the stored original task name instead of parsing
             original_task_name = executable_task.original_task_name
@@ -193,9 +191,9 @@ class BatchManager:
             task_groups[original_task_name].append(executable_task)
 
         # Create RichTask objects
-        rich_tasks: Dict[str, RichTask] = {}
+        rich_tasks: dict[str, RichTask] = {}
         for original_task_name, tasks in task_groups.items():
-            subtasks: Dict[str, RichExecutableTask] = {}
+            subtasks: dict[str, RichExecutableTask] = {}
             theory_file = None
 
             for executable_task in tasks:
@@ -240,7 +238,7 @@ class BatchManager:
         )
 
         # Create TaskExecMetadata
-        task_result: Optional[TaskResult] = runner.task_results.get(
+        task_result: TaskResult | None = runner.task_results.get(
             executable_task.task_name
         )
         if task_result:
@@ -451,12 +449,12 @@ class BatchManager:
             )
             raise
 
-    def _prepare_html_template_data(self, batch: Batch) -> Dict[str, Any]:
+    def _prepare_html_template_data(self, batch: Batch) -> dict[str, Any]:
         """Prepare data for HTML template rendering."""
         # Collect failed, timeout, and memory limit tasks
-        failed_tasks: List[Dict[str, Any]] = []
-        timeout_tasks: List[Dict[str, Any]] = []
-        memory_limit_tasks: List[Dict[str, Any]] = []
+        failed_tasks: list[dict[str, Any]] = []
+        timeout_tasks: list[dict[str, Any]] = []
+        memory_limit_tasks: list[dict[str, Any]] = []
 
         # Count lemma results for statistics
         verified_count = 0
@@ -468,7 +466,7 @@ class BatchManager:
 
         for task_name, rich_task in batch.tasks.items():
             for subtask_name, rich_executable in rich_task.subtasks.items():
-                task_info: Dict[str, Any] = {
+                task_info: dict[str, Any] = {
                     "task_name": task_name,
                     "subtask_name": subtask_name,
                     "rich_executable": rich_executable,
@@ -532,13 +530,13 @@ class BatchManager:
             "unterminated_count": unterminated_count,
         }
 
-    def _prepare_task_table_data(self, batch: Batch) -> List[Dict[str, Any]]:
+    def _prepare_task_table_data(self, batch: Batch) -> list[dict[str, Any]]:
         """Prepare structured table data with proper task and lemma grouping."""
-        task_table_data: List[Dict[str, Any]] = []
+        task_table_data: list[dict[str, Any]] = []
 
         for task_name, rich_task in batch.tasks.items():
             # Group subtasks by lemma
-            lemma_groups: Dict[str, List[RichExecutableTask]] = {}
+            lemma_groups: dict[str, list[RichExecutableTask]] = {}
 
             for _subtask_name, rich_executable in rich_task.subtasks.items():
                 lemma_name = rich_executable.task_config.lemma
@@ -550,7 +548,7 @@ class BatchManager:
             total_subtasks = sum(len(subtasks) for subtasks in lemma_groups.values())
 
             # Create lemma data structures
-            lemmas: List[Dict[str, Any]] = []
+            lemmas: list[dict[str, Any]] = []
             for lemma_name, subtasks in lemma_groups.items():
                 lemmas.append({"lemma_name": lemma_name, "subtasks": subtasks})
 
@@ -569,7 +567,7 @@ class BatchManager:
         """Generate rerun recipe JSON with only failed tasks."""
         try:
             # Collect all failed tasks (including timeouts and memory limits)
-            failed_executable_tasks: List[Tuple[str, RichExecutableTask]] = []
+            failed_executable_tasks: list[tuple[str, RichExecutableTask]] = []
 
             for task_name, rich_task in batch.tasks.items():
                 for _subtask_name, rich_executable in rich_task.subtasks.items():
@@ -616,11 +614,11 @@ class BatchManager:
     def _create_rerun_recipe_from_failed_tasks(
         self,
         batch: Batch,
-        failed_executable_tasks: List[Tuple[str, RichExecutableTask]],
+        failed_executable_tasks: list[tuple[str, RichExecutableTask]],
     ) -> TamarinRecipe:
         """Create a new TamarinRecipe containing only failed tasks."""
         # Group failed tasks by original task name
-        failed_tasks_by_name: Dict[str, List[RichExecutableTask]] = {}
+        failed_tasks_by_name: dict[str, list[RichExecutableTask]] = {}
 
         for task_name, rich_executable in failed_executable_tasks:
             if task_name not in failed_tasks_by_name:
@@ -628,7 +626,7 @@ class BatchManager:
             failed_tasks_by_name[task_name].append(rich_executable)
 
         # Reconstruct tasks from the original recipe structure
-        rerun_tasks: Dict[str, Task] = {}
+        rerun_tasks: dict[str, Task] = {}
 
         # We need to find the original task configurations to recreate the recipe
         for task_name, failed_executables in failed_tasks_by_name.items():
@@ -638,7 +636,7 @@ class BatchManager:
 
             # Collect unique tamarin versions and create lemma configs with their specific parameters
             tamarin_versions: set[str] = set()
-            lemma_configs: Dict[str, Lemma] = {}
+            lemma_configs: dict[str, Lemma] = {}
 
             for rich_executable in failed_executables:
                 config = rich_executable.task_config

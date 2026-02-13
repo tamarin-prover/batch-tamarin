@@ -7,7 +7,7 @@ for use in report templates (Mermaid, Typst, LaTeX, etc.).
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 
 class BaseChart(ABC):
@@ -16,7 +16,7 @@ class BaseChart(ABC):
     def __init__(
         self,
         title: str,
-        data: Union[Dict[str, Union[int, float]], List[Tuple[str, datetime, datetime]]],
+        data: dict[str, int | float] | list[tuple[str, datetime, datetime]],
     ):
         self.title = title
         self.data = data
@@ -33,7 +33,7 @@ class BaseChart(ABC):
 class PieChart(BaseChart):
     """Pie chart for categorical data with percentages."""
 
-    def __init__(self, title: str, data: Dict[str, Union[int, float]]):
+    def __init__(self, title: str, data: dict[str, int | float]):
         """
         Initialize pie chart.
 
@@ -42,7 +42,7 @@ class PieChart(BaseChart):
             data: Dictionary mapping category names to values
         """
         super().__init__(title, data)
-        self.data: Dict[str, Union[int, float]] = data
+        self.data: dict[str, int | float] = data
         self.total = sum(data.values()) if data else 0
 
     def to_mermaid_pie(self) -> str:
@@ -84,7 +84,7 @@ class PieChart(BaseChart):
 class BarChart(BaseChart):
     """Bar chart for numerical data comparison."""
 
-    def __init__(self, title: str, data: Dict[str, Union[int, float]], unit: str = ""):
+    def __init__(self, title: str, data: dict[str, int | float], unit: str = ""):
         """
         Initialize bar chart.
 
@@ -94,7 +94,7 @@ class BarChart(BaseChart):
             unit: Unit of measurement (e.g., "seconds", "MB")
         """
         super().__init__(title, data)
-        self.data: Dict[str, Union[int, float]] = data
+        self.data: dict[str, int | float] = data
         self.unit = unit
 
     def to_mermaid_bar(self) -> str:
@@ -111,9 +111,9 @@ class BarChart(BaseChart):
         lines = [
             "xychart-beta",
             f'    title "{self.title}"',
-            f'    x-axis [{", ".join(categories)}]',
+            f"    x-axis [{', '.join(categories)}]",
             f'    y-axis "{self.unit}"',
-            f'    bar [{", ".join(values)}]',
+            f"    bar [{', '.join(values)}]",
         ]
 
         return "\n".join(lines)
@@ -148,7 +148,7 @@ class BarChart(BaseChart):
 class GanttChart(BaseChart):
     """Gantt chart for timeline visualization."""
 
-    def __init__(self, title: str, data: List[Tuple[str, datetime, datetime]]):
+    def __init__(self, title: str, data: list[tuple[str, datetime, datetime]]):
         """
         Initialize Gantt chart.
 
@@ -157,7 +157,7 @@ class GanttChart(BaseChart):
             data: List of tuples (task_name, start_time, end_time)
         """
         super().__init__(title, data)
-        self.data: List[Tuple[str, datetime, datetime]] = data
+        self.data: list[tuple[str, datetime, datetime]] = data
 
     def to_mermaid_gantt(self) -> str:
         """Render as Mermaid Gantt chart."""
@@ -198,7 +198,7 @@ class GanttChart(BaseChart):
             ]
             for i, (task_name, _, _) in enumerate(self.data):
                 clean_task_name = task_name.replace(" ", "_").replace("-", "_")
-                lines.append(f"    {clean_task_name} : {i}, {i+1}")
+                lines.append(f"    {clean_task_name} : {i}, {i + 1}")
 
         return "\n".join(lines)
 
@@ -240,18 +240,18 @@ class ChartCollection:
     """Collection of charts for report generation."""
 
     def __init__(self):
-        self.success_rate: Optional[PieChart] = None
-        self.cache_hit_rate: Optional[PieChart] = None
-        self.runtime_per_task: Optional[BarChart] = None
-        self.memory_per_task: Optional[BarChart] = None
-        self.execution_timeline: Optional[GanttChart] = None
-        self.error_types: Optional[PieChart] = None
+        self.success_rate: PieChart | None = None
+        self.cache_hit_rate: PieChart | None = None
+        self.runtime_per_task: BarChart | None = None
+        self.memory_per_task: BarChart | None = None
+        self.execution_timeline: GanttChart | None = None
+        self.error_types: PieChart | None = None
 
     def set_success_rate(self, successful: int, failed: int) -> None:
         """Set success rate chart data."""
         # Only create chart if there are any tasks
         if successful + failed > 0:
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             if successful > 0:
                 data["Successful"] = successful
             if failed > 0:
@@ -262,33 +262,33 @@ class ChartCollection:
         """Set cache hit rate chart data."""
         # Only create chart if there are any lemmas
         if cache_hits + cache_misses > 0:
-            data: Dict[str, Any] = {}
+            data: dict[str, Any] = {}
             if cache_hits > 0:
                 data["Cache Hit"] = cache_hits
             if cache_misses > 0:
                 data["Cache Miss"] = cache_misses
             self.cache_hit_rate = PieChart("Cache Hit Rate", data)
 
-    def set_runtime_per_task(self, task_runtimes: Dict[str, float]) -> None:
+    def set_runtime_per_task(self, task_runtimes: dict[str, float]) -> None:
         """Set runtime per task chart data."""
         if task_runtimes:
             self.runtime_per_task = BarChart(
                 "Runtime per Task", task_runtimes, "seconds"
             )
 
-    def set_memory_per_task(self, task_memory: Dict[str, float]) -> None:
+    def set_memory_per_task(self, task_memory: dict[str, float]) -> None:
         """Set memory per task chart data."""
         if task_memory:
             self.memory_per_task = BarChart("Memory Usage per Task", task_memory, "MB")
 
     def set_execution_timeline(
-        self, timeline_data: List[Tuple[str, datetime, datetime]]
+        self, timeline_data: list[tuple[str, datetime, datetime]]
     ) -> None:
         """Set execution timeline chart data."""
         if timeline_data:
             self.execution_timeline = GanttChart("Execution Timeline", timeline_data)
 
-    def set_error_types(self, error_data: Dict[str, Union[int, float]]) -> None:
+    def set_error_types(self, error_data: dict[str, int | float]) -> None:
         """Set error types chart data."""
         if error_data:
             self.error_types = PieChart("Error Types", error_data)

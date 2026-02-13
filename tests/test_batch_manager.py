@@ -9,7 +9,7 @@ All external dependencies are mocked for CI compatibility.
 # pyright: basic
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -40,7 +40,7 @@ class TestBatchManagerInitialization:
     """Test BatchManager initialization."""
 
     def test_batch_manager_init(
-        self, minimal_recipe_data: Dict[str, Any], sample_tamarin_executable: Path
+        self, minimal_recipe_data: dict[str, Any], sample_tamarin_executable: Path
     ):
         """Test BatchManager initialization with recipe and name."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -55,7 +55,7 @@ class TestBatchCreation:
 
     @pytest.mark.asyncio
     async def test_create_batch_with_resolved_config(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating batch with resolved configuration."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -73,15 +73,12 @@ class TestBatchCreation:
                 "batch_tamarin.modules.batch_manager.extract_tamarin_version"
             ) as mock_extract_version,
         ):
-
             # Return input unchanged
-            mock_resolve.side_effect = lambda x, _: x  # type:ignore
+            mock_resolve.side_effect = lambda x, _: x
             mock_resolve_path.return_value = Path("/mock/tamarin-prover")
             mock_extract_version.return_value = "1.10.0"
 
-            batch = (
-                await batch_manager._create_batch_with_resolved_config()  # type:ignore
-            )
+            batch = await batch_manager._create_batch_with_resolved_config()
 
             assert batch.recipe == "test_recipe.json"
             assert batch.config.global_max_cores == 8
@@ -93,7 +90,7 @@ class TestBatchCreation:
 
     @pytest.mark.asyncio
     async def test_create_batch_with_tamarin_version_extraction_failure(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test batch creation when tamarin version extraction fails."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -110,20 +107,17 @@ class TestBatchCreation:
                 "batch_tamarin.modules.batch_manager.extract_tamarin_version"
             ) as mock_extract_version,
         ):
-
-            mock_resolve.side_effect = lambda x, _: x  # type:ignore
+            mock_resolve.side_effect = lambda x, _: x
             mock_resolve_path.return_value = Path("/mock/tamarin-prover")
             mock_extract_version.side_effect = Exception("Version extraction failed")
 
-            batch = (
-                await batch_manager._create_batch_with_resolved_config()  # type:ignore
-            )
+            batch = await batch_manager._create_batch_with_resolved_config()
 
             assert batch.tamarin_versions["stable"].version is None
 
     @pytest.mark.asyncio
     async def test_create_batch_with_resource_resolution(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test batch creation with resource value resolution."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -140,7 +134,6 @@ class TestBatchCreation:
                 "batch_tamarin.modules.batch_manager.extract_tamarin_version"
             ) as mock_extract_version,
         ):
-
             # Mock resource resolution to return different values
             def mock_resolve_fn(value: int, resource_type: str) -> int:
                 if resource_type == "cores":
@@ -153,9 +146,7 @@ class TestBatchCreation:
             mock_resolve_path.return_value = Path("/mock/tamarin-prover")
             mock_extract_version.return_value = "1.10.0"
 
-            batch = (
-                await batch_manager._create_batch_with_resolved_config()  # type:ignore
-            )
+            batch = await batch_manager._create_batch_with_resolved_config()
 
             assert batch.config.global_max_cores == 16
             assert batch.config.global_max_memory == 32
@@ -165,7 +156,7 @@ class TestBatchPopulation:
     """Test batch population with execution results."""
 
     def test_populate_batch_with_results(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test populating batch with execution results."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -267,9 +258,7 @@ class TestBatchPopulation:
         ]
 
         # Execute population
-        batch_manager._populate_batch_with_results(  # type: ignore
-            batch, mock_runner, executable_tasks
-        )
+        batch_manager._populate_batch_with_results(batch, mock_runner, executable_tasks)
 
         # Verify execution metadata
         assert batch.execution_metadata.total_tasks == 2
@@ -282,7 +271,7 @@ class TestBatchPopulation:
         assert batch.execution_metadata.max_memory == 1024.0
 
     def test_populate_batch_with_no_memory_stats(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test populating batch when task results have no memory stats."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -353,9 +342,7 @@ class TestBatchPopulation:
             )
         ]
 
-        batch_manager._populate_batch_with_results(  # type:ignore
-            batch, mock_runner, executable_tasks
-        )
+        batch_manager._populate_batch_with_results(batch, mock_runner, executable_tasks)
 
         assert batch.execution_metadata.total_memory == 0.0
         assert batch.execution_metadata.max_memory == 0.0
@@ -365,7 +352,7 @@ class TestRichTaskCreation:
     """Test creation of RichTask objects from ExecutableTask instances."""
 
     def test_create_rich_tasks_from_executable_tasks(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test creating RichTask objects from ExecutableTask instances."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -442,10 +429,8 @@ class TestRichTaskCreation:
             ),
         ]
 
-        rich_tasks = (
-            batch_manager._create_rich_tasks_from_executable_tasks(  # type:ignore
-                executable_tasks, mock_runner, mock_execution_summary
-            )
+        rich_tasks = batch_manager._create_rich_tasks_from_executable_tasks(
+            executable_tasks, mock_runner, mock_execution_summary
         )
 
         assert len(rich_tasks) == 1
@@ -458,7 +443,7 @@ class TestRichTaskCreation:
         assert "task1--lemma2--stable" in rich_task.subtasks
 
     def test_create_rich_executable_task_with_result(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test creating RichExecutableTask with task result."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -515,10 +500,8 @@ class TestRichTaskCreation:
                 analysis_type="all-traces",
             )
 
-            rich_executable_task = (
-                batch_manager._create_rich_executable_task(  # type:ignore
-                    executable_task, mock_runner, mock_execution_summary
-                )
+            rich_executable_task = batch_manager._create_rich_executable_task(
+                executable_task, mock_runner, mock_execution_summary
             )
 
             assert rich_executable_task.task_config.tamarin_alias == "stable"
@@ -544,7 +527,7 @@ class TestRichTaskCreation:
             assert isinstance(rich_executable_task.task_result, TaskSucceedResult)
 
     def test_create_rich_executable_task_without_result(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test creating RichExecutableTask without task result."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -579,10 +562,8 @@ class TestRichTaskCreation:
             traces_dir=tmp_dir / "traces",
         )
 
-        rich_executable_task = (
-            batch_manager._create_rich_executable_task(  # type:ignore
-                executable_task, mock_runner, mock_execution_summary
-            )
+        rich_executable_task = batch_manager._create_rich_executable_task(
+            executable_task, mock_runner, mock_execution_summary
         )
 
         assert rich_executable_task.task_execution_metadata.status == TaskStatus.PENDING
@@ -622,37 +603,27 @@ class TestStatusConversion:
 
         # Test all status mappings
         assert (
-            batch_manager._convert_task_status(  # type:ignore
-                ExecutableTaskStatus.PENDING
-            )
+            batch_manager._convert_task_status(ExecutableTaskStatus.PENDING)
             == TaskStatus.PENDING
         )
         assert (
-            batch_manager._convert_task_status(  # type:ignore
-                ExecutableTaskStatus.RUNNING
-            )
+            batch_manager._convert_task_status(ExecutableTaskStatus.RUNNING)
             == TaskStatus.RUNNING
         )
         assert (
-            batch_manager._convert_task_status(  # type:ignore
-                ExecutableTaskStatus.COMPLETED
-            )
+            batch_manager._convert_task_status(ExecutableTaskStatus.COMPLETED)
             == TaskStatus.COMPLETED
         )
         assert (
-            batch_manager._convert_task_status(  # type:ignore
-                ExecutableTaskStatus.FAILED
-            )
+            batch_manager._convert_task_status(ExecutableTaskStatus.FAILED)
             == TaskStatus.FAILED
         )
         assert (
-            batch_manager._convert_task_status(  # type:ignore
-                ExecutableTaskStatus.TIMEOUT
-            )
+            batch_manager._convert_task_status(ExecutableTaskStatus.TIMEOUT)
             == TaskStatus.TIMEOUT
         )
         assert (
-            batch_manager._convert_task_status(  # type:ignore
+            batch_manager._convert_task_status(
                 ExecutableTaskStatus.MEMORY_LIMIT_EXCEEDED
             )
             == TaskStatus.MEMORY_LIMIT_EXCEEDED
@@ -662,7 +633,7 @@ class TestStatusConversion:
 class TestTaskResultCreation:
     """Test creation of task results from TaskResult instances."""
 
-    def test_create_task_succeed_result(self, minimal_recipe_data: Dict[str, Any]):
+    def test_create_task_succeed_result(self, minimal_recipe_data: dict[str, Any]):
         """Test creating TaskSucceedResult from TaskResult."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         batch_manager = BatchManager(recipe, "test_recipe.json")
@@ -700,9 +671,7 @@ class TestTaskResultCreation:
         ) as mock_output_manager:
             mock_output_manager.parse_task_result.return_value = mock_parsed_result
 
-            result = batch_manager._create_task_succeed_result(  # type:ignore
-                task_result
-            )
+            result = batch_manager._create_task_succeed_result(task_result)
 
             assert isinstance(result, TaskSucceedResult)
             assert result.warnings == ["Warning: deprecated syntax"]
@@ -712,7 +681,7 @@ class TestTaskResultCreation:
             assert result.analysis_type == "all-traces"
 
     def test_create_task_succeed_result_with_falsified_lemma(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskSucceedResult with falsified lemma."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -750,16 +719,14 @@ class TestTaskResultCreation:
         ) as mock_output_manager:
             mock_output_manager.parse_task_result.return_value = mock_parsed_result
 
-            result = batch_manager._create_task_succeed_result(  # type:ignore
-                task_result
-            )
+            result = batch_manager._create_task_succeed_result(task_result)
 
             assert result.lemma_result == LemmaResult.FALSIFIED
             assert result.steps == 500
             assert result.analysis_type == "exists-trace"
 
     def test_create_task_succeed_result_with_unterminated_lemma(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskSucceedResult with unterminated lemma."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -795,14 +762,12 @@ class TestTaskResultCreation:
         ) as mock_output_manager:
             mock_output_manager.parse_task_result.return_value = mock_parsed_result
 
-            result = batch_manager._create_task_succeed_result(  # type:ignore
-                task_result
-            )
+            result = batch_manager._create_task_succeed_result(task_result)
 
             assert result.lemma_result == LemmaResult.UNTERMINATED
 
     def test_create_task_succeed_result_with_unparseable_output(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskSucceedResult when output parsing fails."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -825,9 +790,7 @@ class TestTaskResultCreation:
         ) as mock_output_manager:
             mock_output_manager.parse_task_result.return_value = None  # Parsing failed
 
-            result = batch_manager._create_task_succeed_result(  # type:ignore
-                task_result
-            )
+            result = batch_manager._create_task_succeed_result(task_result)
 
             assert isinstance(result, TaskSucceedResult)
             assert result.warnings == []
@@ -839,7 +802,7 @@ class TestTaskResultCreation:
             assert result.analysis_type == "unknown"
 
     def test_create_task_failed_result_timeout(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskFailedResult for timeout."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -857,9 +820,7 @@ class TestTaskResultCreation:
             memory_stats=None,
         )
 
-        result = batch_manager._create_task_failed_result(  # type:ignore
-            task_result
-        )
+        result = batch_manager._create_task_failed_result(task_result)
 
         assert isinstance(result, TaskFailedResult)
         assert result.return_code == "124"
@@ -868,7 +829,7 @@ class TestTaskResultCreation:
         assert result.last_stderr_lines == ["Process timed out"]
 
     def test_create_task_failed_result_memory_limit(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskFailedResult for memory limit exceeded."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -886,16 +847,14 @@ class TestTaskResultCreation:
             memory_stats=None,
         )
 
-        result = batch_manager._create_task_failed_result(  # type:ignore
-            task_result
-        )
+        result = batch_manager._create_task_failed_result(task_result)
 
         assert result.error_type == ErrorType.MEMORY_LIMIT
         assert result.error_description == "Task exceeded memory limit"
         assert result.last_stderr_lines == ["Out of memory"]
 
     def test_create_task_failed_result_general_failure(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskFailedResult for general failure."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -913,16 +872,14 @@ class TestTaskResultCreation:
             memory_stats=None,
         )
 
-        result = batch_manager._create_task_failed_result(  # type:ignore
-            task_result
-        )
+        result = batch_manager._create_task_failed_result(task_result)
 
         assert result.error_type == ErrorType.TAMARIN_ERROR
         assert result.error_description == "Task failed with return code 1"
         assert result.last_stderr_lines == ["Syntax error", "Invalid theory"]
 
     def test_create_task_failed_result_long_stderr(
-        self, minimal_recipe_data: Dict[str, Any]
+        self, minimal_recipe_data: dict[str, Any]
     ):
         """Test creating TaskFailedResult with long stderr (should be truncated)."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -944,9 +901,7 @@ class TestTaskResultCreation:
             memory_stats=None,
         )
 
-        result = batch_manager._create_task_failed_result(  # type:ignore
-            task_result
-        )
+        result = batch_manager._create_task_failed_result(task_result)
 
         # Should only keep last 10 lines
         assert len(result.last_stderr_lines) == 10
@@ -958,40 +913,31 @@ class TestTaskResultCreation:
 class TestUtilityMethods:
     """Test utility methods for name extraction and error description."""
 
-    def test_extract_lemma_name_from_task_id(self, minimal_recipe_data: Dict[str, Any]):
+    def test_extract_lemma_name_from_task_id(self, minimal_recipe_data: dict[str, Any]):
         """Test extracting lemma name from task ID."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         batch_manager = BatchManager(recipe, "test_recipe.json")
 
         # Test standard format
         assert (
-            batch_manager._extract_lemma_name_from_task_id(  # type:ignore
-                "task1--lemma1--stable"
-            )
+            batch_manager._extract_lemma_name_from_task_id("task1--lemma1--stable")
             == "lemma1"
         )
         assert (
-            batch_manager._extract_lemma_name_from_task_id(  # type:ignore
+            batch_manager._extract_lemma_name_from_task_id(
                 "complex_task--complex_lemma--dev"
             )
             == "complex_lemma"
         )
 
         # Test edge cases
+        assert batch_manager._extract_lemma_name_from_task_id("simple") == "simple"
         assert (
-            batch_manager._extract_lemma_name_from_task_id(  # type:ignore
-                "simple"
-            )
-            == "simple"
-        )
-        assert (
-            batch_manager._extract_lemma_name_from_task_id(  # type:ignore
-                "task--lemma"
-            )
+            batch_manager._extract_lemma_name_from_task_id("task--lemma")
             == "task--lemma"
         )  # Only 2 parts, returns unchanged
 
-    def test_get_error_description(self, minimal_recipe_data: Dict[str, Any]):
+    def test_get_error_description(self, minimal_recipe_data: dict[str, Any]):
         """Test getting error description from task result."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
         batch_manager = BatchManager(recipe, "test_recipe.json")
@@ -1008,9 +954,7 @@ class TestUtilityMethods:
             duration=3600.0,
         )
         assert (
-            batch_manager._get_error_description(  # type:ignore
-                timeout_result
-            )
+            batch_manager._get_error_description(timeout_result)
             == "Task timed out during execution"
         )
 
@@ -1026,9 +970,7 @@ class TestUtilityMethods:
             duration=500.0,
         )
         assert (
-            batch_manager._get_error_description(  # type:ignore
-                memory_result
-            )
+            batch_manager._get_error_description(memory_result)
             == "Task exceeded memory limit"
         )
 
@@ -1044,9 +986,7 @@ class TestUtilityMethods:
             duration=50.0,
         )
         assert (
-            batch_manager._get_error_description(  # type:ignore
-                failed_result
-            )
+            batch_manager._get_error_description(failed_result)
             == "Task failed with return code 1"
         )
 
@@ -1056,7 +996,7 @@ class TestExecutionReportGeneration:
 
     @pytest.mark.asyncio
     async def test_generate_execution_report_success(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test successful execution report generation."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -1072,13 +1012,12 @@ class TestExecutionReportGeneration:
             ) as mock_populate,
             patch.object(batch_manager, "_write_execution_report") as mock_write,
         ):
-
             mock_batch = Mock()
             mock_create_batch.return_value = mock_batch
             mock_write.return_value = None
 
             mock_runner = Mock()
-            mock_executable_tasks: List[ExecutableTask] = []
+            mock_executable_tasks: list[ExecutableTask] = []
 
             await batch_manager.generate_execution_report(
                 mock_runner, mock_executable_tasks
@@ -1092,7 +1031,7 @@ class TestExecutionReportGeneration:
 
     @pytest.mark.asyncio
     async def test_generate_execution_report_with_exception(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test execution report generation with exception (should not raise)."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -1106,11 +1045,10 @@ class TestExecutionReportGeneration:
                 "batch_tamarin.modules.batch_manager.notification_manager"
             ) as mock_notification,
         ):
-
             mock_create_batch.side_effect = Exception("Test exception")
 
             mock_runner = Mock()
-            mock_executable_tasks: List[ExecutableTask] = []
+            mock_executable_tasks: list[ExecutableTask] = []
 
             # Should not raise exception
             await batch_manager.generate_execution_report(
@@ -1125,7 +1063,7 @@ class TestExecutionReportGeneration:
 
     @pytest.mark.asyncio
     async def test_write_execution_report_success(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test writing execution report to file."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -1146,12 +1084,9 @@ class TestExecutionReportGeneration:
                 "batch_tamarin.modules.batch_manager.notification_manager"
             ) as mock_notification,
         ):
-
             mock_output_manager.get_output_paths.return_value = mock_output_paths
 
-            await batch_manager._write_execution_report(  # type:ignore
-                mock_batch
-            )
+            await batch_manager._write_execution_report(mock_batch)
 
             # Verify file was written
             report_path = tmp_dir / "execution_report.json"
@@ -1166,7 +1101,7 @@ class TestExecutionReportGeneration:
 
     @pytest.mark.asyncio
     async def test_write_execution_report_failure(
-        self, minimal_recipe_data: Dict[str, Any], tmp_dir: Path
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
     ):
         """Test writing execution report with file write failure."""
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
@@ -1186,13 +1121,10 @@ class TestExecutionReportGeneration:
                 "batch_tamarin.modules.batch_manager.notification_manager"
             ) as mock_notification,
         ):
-
             mock_output_manager.get_output_paths.return_value = mock_output_paths
 
             with pytest.raises(Exception):
-                await batch_manager._write_execution_report(  # type:ignore
-                    mock_batch
-                )
+                await batch_manager._write_execution_report(mock_batch)
 
             mock_notification.error.assert_called_once()
             assert (

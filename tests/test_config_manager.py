@@ -8,12 +8,18 @@ including JSON loading, validation, error handling, and configuration resolution
 # pyright: basic
 
 import json
+from collections.abc import Callable
+from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any
 
 import pytest
 
-from batch_tamarin.model.tamarin_recipe import TamarinRecipe
+from batch_tamarin.model.tamarin_recipe import (
+    GlobalConfig,
+    TamarinRecipe,
+    TamarinVersion,
+)
 from batch_tamarin.modules.config_manager import ConfigError, ConfigManager
 
 
@@ -23,8 +29,8 @@ class TestJSONLoading:
     @pytest.mark.asyncio
     async def test_load_valid_json_recipe(
         self,
-        minimal_recipe_data: Dict[str, Any],
-        create_json_file: Callable[[Dict[str, Any]], Path],
+        minimal_recipe_data: dict[str, Any],
+        create_json_file: Callable[[dict[str, Any]], Path],
         mock_notifications: Any,
     ):
         """Test loading a valid JSON recipe."""
@@ -77,7 +83,7 @@ class TestJSONLoading:
         self, tmp_dir: Path, mock_notifications: Any
     ):
         """Test loading JSON with unexpected fields."""
-        invalid_data: Dict[str, Any] = {
+        invalid_data: dict[str, Any] = {
             "config": {
                 "global_max_cores": 8,
                 "global_max_memory": 16,
@@ -112,7 +118,7 @@ class TestJSONLoading:
         self, tmp_dir: Path, mock_notifications: Any
     ):
         """Test loading JSON with numeric key patterns (should now be accepted)."""
-        numeric_data: Dict[str, Any] = {
+        numeric_data: dict[str, Any] = {
             "config": {
                 "global_max_cores": 8,
                 "global_max_memory": 16,
@@ -151,8 +157,8 @@ class TestTaskGeneration:
 
     def test_recipe_to_executable_tasks_minimal(
         self,
-        minimal_recipe_data: Dict[str, Any],
-        create_json_file: Callable[[Dict[str, Any]], Path],
+        minimal_recipe_data: dict[str, Any],
+        create_json_file: Callable[[dict[str, Any]], Path],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -172,15 +178,15 @@ class TestTaskGeneration:
 
     def test_recipe_to_executable_tasks_with_nonexistent_theory(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
         """Test handling of non-existent theory files."""
         # Set theory file to non-existent path
-        minimal_recipe_data["tasks"]["test_task"][
-            "theory_file"
-        ] = "/nonexistent/theory.spthy"
+        minimal_recipe_data["tasks"]["test_task"]["theory_file"] = (
+            "/nonexistent/theory.spthy"
+        )
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
 
@@ -189,15 +195,15 @@ class TestTaskGeneration:
 
     def test_recipe_to_executable_tasks_with_nonexistent_tamarin(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
         """Test handling of non-existent tamarin executables."""
         # Set tamarin executable to non-existent path
-        minimal_recipe_data["tamarin_versions"]["stable"][
-            "path"
-        ] = "/nonexistent/tamarin-prover"
+        minimal_recipe_data["tamarin_versions"]["stable"]["path"] = (
+            "/nonexistent/tamarin-prover"
+        )
 
         recipe = TamarinRecipe.model_validate(minimal_recipe_data)
 
@@ -206,8 +212,8 @@ class TestTaskGeneration:
 
     def test_recipe_to_executable_tasks_with_invalid_tamarin_version(
         self,
-        minimal_recipe_data: Dict[str, Any],
-        create_json_file: Callable[[Dict[str, Any]], Path],
+        minimal_recipe_data: dict[str, Any],
+        create_json_file: Callable[[dict[str, Any]], Path],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -224,13 +230,11 @@ class TestTaskGeneration:
 
     def test_resource_inheritance_for_lemma_overrides_only_specified(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
         """Test that lemma-level resource overrides only apply to specified fields."""
-        from copy import deepcopy
-
         # Prepare recipe data with task-level and lemma-level resources
         recipe_data = deepcopy(minimal_recipe_data)
         task = recipe_data["tasks"]["test_task"]
@@ -244,9 +248,9 @@ class TestTaskGeneration:
         for ex_task in tasks:
             assert ex_task.max_cores == 2, "Expected cores from task-level override"
             assert ex_task.max_memory == 32, "Expected memory from lemma-level override"
-            assert (
-                ex_task.task_timeout == 100
-            ), "Expected timeout from task-level override"
+            assert ex_task.task_timeout == 100, (
+                "Expected timeout from task-level override"
+            )
 
 
 class TestResourceResolution:
@@ -254,7 +258,7 @@ class TestResourceResolution:
 
     def test_resource_inheritance_lemma_overrides_task(
         self,
-        complex_recipe_data: Dict[str, Any],
+        complex_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -277,7 +281,7 @@ class TestResourceResolution:
 
     def test_resource_inheritance_shared_parameters(
         self,
-        inheritance_recipe_data: Dict[str, Any],
+        inheritance_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -297,7 +301,7 @@ class TestResourceResolution:
 
     def test_resource_inheritance_task_overrides_global(
         self,
-        complex_recipe_data: Dict[str, Any],
+        complex_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -317,7 +321,7 @@ class TestResourceResolution:
 
     def test_resource_capping_at_global_limits(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -351,7 +355,7 @@ class TestLemmaFiltering:
 
     def test_no_lemmas_specified_uses_all(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -379,7 +383,7 @@ class TestLemmaFiltering:
 
     def test_lemma_prefix_matching(
         self,
-        complex_recipe_data: Dict[str, Any],
+        complex_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -398,7 +402,7 @@ class TestLemmaFiltering:
 
     def test_lemma_no_matches_warning(
         self,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
         mock_notifications: Any,
         setup_output_manager: Any,
     ):
@@ -473,11 +477,9 @@ class TestValidationAndErrorHandling:
         self,
         tmp_dir: Path,
         mock_notifications: Any,
-        minimal_recipe_data: Dict[str, Any],
+        minimal_recipe_data: dict[str, Any],
     ):
         """Test tamarin executable validation."""
-        from batch_tamarin.model.tamarin_recipe import TamarinVersion
-
         # Test non-existent executable
         tamarin_version = TamarinVersion(
             path="/nonexistent/tamarin-prover", version="1.0.0", test_success=False
@@ -503,8 +505,6 @@ class TestValidationAndErrorHandling:
 
     def test_resource_validation_and_capping(self, mock_notifications: Any):
         """Test resource validation and capping."""
-        from batch_tamarin.model.tamarin_recipe import GlobalConfig
-
         global_config = GlobalConfig(
             global_max_cores=8,
             global_max_memory=16,

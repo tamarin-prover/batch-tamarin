@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from typing import Dict
 
 from ..model.tamarin_recipe import TamarinVersion
 from ..utils.notifications import notification_manager
@@ -114,7 +113,7 @@ async def launch_tamarin_test(path: Path) -> bool:
         return False
 
 
-async def check_tamarin_integrity(tamarin_versions: Dict[str, TamarinVersion]) -> None:
+async def check_tamarin_integrity(tamarin_versions: dict[str, TamarinVersion]) -> None:
     """
     Test tamarin executables for functionality and update TamarinVersion objects.
 

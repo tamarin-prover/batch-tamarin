@@ -5,9 +5,9 @@ This module uses tree-sitter-spthy to parse Tamarin Security Protocol Theory (.s
 and extract all lemma declarations to enable fine-grained task creation.
 """
 
+import re
 from pathlib import Path
 from types import FunctionType
-from typing import List, Optional, Set
 
 try:
     import tree_sitter_spthy as ts_spthy
@@ -32,7 +32,7 @@ class LemmaParser:
 
     def __init__(
         self,
-        external_flags: Optional[List[str]] = None,
+        external_flags: list[str] | None = None,
         ignore_preprocessor: bool = False,
     ) -> None:
         """
@@ -44,13 +44,13 @@ class LemmaParser:
         """
         try:
             self.language = ts_spthy.language()
-            self.parser = Parser(self.language)  # type: ignore
+            self.parser = Parser(self.language)
             self.external_flags = set(external_flags or [])
             self.ignore_preprocessor = ignore_preprocessor
         except Exception as e:
             raise LemmaParsingError(f"Failed to initialize Tamarin parser: {e}") from e
 
-    def parse_lemmas_from_file(self, theory_file: Path) -> List[str]:
+    def parse_lemmas_from_file(self, theory_file: Path) -> list[str]:
         """
         Parse all lemma names from a Tamarin theory file.
 
@@ -102,10 +102,10 @@ class LemmaParser:
             Preprocessed file content as a string
         """
         try:
-            with open(theory_file, "r", encoding="utf-8") as f:
+            with open(theory_file, encoding="utf-8") as f:
                 content = f.readlines()
 
-            processed_lines: List[str] = []
+            processed_lines: list[str] = []
 
             for line in content:
                 stripped_line = line.strip()
@@ -116,7 +116,7 @@ class LemmaParser:
                     )
                     include_file = theory_file.parent / include_path
                     if include_file.exists():
-                        with open(include_file, "r", encoding="utf-8") as included_file:
+                        with open(include_file, encoding="utf-8") as included_file:
                             included_content = included_file.read()
                             processed_lines.append(included_content)
                     else:
@@ -143,8 +143,6 @@ class LemmaParser:
         Returns:
             True if diff() operator is found, False otherwise
         """
-        import re
-
         # Remove comments to avoid false positives
         content_no_comments = re.sub(
             r"//.*?$|/\*.*?\*/", "", content, flags=re.MULTILINE | re.DOTALL
@@ -154,7 +152,7 @@ class LemmaParser:
         diff_pattern = r"\bdiff\s*\("
         return bool(re.search(diff_pattern, content_no_comments))
 
-    def _extract_lemma_names(self, node: Node, content: str) -> List[str]:
+    def _extract_lemma_names(self, node: Node, content: str) -> list[str]:
         """
         Recursively extract lemma names from the syntax tree.
 
@@ -165,8 +163,8 @@ class LemmaParser:
         Returns:
             List of unique lemma names
         """
-        lemma_names: Set[str] = set()
-        defined_symbols: Set[str] = set(
+        lemma_names: set[str] = set()
+        defined_symbols: set[str] = set(
             self.external_flags
         )  # Start with the JSON recipe given flags
 
@@ -302,7 +300,7 @@ class LemmaParser:
         """
         try:
             for child in define_node.children:
-                if child.type == "ident" or child.type == "identifier":
+                if child.type in {"ident", "identifier"}:
                     # Use byte-based slicing to handle UTF-8 encoding correctly
                     symbol_text = (
                         content.encode("utf-8")[child.start_byte : child.end_byte]
@@ -315,7 +313,7 @@ class LemmaParser:
             return None
 
     def _evaluate_ifdef_condition(
-        self, ifdef_node: Node, content: str, defined_symbols: Set[str]
+        self, ifdef_node: Node, content: str, defined_symbols: set[str]
     ) -> bool:
         """
         Evaluate an #ifdef condition against defined symbols.
@@ -331,11 +329,7 @@ class LemmaParser:
         try:
             # Find the condition node
             for child in ifdef_node.children:
-                if (
-                    child.type == "condition"
-                    or child.type == "ident"
-                    or child.type == "identifier"
-                ):
+                if child.type in {"condition", "ident", "identifier"}:
                     # Use byte-based slicing to handle UTF-8 encoding correctly
                     condition_text = (
                         content.encode("utf-8")[child.start_byte : child.end_byte]
@@ -353,7 +347,7 @@ class LemmaParser:
             return False
 
     def _evaluate_condition_expression(
-        self, condition: str, defined_symbols: Set[str]
+        self, condition: str, defined_symbols: set[str]
     ) -> bool:
         """
         Recursively evaluate a preprocessor condition expression.

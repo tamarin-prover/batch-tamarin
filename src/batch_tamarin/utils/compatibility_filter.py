@@ -7,7 +7,6 @@ based on the version of the Tamarin executable being used.
 
 import re
 from pathlib import Path
-from typing import List
 
 from ..modules.tamarin_test_cmd import extract_tamarin_version
 
@@ -70,8 +69,8 @@ def is_version_greater_than(
 
 
 async def compatibility_filter(
-    command: List[str], tamarin_executable: Path
-) -> List[str]:
+    command: list[str], tamarin_executable: Path
+) -> list[str]:
     """
     Filter Tamarin command options based on version compatibility.
 

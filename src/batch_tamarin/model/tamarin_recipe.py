@@ -6,7 +6,7 @@ the tamarin-config-schema.json specification.
 """
 
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -25,16 +25,16 @@ class Lemma(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., description="Name of the lemma to prove")
-    tamarin_versions: Optional[List[str]] = Field(
+    tamarin_versions: list[str] | None = Field(
         None,
         min_length=1,
         description="List of Tamarin version aliases to run this lemma on. If not specified, inherits from task",
     )
-    tamarin_options: Optional[List[str]] = Field(
+    tamarin_options: list[str] | None = Field(
         None,
         description="Additional command-line options to pass to Tamarin for this lemma. Overrides task-level options",
     )
-    preprocess_flags: Optional[List[str]] = Field(
+    preprocess_flags: list[str] | None = Field(
         None,
         description="Preprocessor flags to pass to Tamarin using -D=flag format for this lemma. Overrides task-level flags",
     )
@@ -45,7 +45,7 @@ class Lemma(BaseModel):
 
     @field_validator("tamarin_versions")
     @classmethod
-    def tamarin_versions_unique(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+    def tamarin_versions_unique(cls, v: list[str] | None) -> list[str] | None:
         """Ensure tamarin_versions are unique."""
         if v is not None and len(v) != len(set(v)):
             raise ValueError("tamarin_versions must contain unique items")
@@ -57,17 +57,17 @@ class Resources(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    max_cores: Optional[int] = Field(
+    max_cores: int | None = Field(
         default=None,
         ge=1,
         description="Maximum CPU cores for this task (inherited if not set)",
     )
-    max_memory: Optional[int] = Field(
+    max_memory: int | None = Field(
         default=None,
         ge=1,
         description="Maximum memory in GB for this task (inherited if not set)",
     )
-    timeout: Optional[int] = Field(
+    timeout: int | None = Field(
         default=None,
         ge=1,
         description="Timeout in seconds (alias for task_timeout, used in lemma resources)",
@@ -80,10 +80,10 @@ class TamarinVersion(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path: str = Field(..., description="File path to the Tamarin prover executable")
-    version: Optional[str] = Field(
+    version: str | None = Field(
         None, description="Version identifier for this Tamarin prover"
     )
-    test_success: Optional[bool] = Field(
+    test_success: bool | None = Field(
         None, description="Whether this Tamarin executable passed connectivity tests"
     )
 
@@ -96,7 +96,7 @@ class Task(BaseModel):
     theory_file: str = Field(
         ..., description="Path to the .spthy theory file to analyze"
     )
-    tamarin_versions: List[str] = Field(
+    tamarin_versions: list[str] = Field(
         ...,
         min_length=1,
         description="List of Tamarin version aliases to run this task on",
@@ -105,24 +105,24 @@ class Task(BaseModel):
         ...,
         description="Output prefix for result, filled with _{lemma}_{tamarin-version}",
     )
-    lemmas: Optional[List[Lemma]] = Field(
+    lemmas: list[Lemma] | None = Field(
         None,
         description="List of lemmas to prove. If empty or omitted, all lemmas will be proved using --prove",
     )
-    tamarin_options: Optional[List[str]] = Field(
+    tamarin_options: list[str] | None = Field(
         None, description="Additional command-line options to pass to Tamarin"
     )
-    preprocess_flags: Optional[List[str]] = Field(
+    preprocess_flags: list[str] | None = Field(
         None, description="Preprocessor flags to pass to Tamarin using -D=flag format"
     )
-    resources: Optional[Resources] = Field(
+    resources: Resources | None = Field(
         None,
         description="Resource allocation for this task. If not specified, defaults to 4 cores, 16GB RAM, 3600s timeout",
     )
 
     @field_validator("tamarin_versions")
     @classmethod
-    def tamarin_versions_unique(cls, v: List[str]) -> List[str]:
+    def tamarin_versions_unique(cls, v: list[str]) -> list[str]:
         """Ensure tamarin_versions are unique."""
         if len(v) != len(set(v)):
             raise ValueError("tamarin_versions must contain unique items")
@@ -153,7 +153,7 @@ class GlobalConfig(BaseModel):
 
     @field_validator("global_max_cores", mode="before")
     @classmethod
-    def validate_global_max_cores(cls, v: Union[int, str]) -> int | str:
+    def validate_global_max_cores(cls, v: int | str) -> int | str:
         """Validate and resolve global_max_cores, converting 'max' to system maximum."""
         if isinstance(v, str) and v.lower() != "max":
             raise ValueError("String value must be 'max'")
@@ -163,7 +163,7 @@ class GlobalConfig(BaseModel):
 
     @field_validator("global_max_memory", mode="before")
     @classmethod
-    def validate_global_max_memory(cls, v: Union[int, str]) -> int | str:
+    def validate_global_max_memory(cls, v: int | str) -> int | str:
         """Validate and resolve global_max_memory, converting 'max' to system maximum."""
         if isinstance(v, str):
             if v.lower() == "max":
@@ -190,9 +190,9 @@ class TamarinRecipe(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     config: GlobalConfig = Field(..., description="Global configuration settings")
-    tamarin_versions: Dict[str, TamarinVersion] = Field(
+    tamarin_versions: dict[str, TamarinVersion] = Field(
         ..., description="Named aliases for different Tamarin prover executables"
     )
-    tasks: Dict[str, Task] = Field(
+    tasks: dict[str, Task] = Field(
         ..., description="Named tasks, each defining a Tamarin execution configuration"
     )

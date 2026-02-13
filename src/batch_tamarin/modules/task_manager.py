@@ -6,7 +6,6 @@ built on top of the ProcessManager for actual process execution.
 """
 
 import time
-from typing import Dict, Set
 
 from ..model.executable_task import (
     ExecutableTask,
@@ -31,13 +30,13 @@ class TaskManager:
 
     def __init__(self):
         # Task tracking for progress reporting
-        self._task_status: Dict[str, TaskStatus] = {}
-        self._task_results: Dict[str, TaskResult] = {}
-        self._task_start_times: Dict[str, float] = {}
+        self._task_status: dict[str, TaskStatus] = {}
+        self._task_results: dict[str, TaskResult] = {}
+        self._task_start_times: dict[str, float] = {}
         # Cache manager for task result caching
         self._cache_manager = CacheManager()
         # Track which tasks used cached results
-        self._cached_tasks: Set[str] = set()
+        self._cached_tasks: set[str] = set()
 
     async def run_executable_task(self, task: ExecutableTask) -> TaskResult:
         """
@@ -105,13 +104,16 @@ class TaskManager:
             # Execute the command using existing run_command method (now returns memory stats)
             # Convert memory limit from GB to MB
             memory_limit_mb = float(task.max_memory) * 1024
-            return_code, stdout, stderr, memory_stats = (
-                await process_manager.run_command(
-                    executable,
-                    args,
-                    timeout=float(task.task_timeout),
-                    memory_limit_mb=memory_limit_mb,
-                )
+            (
+                return_code,
+                stdout,
+                stderr,
+                memory_stats,
+            ) = await process_manager.run_command(
+                executable,
+                args,
+                timeout=float(task.task_timeout),
+                memory_limit_mb=memory_limit_mb,
             )
 
             # Determine final status based on return code
@@ -145,7 +147,7 @@ class TaskManager:
             self._task_results[task_id] = task_result
 
             # Store results in cache, except for signal-interrupted tasks
-            if status != TaskStatus.SIGNAL_INTERRUPTED:  # type: ignore
+            if status != TaskStatus.SIGNAL_INTERRUPTED:
                 try:
                     self._cache_manager.store_result(task, task_result)
                     notification_manager.debug(
@@ -343,7 +345,7 @@ class TaskManager:
             cached_task_ids=self._cached_tasks.copy(),
         )
 
-    def get_task_results(self) -> Dict[str, TaskResult]:
+    def get_task_results(self) -> dict[str, TaskResult]:
         """
         Get all task results.
 
