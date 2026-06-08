@@ -4,6 +4,8 @@ Cache command for batch-tamarin.
 This module handles cache interaction commands.
 """
 
+import shutil
+
 import typer
 
 from ..modules.cache_manager import CacheManager
@@ -25,6 +27,13 @@ def clear(
     """
 
     CacheCommand.clear(errors_only=errors_only)
+
+
+@cache_command.command()
+def prune() -> None:
+    """Prunes the cache, removing everything without validation."""
+
+    CacheCommand.prune()
 
 
 class CacheCommand:
@@ -50,6 +59,16 @@ class CacheCommand:
             )
 
             print(f"Cleared cache: {entries} entries, {volume}")
+        except Exception as e:
+            print(f"Failed to clear cache: {e}")
+            raise typer.Exit(1)
+
+    @staticmethod
+    def prune() -> None:
+        try:
+            path = CacheManager.get_cache_dir()
+            shutil.rmtree(path)
+            print(f"Pruned cache!")
         except Exception as e:
             print(f"Failed to clear cache: {e}")
             raise typer.Exit(1)
