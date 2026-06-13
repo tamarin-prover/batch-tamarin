@@ -9,11 +9,12 @@ unique cache keys.
 import hashlib
 from pathlib import Path
 
-from diskcache import Cache
 import typer
+from diskcache import Cache
 
 from ..model.executable_task import ExecutableTask, TaskResult, TaskStatus
 from ..utils.notifications import notification_manager
+from ..utils.system_resources import get_human_readable_volume_size
 
 
 class CachedTaskData:
@@ -34,20 +35,44 @@ class CachedTaskData:
 class CacheManager:
     """Manages persistent caching of Tamarin task results."""
 
+    CACHE_SIZE_LIMIT: int = int(2e9)  # 2GB limit
+
     @staticmethod
     def get_cache_dir() -> Path:
         return Path.home() / ".batch-tamarin" / "cache"
 
+    @staticmethod
+    def _get_directory_size(path: Path) -> int:
+        """Recursively calculate the total size of all files in a directory.
+
+        Args:
+            path: Directory to measure
+
+        Returns:
+            Total size in bytes of all regular files under the directory
+        """
+        return sum(file.stat().st_size for file in path.rglob("*") if file.is_file())
+
     def __init__(self) -> None:
         """Initialize cache manager with user-specific cache directory."""
 
-        limit: int = int(2e9)
         cache_dir = self.get_cache_dir()
-        if cache_dir.exists() and cache_dir.stat().st_size > limit:
-            print(f"The maximum cache size has been exceeded, use `cache prune` to clear it!")
-            typer.Exit(1)
+        if (
+            cache_dir.exists()
+            and self._get_directory_size(cache_dir) > self.CACHE_SIZE_LIMIT
+        ):
+            current_size = get_human_readable_volume_size(
+                self._get_directory_size(cache_dir)
+            )
+            limit_size = get_human_readable_volume_size(self.CACHE_SIZE_LIMIT)
+            print(
+                f"The maximum cache size has been exceeded "
+                f"({current_size} / {limit_size}), "
+                f"use `batch-tamarin cache prune` to clear it!"
+            )
+            raise typer.Exit(1)
 
-        self.cache: Cache = Cache(str(cache_dir), size_limit=limit)  # 2GB limit
+        self.cache: Cache = Cache(str(cache_dir), size_limit=self.CACHE_SIZE_LIMIT)
 
     def get_cached_result(self, task: ExecutableTask) -> TaskResult | None:
         """
