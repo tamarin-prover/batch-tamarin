@@ -68,7 +68,9 @@ class CacheCommand:
         try:
             path = CacheManager.get_cache_dir()
             shutil.rmtree(path)
-            print(f"Pruned cache!")
+            print("Pruned cache!")
+        except FileNotFoundError:
+            print("Cache directory does not exist, nothing to prune.")
         except Exception as e:
-            print(f"Failed to clear cache: {e}")
+            print(f"Failed to prune cache: {e}")
             raise typer.Exit(1)
