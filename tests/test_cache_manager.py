@@ -13,6 +13,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from batch_tamarin.model.executable_task import ExecutableTask, TaskResult, TaskStatus
@@ -502,3 +503,33 @@ class TestCacheManager:
         # Check that cache directory is created under user home
         expected_path = Path.home() / ".batch-tamarin" / "cache"
         assert Path(cache_manager.cache.directory) == expected_path
+
+    def test_cache_manager_refuses_to_open_oversized_cache(
+        self, tmp_dir: Path, monkeypatch: MonkeyPatch
+    ):
+        """Test that CacheManager exits when the cache directory exceeds the size limit."""
+        cache_dir = tmp_dir / ".batch-tamarin" / "cache"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "big.bin").write_bytes(b"x" * 1000)
+
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_dir)
+        monkeypatch.setattr(CacheManager, "CACHE_SIZE_LIMIT", 500)
+
+        with pytest.raises(typer.Exit) as exc_info:
+            CacheManager()
+
+        assert exc_info.value.exit_code == 1
+
+    def test_cache_manager_opens_cache_below_size_limit(
+        self, tmp_dir: Path, monkeypatch: MonkeyPatch
+    ):
+        """Test that CacheManager initializes normally when the cache is below the limit."""
+        cache_dir = tmp_dir / ".batch-tamarin" / "cache"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "small.bin").write_bytes(b"x" * 100)
+
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_dir)
+        monkeypatch.setattr(CacheManager, "CACHE_SIZE_LIMIT", 500)
+
+        cache_manager = CacheManager()
+        assert cache_manager.cache is not None

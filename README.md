@@ -118,8 +118,11 @@ batch-tamarin report ./results --output report.html --format html
 # Generate LaTeX report for academic publications
 batch-tamarin report ./results --output report.tex --format tex
 
-# Clear cached results
-batch-tamarin --rm-cache
+# Clear cached results (keeps the cache directory structure intact)
+batch-tamarin cache clear
+
+# Completely remove the cache directory, bypassing diskcache validation
+batch-tamarin cache prune
 ```
 
 The `--task`/`-t` option of `run` filters tasks by prefix on their generated unique task name (`{output_file_prefix}--{lemma_name}--{tamarin_version}`). Use `batch-tamarin check recipe.json` to preview the generated task names.
