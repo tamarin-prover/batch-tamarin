@@ -64,7 +64,12 @@ def run(
         "-s",
         help="Task scheduling strategy: fifo (file sequential scheduling), sjf (shortest job first), ljf (longest job first)",
     ),
-    task: str | None = typer.Option(None, "--task", "-t", help="Only execute specific task"),
+    task: str | None = typer.Option(
+        None,
+        "--task",
+        "-t",
+        help="Only execute tasks who starts with this prefix",
+    ),
 ) -> None:
     """
     Execute tasks from the specified configuration file.
