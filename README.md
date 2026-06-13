@@ -91,6 +91,9 @@ batch-tamarin run recipe.json
 # Run with debug output
 batch-tamarin run recipe.json --debug
 
+# Run only tasks whose generated unique task ID starts with a prefix
+batch-tamarin run recipe.json --task <prefix>
+
 # Check configuration and preview tasks
 batch-tamarin check recipe.json
 
@@ -118,6 +121,8 @@ batch-tamarin report ./results --output report.tex --format tex
 # Clear cached results
 batch-tamarin --rm-cache
 ```
+
+The `--task`/`-t` option of `run` filters tasks by prefix on their generated unique task name (`{output_file_prefix}--{lemma_name}--{tamarin_version}`). Use `batch-tamarin check recipe.json` to preview the generated task names.
 
 ### Configuration Example
 

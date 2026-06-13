@@ -15,7 +15,9 @@ from ..utils.notifications import notification_manager
 
 
 async def process_config_file(
-    config_path: Path, scheduler: SchedulingStrategy = SchedulingStrategy.FIFO
+    config_path: Path,
+    scheduler: SchedulingStrategy = SchedulingStrategy.FIFO,
+    task_name: str | None = None,
 ) -> None:
     """Process configuration file and execute tasks using unified direct path."""
     try:
@@ -28,6 +30,16 @@ async def process_config_file(
 
         # Convert recipe to executable tasks directly (unified path like check.py)
         executable_tasks = config_manager.recipe_to_executable_tasks(recipe)
+
+        # Filter tasks by prefix on their generated unique task name.
+        # ExecutableTask.task_name has the form:
+        #   {output_file_prefix}--{lemma_name}--{tamarin_version}
+        if task_name:
+            executable_tasks = [
+                task
+                for task in executable_tasks
+                if task.task_name.startswith(task_name)
+            ]
 
         # Execute tasks using the direct execution path
         await runner.execute_all_tasks(executable_tasks)
@@ -49,6 +61,7 @@ class RunCommand:
         config_file: str,
         debug: bool = False,
         scheduler: SchedulingStrategy = SchedulingStrategy.FIFO,
+        task_name: str | None = None,
     ) -> None:
         """
         Execute tasks from the specified configuration file.
@@ -57,6 +70,7 @@ class RunCommand:
             config_file: Path to JSON recipe file to execute
             debug: Enable debug output
             scheduler: Task scheduling strategy
+            task_name: Prefix of the generated unique task name to execute
         """
         # Set debug mode if enabled
         if debug:
@@ -66,7 +80,7 @@ class RunCommand:
         # Execute config file tasks
         config_path = Path(config_file)
         try:
-            asyncio.run(process_config_file(config_path, scheduler))
+            asyncio.run(process_config_file(config_path, scheduler, task_name))
         except Exception as e:
             notification_manager.error(f"Failed to process JSON recipe : {e}")
             raise
