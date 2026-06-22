@@ -265,6 +265,139 @@ end
 
         # Note: Nested conditional behavior depends on preprocessor implementation
 
+    def test_parse_lemmas_with_not_condition(self, tmp_dir: Path) -> None:
+        """Test parsing lemmas guarded by #ifdef not FLAG."""
+        theory_content = """
+theory NotConditionTheory
+begin
+
+#ifdef not FLAG1
+lemma lemma_without_flag:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+lemma always_present_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "not_condition_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        parser_no_flags = LemmaParser()
+        lemmas_no_flags = parser_no_flags.parse_lemmas_from_file(theory_file)
+
+        parser_flag1 = LemmaParser(external_flags=["FLAG1"])
+        lemmas_flag1 = parser_flag1.parse_lemmas_from_file(theory_file)
+
+        # Without FLAG1: not FLAG1 is true -> lemma_without_flag should be included
+        assert "lemma_without_flag" in lemmas_no_flags
+        assert "always_present_lemma" in lemmas_no_flags
+
+        # With FLAG1: not FLAG1 is false -> lemma_without_flag should be excluded
+        assert "lemma_without_flag" not in lemmas_flag1
+        assert "always_present_lemma" in lemmas_flag1
+
+    def test_parse_lemmas_with_and_not_condition(self, tmp_dir: Path) -> None:
+        """Test parsing lemmas guarded by #ifdef FLAG1 & not FLAG2."""
+        theory_content = """
+theory AndNotConditionTheory
+begin
+
+#ifdef FLAG1 & not FLAG2
+lemma lemma_flag1_not_flag2:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+lemma always_present_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "and_not_condition_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        parser_no_flags = LemmaParser()
+        lemmas_no_flags = parser_no_flags.parse_lemmas_from_file(theory_file)
+
+        parser_flag1 = LemmaParser(external_flags=["FLAG1"])
+        lemmas_flag1 = parser_flag1.parse_lemmas_from_file(theory_file)
+
+        parser_flag2 = LemmaParser(external_flags=["FLAG2"])
+        lemmas_flag2 = parser_flag2.parse_lemmas_from_file(theory_file)
+
+        parser_both = LemmaParser(external_flags=["FLAG1", "FLAG2"])
+        lemmas_both = parser_both.parse_lemmas_from_file(theory_file)
+
+        # No flags: FLAG1 is false -> condition false
+        assert "lemma_flag1_not_flag2" not in lemmas_no_flags
+
+        # FLAG1 only: FLAG1 & not FLAG2 -> true
+        assert "lemma_flag1_not_flag2" in lemmas_flag1
+
+        # FLAG2 only: FLAG1 is false -> condition false
+        assert "lemma_flag1_not_flag2" not in lemmas_flag2
+
+        # Both: FLAG1 & not FLAG2 -> false (FLAG2 is set)
+        assert "lemma_flag1_not_flag2" not in lemmas_both
+
+        assert "always_present_lemma" in lemmas_no_flags
+        assert "always_present_lemma" in lemmas_flag1
+        assert "always_present_lemma" in lemmas_flag2
+        assert "always_present_lemma" in lemmas_both
+
+    def test_parse_lemmas_with_nested_not_condition(self, tmp_dir: Path) -> None:
+        """Test parsing lemmas guarded by #ifdef (FLAG1 | FLAG2) & not FLAG3."""
+        theory_content = """
+theory NestedNotConditionTheory
+begin
+
+#ifdef (FLAG1 | FLAG2) & not FLAG3
+lemma lemma_complex_condition:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+#endif
+
+lemma always_present_lemma:
+  "All x #i. TestRule(x) @ #i ==> ∃ y #j. TestRule2(y) @ #j"
+
+end
+"""
+        theory_file = tmp_dir / "nested_not_condition_theory.spthy"
+        theory_file.write_text(theory_content)
+
+        parser_no_flags = LemmaParser()
+        lemmas_no_flags = parser_no_flags.parse_lemmas_from_file(theory_file)
+
+        parser_flag1 = LemmaParser(external_flags=["FLAG1"])
+        lemmas_flag1 = parser_flag1.parse_lemmas_from_file(theory_file)
+
+        parser_flag2 = LemmaParser(external_flags=["FLAG2"])
+        lemmas_flag2 = parser_flag2.parse_lemmas_from_file(theory_file)
+
+        parser_flag1_flag3 = LemmaParser(external_flags=["FLAG1", "FLAG3"])
+        lemmas_flag1_flag3 = parser_flag1_flag3.parse_lemmas_from_file(theory_file)
+
+        parser_all = LemmaParser(external_flags=["FLAG1", "FLAG2", "FLAG3"])
+        lemmas_all = parser_all.parse_lemmas_from_file(theory_file)
+
+        # No flags: (false | false) & not false -> false
+        assert "lemma_complex_condition" not in lemmas_no_flags
+
+        # FLAG1 only: (true | false) & not false -> true
+        assert "lemma_complex_condition" in lemmas_flag1
+
+        # FLAG2 only: (false | true) & not false -> true
+        assert "lemma_complex_condition" in lemmas_flag2
+
+        # FLAG1 + FLAG3: (true | false) & not true -> false
+        assert "lemma_complex_condition" not in lemmas_flag1_flag3
+
+        # All flags: (true | true) & not true -> false
+        assert "lemma_complex_condition" not in lemmas_all
+
+        assert "always_present_lemma" in lemmas_no_flags
+        assert "always_present_lemma" in lemmas_flag1
+
 
 class TestLemmaParserEdgeCases:
     """Test edge cases and error conditions."""
