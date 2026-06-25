@@ -69,6 +69,16 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
+        a.trace-link {
+            display: inline-block;
+            margin-top: 5px;
+            font-size: 0.82em;
+            color: #116dd7;
+            text-decoration: none;
+        }
+        a.trace-link:hover {
+            text-decoration: underline;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -223,7 +233,8 @@
                     {% set lemma_rowspan = lemma_data.subtasks|length %}
                     {% set middle_loop = loop %}
                     {% set lemma_alt = middle_loop.index0 % 2 == 1 %}
-                    {% for rich_executable in lemma_data.subtasks %}
+                    {% for subtask_item in lemma_data.subtasks %}
+                        {% set rich_executable = subtask_item.task %}
                         <tr class="{{ task_color }}{% if lemma_alt %} lemma-alt{% endif %}">
                             {% if loop.first and middle_loop.first %}
                                 <td{% if task_rowspan > 1 %} rowspan="{{ task_rowspan }}"{% endif %}>
@@ -245,6 +256,9 @@
                                 {% elif rich_executable.task_execution_metadata.status.value == 'timeout' %}⏳ Timed Out
                                 {% elif rich_executable.task_execution_metadata.status.value == 'memory_limit_exceeded' %}🧠 Memory Limit
                                 {% else %}❌ Error
+                                {% endif %}
+                                {% if subtask_item.trace_svg_path %}
+                                <a class="trace-link" href="{{ subtask_item.trace_svg_path }}" target="_blank">🔍 View Trace</a>
                                 {% endif %}
                             </td>
                             <td>{{ "%.1f"|format(rich_executable.task_execution_metadata.exec_duration_monotonic) }}s</td>

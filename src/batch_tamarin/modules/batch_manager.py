@@ -35,6 +35,7 @@ from ..modules.output_manager import SuccessfulTaskResult, output_manager
 from ..modules.tamarin_test_cmd import extract_tamarin_version
 from ..modules.task_manager import ExecutionSummary
 from ..runner import TaskRunner
+from ..utils.dot_utils import convert_dot_to_svg, is_dot_file_empty
 from ..utils.notifications import notification_manager
 from ..utils.system_resources import resolve_executable_path, resolve_resource_value
 
@@ -409,7 +410,7 @@ class BatchManager:
             base_dir = output_paths["base"]
 
             # Generate HTML summary
-            await self._generate_html_summary(batch, base_dir)
+            await self._generate_html_summary(batch, base_dir, output_paths["traces"])
 
             # Generate rerun recipe for failed tasks
             await self._generate_rerun_recipe(batch, base_dir)
@@ -420,7 +421,9 @@ class BatchManager:
             )
             # Don't raise - this is not a critical failure
 
-    async def _generate_html_summary(self, batch: Batch, output_dir: Path) -> None:
+    async def _generate_html_summary(
+        self, batch: Batch, output_dir: Path, traces_dir: Path
+    ) -> None:
         """Generate HTML summary from batch data."""
         try:
             # Load Jinja2 template
@@ -429,7 +432,7 @@ class BatchManager:
             template = env.get_template("summary.html.j2")
 
             # Prepare template data
-            template_data = self._prepare_html_template_data(batch)
+            template_data = self._prepare_html_template_data(batch, traces_dir)
 
             # Render HTML
             html_content = template.render(**template_data)
@@ -449,7 +452,9 @@ class BatchManager:
             )
             raise
 
-    def _prepare_html_template_data(self, batch: Batch) -> dict[str, Any]:
+    def _prepare_html_template_data(
+        self, batch: Batch, traces_dir: Path
+    ) -> dict[str, Any]:
         """Prepare data for HTML template rendering."""
         # Collect failed, timeout, and memory limit tasks
         failed_tasks: list[dict[str, Any]] = []
@@ -462,7 +467,7 @@ class BatchManager:
         unterminated_count = 0
 
         # Prepare structured table data with lemma grouping
-        task_table_data = self._prepare_task_table_data(batch)
+        task_table_data = self._prepare_task_table_data(batch, traces_dir)
 
         for task_name, rich_task in batch.tasks.items():
             for subtask_name, rich_executable in rich_task.subtasks.items():
@@ -530,19 +535,29 @@ class BatchManager:
             "unterminated_count": unterminated_count,
         }
 
-    def _prepare_task_table_data(self, batch: Batch) -> list[dict[str, Any]]:
+    def _prepare_task_table_data(
+        self, batch: Batch, traces_dir: Path
+    ) -> list[dict[str, Any]]:
         """Prepare structured table data with proper task and lemma grouping."""
         task_table_data: list[dict[str, Any]] = []
 
         for task_name, rich_task in batch.tasks.items():
-            # Group subtasks by lemma
-            lemma_groups: dict[str, list[RichExecutableTask]] = {}
+            # Group subtasks by lemma and add information for traces
+            lemma_groups: dict[str, list[dict[str, Any]]] = {}
 
-            for _subtask_name, rich_executable in rich_task.subtasks.items():
+            for subtask_name, rich_executable in rich_task.subtasks.items():
                 lemma_name = rich_executable.task_config.lemma
                 if lemma_name not in lemma_groups:
                     lemma_groups[lemma_name] = []
-                lemma_groups[lemma_name].append(rich_executable)
+
+                trace_svg_path = self._get_trace_svg_path(subtask_name, traces_dir)
+                lemma_groups[lemma_name].append(
+                    {
+                        "task": rich_executable,
+                        "subtask_name": subtask_name,
+                        "trace_svg_path": trace_svg_path,
+                    }
+                )
 
             # Calculate total subtasks for this task
             total_subtasks = sum(len(subtasks) for subtasks in lemma_groups.values())
@@ -562,6 +577,18 @@ class BatchManager:
             )
 
         return task_table_data
+
+    def _get_trace_svg_path(self, subtask_name: str, traces_dir: Path) -> str | None:
+        """Return a relative path (from the output dir) to the SVG trace file, or None."""
+        if not traces_dir.exists():
+            return None
+        dot_file = traces_dir / f"{subtask_name}.dot"
+        if not dot_file.exists() or is_dot_file_empty(dot_file):
+            return None
+        svg_file = convert_dot_to_svg(dot_file)
+        if svg_file is None:
+            return None
+        return f"traces/{svg_file.name}"
 
     async def _generate_rerun_recipe(self, batch: Batch, output_dir: Path) -> None:
         """Generate rerun recipe JSON with only failed tasks."""
