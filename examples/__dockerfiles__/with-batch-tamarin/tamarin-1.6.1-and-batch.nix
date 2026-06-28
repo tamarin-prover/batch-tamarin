@@ -1,5 +1,5 @@
 {
-  description = "Tamarin Prover 1.6.1 and batch-tamarin 1.1.2";
+  description = "Tamarin Prover 1.6.1 and batch-tamarin 1.2.0";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
@@ -23,7 +23,7 @@
             owner = "lmandrelli";
             repo = "py-tree-sitter-spthy";
             rev = "v${version}";
-            hash = "sha256-E3vbeDEiXcGyDVFq28aW7MuaTCLanhaGfnD7nqf9zcA=";
+            hash = "sha256-0000000000000000000000000000000000000000000=";
           };
 
           nativeBuildInputs = with python.pkgs; [ setuptools wheel ];
@@ -32,14 +32,14 @@
 
         batch-tamarin = python.pkgs.buildPythonPackage rec {
           pname = "batch-tamarin";
-          version = "1.1.2";
+          version = "1.2.0";
           format = "pyproject";
 
           src = pkgs.fetchFromGitHub {
             owner = "tamarin-prover";
             repo = "batch-tamarin";
             rev = "v${version}";
-            hash = "sha256-wmfCoY2z7b/wnlqeb1Vc9eHzeWYS+v+n9mWxXzrkJzM=";
+            hash = "sha256-0000000000000000000000000000000000000000000=";
           };
 
           nativeBuildInputs = with python.pkgs; [ setuptools wheel build ];

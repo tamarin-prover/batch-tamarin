@@ -52,9 +52,31 @@ This document explains how to package and publish batch-tamarin to PyPI.
 
 ## Version Management
 
-Update the version in these files before building:
-- `src/batch_tamarin/__init__.py` (`__version__`)
-- `pyproject.toml` (`version`)
+The project uses a **single source of truth** for versioning: `pyproject.toml`.
+
+1. **Bump the version** in `pyproject.toml` (`project.version`).
+2. **Run the update script** (or let the pre-commit hook do it automatically):
+   ```bash
+   python scripts/update_version.py
+   ```
+   This propagates the version to:
+   - `src/batch_tamarin/__init__.py` (`__version__`)
+   - `README.md` release badge
+   - `examples/__dockerfiles__/with-batch-tamarin/*.nix`
+
+3. **Update `uv.lock`** if you use `uv`:
+   ```bash
+   uv lock
+   ```
+
+### Notes
+
+- `__author__` may contain [Rich](https://github.com/Textualize/rich) console markup
+  (e.g. `[dim green]…[/dim green]`) for styled `--version` output. The update script
+  preserves any existing markup, so manual styling edits are safe.
+- When the version changes, the script invalidates SHA256 hashes in the Nix
+  examples so that Nix will report the correct new hash on the next build.
+- `__contributors__` in `__init__.py` is also preserved by the script.
 
 ## Package Structure
 
