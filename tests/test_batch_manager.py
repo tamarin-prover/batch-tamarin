@@ -19,6 +19,11 @@ from batch_tamarin.model.batch import (
     ErrorType,
     ExecMetadata,
     LemmaResult,
+    Resources as BatchResources,
+    RichExecutableTask,
+    RichTask,
+    TaskConfig,
+    TaskExecMetadata,
     TaskFailedResult,
     TaskStatus,
     TaskSucceedResult,
@@ -1131,3 +1136,212 @@ class TestExecutionReportGeneration:
                 "Failed to write execution report"
                 in mock_notification.error.call_args[0][0]
             )
+
+def _make_rich_executable(lemma: str, version: str = "stable") -> RichExecutableTask:
+    """Create a minimal RichExecutableTask for use in trace tests."""
+    return RichExecutableTask(
+        task_config=TaskConfig(
+            tamarin_alias=version,
+            lemma=lemma,
+            output_theory_file=Path("/tmp/out.spthy"),
+            output_trace_file=Path("/tmp/trace.json"),
+            options=None,
+            preprocessor_flags=None,
+            resources=BatchResources(cores=4, memory=8, timeout=3600),
+        ),
+        task_execution_metadata=TaskExecMetadata(
+            command=[],
+            status=TaskStatus.COMPLETED,
+            cache_hit=False,
+            exec_start="2024-01-01T00:00:00",
+            exec_end="2024-01-01T00:01:00",
+            exec_duration_monotonic=60.0,
+            avg_memory=256.0,
+            peak_memory=512.0,
+        ),
+        task_result=TaskSucceedResult(
+            warnings=[],
+            real_time_tamarin_measure=58.0,
+            lemma_result=LemmaResult.FALSIFIED,
+            steps=42,
+            analysis_type="all-traces",
+        ),
+    )
+
+
+def _make_batch(
+    recipe: Any,
+    subtasks: dict[str, RichExecutableTask],
+    task_name: str = "my_task",
+    theory_file: str = "/fake/theory.spthy",
+) -> Batch:
+    """Wrap subtasks in a minimal Batch object."""
+    return Batch(
+        recipe="test.json",
+        config=recipe.config,
+        tamarin_versions=recipe.tamarin_versions,
+        execution_metadata=ExecMetadata(
+            total_tasks=len(subtasks),
+            total_successes=0,
+            total_failures=0,
+            total_cache_hit=0,
+            total_runtime=0.0,
+            total_memory=0.0,
+            max_runtime=0.0,
+            max_memory=0.0,
+        ),
+        tasks={task_name: RichTask(theory_file=theory_file, subtasks=subtasks)},
+    )
+
+
+class TestGetTraceSvgPath:
+    """Tests for BatchManager._get_trace_svg_path."""
+
+    def test_returns_none_when_traces_dir_does_not_exist(
+        self, minimal_recipe_data: dict[str, Any]
+    ):
+        """No SVG path when the traces directory is missing."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+
+        result = bm._get_trace_svg_path("my_subtask", Path("/nonexistent/traces"))
+
+        assert result is None
+
+    def test_returns_none_when_dot_file_is_absent(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """No SVG path when the corresponding DOT file does not exist."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+
+        result = bm._get_trace_svg_path("my_subtask", traces_dir)
+
+        assert result is None
+
+    def test_returns_none_when_dot_file_is_empty(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """No SVG path when the DOT file exists but is considered empty."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+        (traces_dir / "my_subtask.dot").write_text("")
+
+        with patch(
+            "batch_tamarin.modules.batch_manager.is_dot_file_empty", return_value=True
+        ):
+            result = bm._get_trace_svg_path("my_subtask", traces_dir)
+
+        assert result is None
+
+    def test_returns_relative_path_when_svg_is_generated(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """Returns traces/<name>.svg when graphviz converts the DOT file."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+        dot_file = traces_dir / "my_subtask.dot"
+        dot_file.write_text("digraph { a -> b; c -> d; e -> f; }")
+        svg_file = traces_dir / "my_subtask.svg"
+
+        with (
+            patch(
+                "batch_tamarin.modules.batch_manager.is_dot_file_empty",
+                return_value=False,
+            ),
+            patch(
+                "batch_tamarin.modules.batch_manager.convert_dot_to_svg",
+                return_value=svg_file,
+            ),
+        ):
+            result = bm._get_trace_svg_path("my_subtask", traces_dir)
+
+        assert result == "traces/my_subtask.svg"
+
+    def test_returns_none_when_svg_conversion_fails(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """Returns None when graphviz is unavailable and conversion fails."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+        (traces_dir / "my_subtask.dot").write_text("digraph { a -> b; c -> d; e -> f; }")
+
+        with (
+            patch(
+                "batch_tamarin.modules.batch_manager.is_dot_file_empty",
+                return_value=False,
+            ),
+            patch(
+                "batch_tamarin.modules.batch_manager.convert_dot_to_svg",
+                return_value=None,
+            ),
+        ):
+            result = bm._get_trace_svg_path("my_subtask", traces_dir)
+
+        assert result is None
+
+
+class TestPrepareTaskTableData:
+    """Tests for BatchManager._prepare_task_table_data trace integration."""
+
+    def test_subtask_items_have_trace_svg_path_none_when_no_dot_file(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """trace_svg_path is None in subtask dicts when no DOT file exists."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+
+        subtask_name = "my_task--lemma1--stable"
+        batch = _make_batch(
+            recipe, {subtask_name: _make_rich_executable("lemma1")}
+        )
+
+        table_data = bm._prepare_task_table_data(batch, traces_dir)
+
+        subtask_item = table_data[0]["lemmas"][0]["subtasks"][0]
+        assert subtask_item["trace_svg_path"] is None
+
+    def test_subtask_items_carry_trace_svg_path_when_dot_file_present(
+        self, minimal_recipe_data: dict[str, Any], tmp_dir: Path
+    ):
+        """trace_svg_path is populated in subtask dicts when the DOT file exists."""
+        recipe = TamarinRecipe.model_validate(minimal_recipe_data)
+        bm = BatchManager(recipe, "test.json")
+        traces_dir = tmp_dir / "traces"
+        traces_dir.mkdir()
+
+        subtask_name = "my_task--lemma1--stable"
+        dot_file = traces_dir / f"{subtask_name}.dot"
+        dot_file.write_text("digraph { a -> b; c -> d; e -> f; }")
+        svg_file = traces_dir / f"{subtask_name}.svg"
+
+        batch = _make_batch(
+            recipe, {subtask_name: _make_rich_executable("lemma1")}
+        )
+
+        with (
+            patch(
+                "batch_tamarin.modules.batch_manager.is_dot_file_empty",
+                return_value=False,
+            ),
+            patch(
+                "batch_tamarin.modules.batch_manager.convert_dot_to_svg",
+                return_value=svg_file,
+            ),
+        ):
+            table_data = bm._prepare_task_table_data(batch, traces_dir)
+
+        subtask_item = table_data[0]["lemmas"][0]["subtasks"][0]
+        assert subtask_item["trace_svg_path"] == f"traces/{subtask_name}.svg"
+        assert subtask_item["subtask_name"] == subtask_name
+        assert subtask_item["task"] is batch.tasks["my_task"].subtasks[subtask_name]
