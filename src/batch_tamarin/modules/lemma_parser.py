@@ -327,33 +327,95 @@ class LemmaParser:
             True if condition is satisfied, False otherwise
         """
         try:
-            # Find the condition node
+            condition_types = {
+                "ident",
+                "identifier",
+                "ifdef_not",
+                "ifdef_and",
+                "ifdef_or",
+                "ifdef_nested",
+                "condition",
+            }
             for child in ifdef_node.children:
-                if child.type in {"condition", "ident", "identifier"}:
-                    # Use byte-based slicing to handle UTF-8 encoding correctly
-                    condition_text = (
-                        content.encode("utf-8")[child.start_byte : child.end_byte]
-                        .decode("utf-8")
-                        .strip()
-                    )
-                    return self._evaluate_condition_expression(
-                        condition_text, defined_symbols
-                    )
-
-            # If no condition found, assume false
+                if child.type in condition_types:
+                    return self._evaluate_condition_node(child, content, defined_symbols)
             return False
         except Exception:
-            # If evaluation fails, assume false to be safe
+            return False
+
+    def _evaluate_condition_node(
+        self, node: Node, content: str, defined_symbols: set[str]
+    ) -> bool:
+        """
+        Recursively evaluate a condition AST node.
+
+        Args:
+            node: Tree-sitter condition node (ident, ifdef_not, ifdef_and, ifdef_or, ifdef_nested)
+            content: Original file content
+            defined_symbols: Set of currently defined symbols
+
+        Returns:
+            True if condition is satisfied, False otherwise
+        """
+        try:
+            if node.type in {"ident", "identifier"}:
+                symbol = (
+                    content.encode("utf-8")[node.start_byte : node.end_byte]
+                    .decode("utf-8")
+                    .strip()
+                )
+                return symbol in defined_symbols
+
+            elif node.type == "ifdef_not":
+                for child in node.children:
+                    if child.type != "not":
+                        return not self._evaluate_condition_node(
+                            child, content, defined_symbols
+                        )
+                return False
+
+            elif node.type == "ifdef_and":
+                operands = [c for c in node.children if c.type != "&"]
+                return all(
+                    self._evaluate_condition_node(c, content, defined_symbols)
+                    for c in operands
+                )
+
+            elif node.type == "ifdef_or":
+                operands = [c for c in node.children if c.type != "|"]
+                return any(
+                    self._evaluate_condition_node(c, content, defined_symbols)
+                    for c in operands
+                )
+
+            elif node.type == "ifdef_nested":
+                for child in node.children:
+                    if child.type not in {"(", ")"}:
+                        return self._evaluate_condition_node(
+                            child, content, defined_symbols
+                        )
+                return False
+
+            elif node.type == "condition":
+                condition_text = (
+                    content.encode("utf-8")[node.start_byte : node.end_byte]
+                    .decode("utf-8")
+                    .strip()
+                )
+                return self._evaluate_condition_expression(condition_text, defined_symbols)
+
+            return False
+        except Exception:
             return False
 
     def _evaluate_condition_expression(
         self, condition: str, defined_symbols: set[str]
     ) -> bool:
         """
-        Recursively evaluate a preprocessor condition expression.
+        Evaluate a preprocessor condition from a plain text string (fallback).
 
         Args:
-            condition: Condition string (e.g., "KEYWORD1", "(KEYWORD1 | KEYWORD2) & KEYWORD3")
+            condition: Condition string (e.g., "KEYWORD1", "KEYWORD1 & KEYWORD2")
             defined_symbols: Set of defined symbols
 
         Returns:
@@ -368,9 +430,8 @@ class LemmaParser:
 
             # Handle NOT operator
             if condition.startswith("not "):
-                inner_condition = condition[4:].strip()
                 return not self._evaluate_condition_expression(
-                    inner_condition, defined_symbols
+                    condition[4:].strip(), defined_symbols
                 )
 
             # Handle OR operator
@@ -409,6 +470,18 @@ class LemmaParser:
         try:
             found_else = False
 
+            condition_types = {
+                "condition",
+                "ident",
+                "identifier",
+                "ifdef_not",
+                "ifdef_and",
+                "ifdef_or",
+                "ifdef_nested",
+                "#ifdef",
+                "#endif",
+            }
+
             for child in ifdef_node.children:
                 if child.type == "else":
                     found_else = True
@@ -416,7 +489,7 @@ class LemmaParser:
                     if not condition_active:
                         for else_child in child.children:
                             traverse_func(else_child, True)
-                elif child.type not in ["condition", "ident", "identifier"]:
+                elif child.type not in condition_types:
                     # This is part of the main ifdef body
                     if condition_active:
                         traverse_func(child, True)
@@ -424,7 +497,7 @@ class LemmaParser:
             # If no else branch was found and condition is active, process all non-condition children
             if not found_else and condition_active:
                 for child in ifdef_node.children:
-                    if child.type not in ["condition", "ident", "identifier"]:
+                    if child.type not in condition_types:
                         traverse_func(child, True)
         except Exception:
             # If traversal fails, skip this ifdef block
