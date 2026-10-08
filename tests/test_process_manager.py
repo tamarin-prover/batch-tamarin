@@ -111,6 +111,96 @@ async def test_memory_limit_still_terminates_process():
     assert manager.get_active_processes_count() == 0
 
 
+async def test_memory_limit_preserves_stats_when_output_finishes_first():
+    manager = ProcessManager()
+    terminated = asyncio.Event()
+    finish_wait = asyncio.Event()
+    process = Mock(pid=12345, returncode=None)
+    monitored_process = Mock()
+    monitored_process.memory_info.return_value.rss = 2 * 1024 * 1024
+    monitored_process.children.return_value = []
+
+    def terminate():
+        process.returncode = -signal.SIGTERM
+        terminated.set()
+
+    async def communicate():
+        await terminated.wait()
+        return b"", b""
+
+    async def wait_for_exit():
+        await finish_wait.wait()
+        return process.returncode
+
+    process.terminate.side_effect = terminate
+    process.communicate = AsyncMock(side_effect=communicate)
+    process.wait = AsyncMock(side_effect=wait_for_exit)
+    real_wait = asyncio.wait
+
+    async def wait_then_finish_watcher(*args, **kwargs):
+        result = await real_wait(*args, **kwargs)
+        # communicate() has finished, but the watcher is still awaiting wait().
+        finish_wait.set()
+        return result
+
+    with (
+        patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)),
+        patch("psutil.Process", return_value=monitored_process),
+        patch("asyncio.wait", side_effect=wait_then_finish_watcher),
+    ):
+        result = await manager.run_command(
+            Path("command"), [], timeout=5.0, memory_limit_mb=1.0
+        )
+
+    assert result == (
+        -2,
+        "",
+        "Process exceeded memory limit",
+        MemoryStats(peak_memory_mb=2.0, avg_memory_mb=2.0),
+    )
+    process.terminate.assert_called_once()
+    assert manager.get_active_processes_count() == 0
+
+
+async def test_cancellation_while_collecting_memory_limit_stats_propagates():
+    manager = ProcessManager()
+    collecting_stats = asyncio.Event()
+    process = Mock(pid=12345, returncode=-signal.SIGTERM)
+    process.communicate = AsyncMock(return_value=(b"", b""))
+    stats = MemoryStats(peak_memory_mb=2.0, avg_memory_mb=2.0)
+
+    async def monitor(process, memory_limit_mb, process_id):
+        manager._memory_exceeded_processes[process_id] = True
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            return stats
+
+    real_wait = asyncio.wait
+
+    async def wait_then_signal(*args, **kwargs):
+        result = await real_wait(*args, **kwargs)
+        collecting_stats.set()
+        return result
+
+    with (
+        patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)),
+        patch.object(manager, "_monitor_memory", side_effect=monitor),
+        patch("asyncio.wait", side_effect=wait_then_signal),
+    ):
+        command = asyncio.create_task(manager.run_command(Path("command"), []))
+        try:
+            await asyncio.wait_for(collecting_stats.wait(), timeout=1.0)
+            command.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await command
+            assert manager.get_active_processes_count() == 0
+            assert manager._memory_exceeded_processes == {}
+        finally:
+            command.cancel()
+            await asyncio.gather(command, return_exceptions=True)
+
+
 @pytest.mark.parametrize(
     ("monitor_finishes_early", "ignore_sigterm"),
     [(False, False), (True, False), (False, True)],

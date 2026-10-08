@@ -99,7 +99,7 @@ class ProcessManager:
                 # Wait with timeout for both tasks
                 loop = asyncio.get_running_loop()
                 deadline = loop.time() + timeout
-                done, pending = await asyncio.wait(
+                done, _ = await asyncio.wait(
                     [task, memory_task],
                     timeout=timeout,
                     return_when=asyncio.FIRST_COMPLETED,
@@ -113,25 +113,26 @@ class ProcessManager:
                     and task not in done
                     and not self._memory_exceeded_processes.get(process_id, False)
                 ):
-                    process_done, pending = await asyncio.wait(
+                    process_done, _ = await asyncio.wait(
                         [task], timeout=max(0.0, deadline - loop.time())
                     )
                     done.update(process_done)
 
                 # Check if memory limit was exceeded
                 if self._memory_exceeded_processes.get(process_id, False):
-                    # Memory limit was exceeded
-                    # Cancel any pending tasks
-                    for pending_task in pending:
-                        pending_task.cancel()
-
-                    # Get memory stats from memory task
+                    # The process output may finish before the watcher completes
+                    # termination. Let the watcher finish and return its samples.
                     memory_stats = None
-                    if memory_task in done:
-                        try:
-                            memory_stats = await memory_task
-                        except Exception:
-                            pass
+                    try:
+                        # Preserve caller cancellation even if the watcher
+                        # handles cancellation by returning its final samples.
+                        (memory_stats,) = await asyncio.gather(memory_task)
+                    except Exception:
+                        pass
+
+                    if not task.done():
+                        task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
 
                     notification_manager.warning(
                         f"[ProcessManager] Command exceeded memory limit: {' '.join(command)}"
