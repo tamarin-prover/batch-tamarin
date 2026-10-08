@@ -1,6 +1,7 @@
 """Tests for process completion racing with memory monitoring."""
 
 import asyncio
+import signal
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
@@ -108,3 +109,170 @@ async def test_memory_limit_still_terminates_process():
     assert result[:3] == (-2, "", "Process exceeded memory limit")
     assert result[3] == MemoryStats(peak_memory_mb=2.0, avg_memory_mb=2.0)
     assert manager.get_active_processes_count() == 0
+
+
+@pytest.mark.parametrize(
+    ("monitor_finishes_early", "ignore_sigterm"),
+    [(False, False), (True, False), (False, True)],
+)
+async def test_cancellation_reaps_subprocess_and_monitor(
+    tmp_path, monitor_finishes_early, ignore_sigterm
+):
+    if ignore_sigterm and sys.platform == "win32":
+        pytest.skip("SIGTERM handling requires POSIX")
+    manager = ProcessManager()
+    ready_file = tmp_path / "ready"
+    captured = {}
+    real_monitor = manager._monitor_memory
+
+    async def monitor(process, *args):
+        captured["process"] = process
+        captured["monitor"] = asyncio.current_task()
+        if monitor_finishes_early:
+            return None
+        return await real_monitor(process, *args)
+
+    async def wait_until_ready():
+        while not ready_file.exists() or "process" not in captured:
+            await asyncio.sleep(0.01)
+
+    code = (
+        "import pathlib, signal, sys, time; "
+        + ("signal.signal(signal.SIGTERM, signal.SIG_IGN); " if ignore_sigterm else "")
+        + "pathlib.Path(sys.argv[1]).touch(); time.sleep(30)"
+    )
+    with patch.object(manager, "_monitor_memory", side_effect=monitor):
+        command = asyncio.create_task(
+            manager.run_command(
+                Path(sys.executable), ["-c", code, str(ready_file)], timeout=20.0
+            )
+        )
+        try:
+            await asyncio.wait_for(wait_until_ready(), timeout=5.0)
+            process = captured["process"]
+            output_task = manager._active_processes["cmd_0"].task
+            command.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(command, timeout=10.0)
+
+            assert process.returncode is not None
+            if ignore_sigterm:
+                assert process.returncode == -signal.SIGKILL
+            assert output_task.done()
+            assert captured["monitor"].done()
+            assert manager.get_active_processes_count() == 0
+            assert manager._memory_exceeded_processes == {}
+        finally:
+            # Reap the child even when exercising the unfixed implementation.
+            command.cancel()
+            await asyncio.gather(command, return_exceptions=True)
+            if "process" in captured:
+                process = captured["process"]
+                if process.returncode is None:
+                    process.kill()
+                await process.wait()
+                captured["monitor"].cancel()
+                await asyncio.gather(captured["monitor"], return_exceptions=True)
+
+
+async def test_repeated_cancellation_waits_for_cleanup():
+    manager = ProcessManager()
+    monitor_started = asyncio.Event()
+    termination_started = asyncio.Event()
+    allow_exit = asyncio.Event()
+    process = Mock(pid=12345, returncode=None)
+    process.communicate = AsyncMock(side_effect=asyncio.Event().wait)
+    background_tasks = []
+
+    async def monitor(*args):
+        background_tasks.append(asyncio.current_task())
+        monitor_started.set()
+        await asyncio.Event().wait()
+
+    async def wait_for_exit():
+        termination_started.set()
+        await allow_exit.wait()
+        process.returncode = -15
+        return process.returncode
+
+    process.wait = AsyncMock(side_effect=wait_for_exit)
+    with (
+        patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)),
+        patch.object(manager, "_monitor_memory", side_effect=monitor),
+    ):
+        command = asyncio.create_task(manager.run_command(Path("command"), []))
+        try:
+            await asyncio.wait_for(monitor_started.wait(), timeout=1.0)
+            background_tasks.append(manager._active_processes["cmd_0"].task)
+            command.cancel()
+            await asyncio.wait_for(termination_started.wait(), timeout=1.0)
+            command.cancel()
+            await asyncio.sleep(0)
+            assert not command.done()
+            assert manager.get_active_processes_count() == 1
+            allow_exit.set()
+            with pytest.raises(asyncio.CancelledError):
+                await command
+            assert all(task.done() for task in background_tasks)
+            assert manager.get_active_processes_count() == 0
+        finally:
+            allow_exit.set()
+            command.cancel()
+            await asyncio.gather(command, return_exceptions=True)
+            for task in background_tasks:
+                task.cancel()
+            await asyncio.gather(*background_tasks, return_exceptions=True)
+
+
+async def test_cancellation_during_memory_stats_collection_propagates():
+    manager = ProcessManager()
+    collecting_stats = asyncio.Event()
+    process = Mock(pid=12345, returncode=0)
+    process.communicate = AsyncMock(return_value=(b"output", b""))
+    captured = {}
+
+    async def monitor(*args):
+        captured["monitor"] = asyncio.current_task()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            collecting_stats.set()
+            await asyncio.Event().wait()
+
+    with (
+        patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)),
+        patch.object(manager, "_monitor_memory", side_effect=monitor),
+    ):
+        command = asyncio.create_task(manager.run_command(Path("command"), []))
+        try:
+            await asyncio.wait_for(collecting_stats.wait(), timeout=1.0)
+            command.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await command
+            assert captured["monitor"].done()
+            assert manager.get_active_processes_count() == 0
+        finally:
+            command.cancel()
+            await asyncio.gather(command, return_exceptions=True)
+
+
+async def test_timeout_preserves_final_memory_sample():
+    manager = ProcessManager()
+    process = Mock(pid=12345, returncode=None)
+    process.communicate = AsyncMock(side_effect=asyncio.Event().wait)
+    process.wait = AsyncMock(return_value=0)
+    stats = MemoryStats(peak_memory_mb=2.0, avg_memory_mb=1.0)
+
+    async def monitor(*args):
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            return stats
+
+    with (
+        patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)),
+        patch.object(manager, "_monitor_memory", side_effect=monitor),
+    ):
+        result = await manager.run_command(Path("command"), [], timeout=0.01)
+
+    assert result == (-1, "", "Process timed out", stats)

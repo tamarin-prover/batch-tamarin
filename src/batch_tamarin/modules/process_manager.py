@@ -143,11 +143,9 @@ class ProcessManager:
                     memory_task.cancel()
 
                     # Get memory stats if available
-                    memory_stats = None
-                    try:
-                        memory_stats = await asyncio.wait_for(memory_task, timeout=1.0)
-                    except (asyncio.TimeoutError, asyncio.CancelledError):
-                        pass
+                    memory_stats = await self._get_memory_stats(
+                        memory_task, timeout=1.0
+                    )
 
                     return (*result, memory_stats)
                 else:
@@ -160,12 +158,9 @@ class ProcessManager:
                     # Try to get current memory stats before cancelling
                     memory_stats = None
                     if not memory_task.done():
-                        try:
-                            memory_stats = await asyncio.wait_for(
-                                memory_task, timeout=0.5
-                            )
-                        except (asyncio.TimeoutError, asyncio.CancelledError):
-                            pass
+                        memory_stats = await self._get_memory_stats(
+                            memory_task, timeout=0.5
+                        )
 
                     # Cancel memory monitoring if still running
                     if not memory_task.done():
@@ -182,16 +177,30 @@ class ProcessManager:
                 # Try to get current memory stats before cancelling
                 memory_stats = None
                 if not memory_task.done():
-                    try:
-                        memory_stats = await asyncio.wait_for(memory_task, timeout=0.5)
-                    except (asyncio.TimeoutError, asyncio.CancelledError):
-                        pass
+                    memory_stats = await self._get_memory_stats(
+                        memory_task, timeout=0.5
+                    )
 
                 # Cancel memory monitoring if still running
                 if not memory_task.done():
                     memory_task.cancel()
 
                 return (-1, "", "Process timed out", memory_stats)
+
+        except asyncio.CancelledError:
+            if process_id in self._active_processes:
+                cleanup_task = asyncio.create_task(
+                    self._cleanup_cancelled_command(process_id, task, memory_task)
+                )
+                # Repeated cancellation must not interrupt termination or leave
+                # an untracked subprocess behind while cleanup is still running.
+                while not cleanup_task.done():
+                    try:
+                        await asyncio.shield(cleanup_task)
+                    except asyncio.CancelledError:
+                        continue
+                cleanup_task.result()
+            raise
 
         except Exception as e:
             notification_manager.error(
@@ -205,6 +214,37 @@ class ProcessManager:
                 del self._active_processes[process_id]
             if process_id in self._memory_exceeded_processes:
                 del self._memory_exceeded_processes[process_id]
+
+    async def _get_memory_stats(
+        self, memory_task: asyncio.Task, timeout: float
+    ) -> MemoryStats | None:
+        """Collect watcher results without swallowing cancellation of the caller."""
+        try:
+            # gather handles cancellation of the watcher as a result, while
+            # cancellation of run_command itself still raises CancelledError.
+            results = await asyncio.wait_for(
+                asyncio.gather(memory_task, return_exceptions=True), timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            # The watcher may return its final sample when the timeout cancels
+            # it. Keep that sample even though gather itself was cancelled.
+            if memory_task.cancelled():
+                return None
+            result = memory_task.result()
+        else:
+            result = results[0]
+        return result if isinstance(result, MemoryStats) else None
+
+    async def _cleanup_cancelled_command(
+        self, process_id: str, task: asyncio.Task, memory_task: asyncio.Task
+    ) -> None:
+        """Terminate the child and join both background tasks before unregistering."""
+        memory_task.cancel()
+        try:
+            await self._kill_process(process_id)
+        finally:
+            task.cancel()
+            await asyncio.gather(task, memory_task, return_exceptions=True)
 
     async def _wait_for_process(
         self, process: asyncio.subprocess.Process
