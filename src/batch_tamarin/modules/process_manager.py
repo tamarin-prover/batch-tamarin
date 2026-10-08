@@ -106,17 +106,20 @@ class ProcessManager:
                 # Check if memory limit was exceeded
                 if self._memory_exceeded_processes.get(process_id, False):
                     # Memory limit was exceeded
-                    # Cancel any pending tasks
+                    # The monitor task is finishing its own termination of the
+                    # process, so let it return its stats; cancel other tasks
                     for pending_task in pending:
-                        pending_task.cancel()
+                        if pending_task is not memory_task:
+                            pending_task.cancel()
 
                     # Get memory stats from memory task
                     memory_stats = None
-                    if memory_task in done:
-                        try:
-                            memory_stats = await memory_task
-                        except Exception:
-                            pass
+                    try:
+                        memory_stats = await asyncio.wait_for(
+                            memory_task, timeout=10.0
+                        )
+                    except Exception:
+                        pass
 
                     notification_manager.warning(
                         f"[ProcessManager] Command exceeded memory limit: {' '.join(command)}"
