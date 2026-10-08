@@ -97,11 +97,26 @@ class ProcessManager:
 
             try:
                 # Wait with timeout for both tasks
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + timeout
                 done, pending = await asyncio.wait(
                     [task, memory_task],
                     timeout=timeout,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+
+                # The watcher can finish before communicate() collects the result,
+                # e.g. when a short-lived process exits before psutil attaches.
+                # Keep waiting for the process using the original timeout budget.
+                if (
+                    memory_task in done
+                    and task not in done
+                    and not self._memory_exceeded_processes.get(process_id, False)
+                ):
+                    process_done, pending = await asyncio.wait(
+                        [task], timeout=max(0.0, deadline - loop.time())
+                    )
+                    done.update(process_done)
 
                 # Check if memory limit was exceeded
                 if self._memory_exceeded_processes.get(process_id, False):
